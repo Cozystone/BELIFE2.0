@@ -33,6 +33,8 @@ describe("buildMentalStateHistoryReport", () => {
     expect(report.current?.stressLoad).toBe(0.42);
     expect(report.previous?.stressLoad).toBe(0.2);
     expect(report.deltas.stressLoad).toBeCloseTo(0.22);
+    expect(report.trend.values.stressLoad).toBeCloseTo(0.277);
+    expect(report.trend.deltas.stressLoad).toBeCloseTo(0.077);
     expect(report.directionSummary).toContain("부담");
   });
 
@@ -43,6 +45,8 @@ describe("buildMentalStateHistoryReport", () => {
 
     expect(report.previous).toBeNull();
     expect(report.deltas.motivation).toBe(0);
+    expect(report.trend.values.motivation).toBe(0.55);
+    expect(report.trend.deltas.motivation).toBe(0);
     expect(report.directionSummary).toContain("첫 상태 추정");
   });
 
@@ -54,6 +58,19 @@ describe("buildMentalStateHistoryReport", () => {
 
     expect(report.deltas.cognitiveDistortionRisk).toBeCloseTo(0.24);
     expect(report.deltas.abstentionRisk).toBeCloseTo(0.14);
+    expect(report.trend.deltas.abstentionRisk).toBeCloseTo(0.049);
     expect(report.directionSummary).toContain("해석을 조심");
+  });
+
+  it("separates single-step deltas from smoothed EWMA trend", () => {
+    const report = buildMentalStateHistoryReport([
+      state({ stressLoad: 0.2, motivation: 0.45, createdAt: "2026-01-01T00:00:00.000Z" }),
+      state({ stressLoad: 0.4, motivation: 0.42, createdAt: "2026-01-02T00:00:00.000Z" }),
+      state({ stressLoad: 0.8, motivation: 0.38, createdAt: "2026-01-03T00:00:00.000Z" }),
+    ]);
+
+    expect(report.deltas.stressLoad).toBeCloseTo(0.4);
+    expect(report.trend.deltas.stressLoad).toBeLessThan(report.deltas.stressLoad);
+    expect(report.trend.summary).toContain("EWMA");
   });
 });

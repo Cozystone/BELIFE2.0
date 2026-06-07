@@ -158,12 +158,21 @@ export type MentalStateTrendMetric =
   | "abstentionRisk";
 
 export type MentalStateTrendDeltas = Record<MentalStateTrendMetric, number>;
+export type MentalStateTrendValues = Record<MentalStateTrendMetric, number>;
+
+export interface MentalStateEwmaTrend {
+  lambda: number;
+  values: MentalStateTrendValues;
+  deltas: MentalStateTrendDeltas;
+  summary: string;
+}
 
 export interface MentalStateHistoryReport {
   generatedAt: string;
   current: MentalStateEstimate | null;
   previous: MentalStateEstimate | null;
   deltas: MentalStateTrendDeltas;
+  trend: MentalStateEwmaTrend;
   directionSummary: string;
   items: MentalStateEstimate[];
 }

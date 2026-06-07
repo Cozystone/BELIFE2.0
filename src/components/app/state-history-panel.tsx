@@ -101,6 +101,21 @@ export function StateHistoryPanel({ history }: { history: MentalStateHistoryRepo
                 })}
               </div>
             </div>
+            <div className="rounded-md border border-teal-300/10 bg-teal-400/5 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-zinc-500">EWMA trend</p>
+                <span className="font-mono text-[11px] text-teal-200">lambda {history.trend.lambda}</span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-zinc-300">{history.trend.summary}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {(["stressLoad", "rumination", "motivation", "abstentionRisk"] as const).map((metric) => (
+                  <div key={metric} className="rounded-sm bg-black/30 px-2 py-2">
+                    <p className="text-[11px] text-zinc-500">{labels[metric]}</p>
+                    <p className="mt-1 font-mono text-xs text-teal-200">{Math.round(history.trend.values[metric] * 100)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       ) : null}
