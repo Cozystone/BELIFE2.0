@@ -265,6 +265,20 @@ export interface BelifeMemoryTimeline {
   items: BelifeMemoryTimelineItem[];
 }
 
+export type MemoryEvidenceSource = "memory" | "message" | "ontology";
+
+export interface MemoryEvidenceItem {
+  id: string;
+  source: MemoryEvidenceSource;
+  label: string;
+  detail: string;
+  score: number;
+  confidence: number;
+  evidenceType?: EvidenceType;
+  createdAt?: string;
+  tags: string[];
+}
+
 export type ConnectionScenarioType =
   | "first_contact"
   | "light_disagreement"
@@ -386,7 +400,7 @@ export interface CompatibilityAxes {
   relationshipReport: ConnectionRelationshipReport;
 }
 
-export type TwinEvidenceSource = "profile" | "state" | "behavior" | "ontology";
+export type TwinEvidenceSource = "profile" | "state" | "behavior" | "ontology" | "memory" | "message";
 
 export interface TwinEvidenceItem {
   source: TwinEvidenceSource;

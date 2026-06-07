@@ -1,6 +1,7 @@
 import { clamp, compactText } from "@/lib/utils";
 import type {
   BehaviorSnapshot,
+  MemoryEvidenceItem,
   MentalStateEstimate,
   OntologyNode,
   TwinEvidenceItem,
@@ -15,6 +16,7 @@ export interface BuildTwinReflectionInput {
   state: MentalStateEstimate | null;
   behavior: BehaviorSnapshot | null;
   nodes: OntologyNode[];
+  retrievedEvidence?: MemoryEvidenceItem[];
 }
 
 export function buildTwinReflection(input: BuildTwinReflectionInput): TwinReflection {
@@ -57,6 +59,7 @@ export function calculateTwinConfidence(
 
 function buildTwinEvidence(input: BuildTwinReflectionInput): TwinEvidenceItem[] {
   const evidence: TwinEvidenceItem[] = [];
+  const retrievedEvidence: TwinEvidenceItem[] = [];
 
   if (input.profile?.currentGoal) {
     evidence.push({
@@ -94,6 +97,15 @@ function buildTwinEvidence(input: BuildTwinReflectionInput): TwinEvidenceItem[] 
     });
   }
 
+  for (const item of (input.retrievedEvidence ?? []).slice(0, 3)) {
+    retrievedEvidence.push({
+      source: item.source,
+      label: item.label,
+      detail: compactText(item.detail, 170),
+      confidence: Math.max(item.confidence, item.score),
+    });
+  }
+
   for (const node of input.nodes.slice(0, 4)) {
     evidence.push({
       source: "ontology",
@@ -103,9 +115,9 @@ function buildTwinEvidence(input: BuildTwinReflectionInput): TwinEvidenceItem[] 
     });
   }
 
-  return evidence
-    .sort((left, right) => right.confidence - left.confidence)
-    .slice(0, 6);
+  const rankedRetrieved = retrievedEvidence.sort((left, right) => right.confidence - left.confidence).slice(0, 2);
+  const rankedStructural = evidence.sort((left, right) => right.confidence - left.confidence);
+  return [...rankedRetrieved, ...rankedStructural].slice(0, 6);
 }
 
 function buildUncertainties(input: BuildTwinReflectionInput, evidence: TwinEvidenceItem[]) {

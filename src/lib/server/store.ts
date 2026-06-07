@@ -12,6 +12,7 @@ import {
   ontologyNodes,
   profiles,
   stateEstimates,
+  type MemoryChunkRow,
   type MessageRow,
   type OntologyEdgeRow,
   type OntologyNodeRow,
@@ -76,6 +77,7 @@ export interface BelifeStore {
   getConversationMessages(conversationId: string, userId: string, limit?: number): Promise<ConversationMessage[]>;
   getRecentMessages(userId: string, limit?: number): Promise<ConversationMessage[]>;
   saveMemoryChunks(chunks: MemoryChunk[]): Promise<void>;
+  getRecentMemoryChunks(userId: string, limit?: number): Promise<MemoryChunk[]>;
   upsertOntologyNodes(userId: string, nodes: OntologyNode[]): Promise<OntologyNode[]>;
   getOntologyNodes(userId: string): Promise<OntologyNode[]>;
   getOntologyEdges(userId: string): Promise<OntologyEdge[]>;
@@ -142,6 +144,27 @@ function mapMessage(row: MessageRow): ConversationMessage {
     role: row.role,
     content: row.content,
     source: row.source,
+    createdAt: dateToIso(row.createdAt),
+  };
+}
+
+function memoryChunkKind(value: string): MemoryChunk["kind"] {
+  if (value === "raw" || value === "semantic" || value === "behavior" || value === "state" || value === "relationship") {
+    return value;
+  }
+  return "semantic";
+}
+
+function mapMemoryChunk(row: MemoryChunkRow): MemoryChunk {
+  return {
+    id: row.id,
+    userId: row.userId,
+    messageId: row.messageId ?? undefined,
+    content: row.content,
+    kind: memoryChunkKind(row.kind),
+    salience: row.salience,
+    evidenceType: row.evidenceType,
+    tags: row.tags ?? [],
     createdAt: dateToIso(row.createdAt),
   };
 }
@@ -385,6 +408,16 @@ class DbBelifeStore implements BelifeStore {
         tags: chunk.tags,
       })),
     );
+  }
+
+  async getRecentMemoryChunks(userId: string, limit = 40) {
+    const rows = await getDb()
+      .select()
+      .from(memoryChunks)
+      .where(eq(memoryChunks.userId, userId))
+      .orderBy(desc(memoryChunks.createdAt))
+      .limit(Math.max(1, Math.min(120, limit)));
+    return rows.map(mapMemoryChunk).reverse();
   }
 
   async upsertOntologyNodes(userId: string, nodes: OntologyNode[]) {
@@ -908,6 +941,10 @@ class MemoryBelifeStore implements BelifeStore {
 
   async saveMemoryChunks(chunks: MemoryChunk[]) {
     memoryState.chunks.push(...chunks.map((chunk) => ({ ...chunk, id: chunk.id ?? randomUUID(), createdAt: isoNow() })));
+  }
+
+  async getRecentMemoryChunks(userId: string, limit = 40) {
+    return memoryState.chunks.filter((chunk) => chunk.userId === userId).slice(-Math.max(1, Math.min(120, limit)));
   }
 
   async upsertOntologyNodes(userId: string, nodes: OntologyNode[]) {

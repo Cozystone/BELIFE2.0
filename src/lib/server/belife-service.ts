@@ -5,6 +5,7 @@ import { buildStructuredExtraction } from "@/lib/ai/structured-extraction";
 import { buildConnectionPreview } from "@/lib/engines/compatibility";
 import { calculateDataTrust } from "@/lib/engines/data-trust";
 import { buildTwinReflection } from "@/lib/engines/digital-twin";
+import { rankMemoryEvidence } from "@/lib/engines/evidence-retrieval";
 import { estimateMentalState } from "@/lib/engines/mental-state";
 import { buildOntologyGraph, filterOntologyView } from "@/lib/engines/ontology";
 import { buildPatternReminders } from "@/lib/engines/pattern-reminders";
@@ -20,6 +21,7 @@ import type {
   BelifeUser,
   Briefing,
   ConversationMessage,
+  MemoryEvidenceItem,
   MessageSource,
   OnboardingAnswers,
   OntologyNode,
@@ -166,11 +168,19 @@ export async function handleConversationMessage(input: {
   await store.saveBehavior(input.user.id, extraction.behavior);
   const dataTrust = await refreshDataTrust(input.user.id);
   const allNodes = mergeNodes(currentNodes, savedNodes);
+  const memoryEvidence = rankMemoryEvidence({
+    query: input.content,
+    chunks: await store.getRecentMemoryChunks(input.user.id, 60),
+    nodes: allNodes,
+    messages: [...recentMessages, userMessage],
+    limit: 6,
+  });
   const assistantText = await buildAssistantReply({
     displayName: profile?.nickname ?? input.user.name,
     content: input.content,
     recentMessages,
     nodes: allNodes,
+    memoryEvidence,
     stateSummary: extraction.state.summary,
     tone: profile?.preferredTone ?? "calm",
   });
@@ -204,6 +214,7 @@ async function buildAssistantReply(input: {
   content: string;
   recentMessages: ConversationMessage[];
   nodes: OntologyNode[];
+  memoryEvidence: MemoryEvidenceItem[];
   stateSummary: string;
   tone: string;
 }) {
@@ -215,6 +226,12 @@ async function buildAssistantReply(input: {
     .slice(-6)
     .map((message) => `${message.role}: ${compactText(message.content, 120)}`)
     .join("\n");
+  const evidence = input.memoryEvidence
+    .map(
+      (item) =>
+        `- ${item.source}: ${item.label} (${Math.round(item.confidence * 100)}%, score ${Math.round(item.score * 100)}) - ${item.detail}`,
+    )
+    .join("\n");
 
   const prompt = `You are BELIFE, a Korean-first personal AI intelligence service.
 You are not a therapist and must not diagnose. Use warm, calm Korean by default.
@@ -223,13 +240,15 @@ Preferred tone: ${input.tone}
 Current state interpretation: ${input.stateSummary}
 Known self-structure:
 ${context || "- Not enough structure yet"}
+Relevant memory evidence:
+${evidence || "- No retrieved evidence yet"}
 Recent conversation:
 ${recent || "- First conversation"}
 
 User just said:
 ${input.content}
 
-Answer in Korean. Structure before advice. Keep it concise: 3 short paragraphs max, then one reflective question.`;
+Answer in Korean. Use retrieved evidence only as support, never as absolute proof. Structure before advice. Keep it concise: 3 short paragraphs max, then one reflective question.`;
 
   try {
     const response = await ollamaGenerate({
@@ -377,15 +396,30 @@ export async function getTwinAnswer(userId: string, question: string) {
 
 export async function getTwinReflection(userId: string, question: string) {
   const store = getStore();
-  const [profile, state, behavior, nodes] = await Promise.all([
+  const [profile, state, behavior, nodes, chunks, recentMessages] = await Promise.all([
     store.getProfile(userId),
     store.getLatestState(userId),
     store.getLatestBehavior(userId),
     store.getOntologyNodes(userId),
+    store.getRecentMemoryChunks(userId, 60),
+    store.getRecentMessages(userId, 20),
   ]);
+  const memoryEvidence = rankMemoryEvidence({
+    query: question,
+    chunks,
+    nodes,
+    messages: recentMessages,
+    limit: 6,
+  });
   const constraints = nodes
     .slice(0, 10)
     .map((node) => `${node.type}: ${node.label} - ${node.summary}`)
+    .join("\n");
+  const retrieved = memoryEvidence
+    .map(
+      (item) =>
+        `- ${item.source}: ${item.label} (${Math.round(item.confidence * 100)}%, score ${Math.round(item.score * 100)}) - ${item.detail}`,
+    )
     .join("\n");
   const prompt = `You are BELIFE Digital Twin, constrained by evidence only.
 Do not invent unsupported life facts. Say when confidence is low.
@@ -395,6 +429,8 @@ Current state: ${state?.summary ?? "limited state evidence"}
 Behavior style: ${behavior?.summary ?? "limited behavior evidence"}
 Ontology constraints:
 ${constraints || "No strong ontology yet"}
+Retrieved memory evidence:
+${retrieved || "No retrieved evidence yet"}
 
 Question: ${question}
 
@@ -403,7 +439,7 @@ Return: 1) what your structure might be doing, 2) what is uncertain, 3) one ques
   try {
     const response = await ollamaGenerate({ prompt, temperature: 0.35 });
     if (response) {
-      return buildTwinReflection({ answer: response, question, profile, state, behavior, nodes });
+      return buildTwinReflection({ answer: response, question, profile, state, behavior, nodes, retrievedEvidence: memoryEvidence });
     }
   } catch {
     // Keep production usable while an external Ollama endpoint is being connected.
@@ -414,7 +450,7 @@ Return: 1) what your structure might be doing, 2) what is uncertain, 3) one ques
 아직 확실하지 않은 부분은 이것이 일시적인 피로에서 나온 반복인지, 오래된 관계/결정 방식에서 나온 반복인지입니다. BELIFE는 증거가 부족한 부분을 사실처럼 말하지 않겠습니다.
 
 스스로에게 물어볼 질문은 이것입니다. 지금 내가 해결하려는 것은 실제 문제인가요, 아니면 그 문제를 둘러싼 불안과 압박인가요?`;
-  return buildTwinReflection({ answer: fallbackAnswer, question, profile, state, behavior, nodes });
+  return buildTwinReflection({ answer: fallbackAnswer, question, profile, state, behavior, nodes, retrievedEvidence: memoryEvidence });
 }
 
 export async function getConnectionPreview(userId: string) {

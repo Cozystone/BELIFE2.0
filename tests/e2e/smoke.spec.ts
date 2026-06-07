@@ -296,24 +296,26 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/twin");
   await expect(page.getByRole("heading", { name: "Digital Twin" })).toBeVisible();
-  const twinResult = await page.evaluate(async () => {
+  const twinResult = await page.evaluate(async (question) => {
     const response = await fetch("/api/twin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: "왜 같은 걱정이 반복되는지 알려줘" }),
+      body: JSON.stringify({ question }),
     });
     const body = await response.json();
     return {
       status: response.status,
       hasAnswer: Boolean(body.answer),
       evidenceCount: body.reflection.evidence.length,
+      evidenceSources: body.reflection.evidence.map((item: { source: string }) => item.source),
       confidenceLabel: body.reflection.confidenceLabel,
     };
-  });
+  }, `Why did I say ${continuityFollowup}, and what memory evidence supports it?`);
 
   expect(twinResult.status).toBe(200);
   expect(twinResult.hasAnswer).toBe(true);
   expect(twinResult.evidenceCount).toBeGreaterThan(0);
+  expect(twinResult.evidenceSources.some((source: string) => source === "memory" || source === "message")).toBe(true);
   expect(twinResult.confidenceLabel).toMatch(/early|forming|grounded|strong/);
   await page.getByRole("button", { name: "Ask Twin" }).click();
   await expect(page.getByRole("heading", { name: "Evidence" })).toBeVisible();
