@@ -10,9 +10,22 @@ const labels: Record<MentalStateTrendMetric, string> = {
   motivation: "Motivation",
   socialWithdrawal: "Withdrawal",
   supportNeed: "Support",
+  cognitiveDistortionRisk: "Distortion candidate",
+  motivationalCollapseRisk: "Motivation risk",
+  baselineDeviation: "Baseline shift",
+  abstentionRisk: "Caution",
 };
 
-const visibleMetrics: MentalStateTrendMetric[] = ["stressLoad", "burnoutRisk", "rumination", "motivation", "supportNeed"];
+const visibleMetrics: MentalStateTrendMetric[] = [
+  "stressLoad",
+  "burnoutRisk",
+  "rumination",
+  "motivation",
+  "supportNeed",
+  "cognitiveDistortionRisk",
+  "motivationalCollapseRisk",
+  "abstentionRisk",
+];
 
 function deltaLabel(value: number) {
   const percent = Math.round(value * 100);
@@ -55,6 +68,9 @@ export function StateHistoryPanel({ history }: { history: MentalStateHistoryRepo
             <ScoreBar label="Rumination" value={current.rumination} tone="zinc" />
             <ScoreBar label="Motivation" value={current.motivation} tone="teal" />
             <ScoreBar label="Support need" value={current.supportNeed} />
+            <ScoreBar label="Distortion candidate" value={current.cognitiveDistortionRisk} tone="zinc" />
+            <ScoreBar label="Motivation drop risk" value={current.motivationalCollapseRisk} tone="zinc" />
+            <ScoreBar label="Interpretation caution" value={current.abstentionRisk} tone="zinc" />
           </div>
           <div className="space-y-3">
             <div className="rounded-md border border-white/[0.08] bg-black/40 p-3">

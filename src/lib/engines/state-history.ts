@@ -9,6 +9,10 @@ export const mentalStateTrendMetrics: MentalStateTrendMetric[] = [
   "motivation",
   "socialWithdrawal",
   "supportNeed",
+  "cognitiveDistortionRisk",
+  "motivationalCollapseRisk",
+  "baselineDeviation",
+  "abstentionRisk",
 ];
 
 function emptyDeltas(): MentalStateTrendDeltas {
@@ -20,6 +24,10 @@ function emptyDeltas(): MentalStateTrendDeltas {
     motivation: 0,
     socialWithdrawal: 0,
     supportNeed: 0,
+    cognitiveDistortionRisk: 0,
+    motivationalCollapseRisk: 0,
+    baselineDeviation: 0,
+    abstentionRisk: 0,
   };
 }
 
@@ -37,6 +45,10 @@ function buildDirectionSummary(current: MentalStateEstimate | null, previous: Me
 
   if (deltas.rumination > 0.08) {
     return "최근에는 반복 사고 신호가 올라왔습니다. 같은 생각이 실제 문제인지, 불안의 반복인지 나누어 보는 편이 좋습니다.";
+  }
+
+  if (deltas.cognitiveDistortionRisk > 0.08 || deltas.abstentionRisk > 0.08) {
+    return "최근에는 해석을 조심해야 할 후보 신호가 커졌습니다. BELIFE는 단정하지 않고 근거가 더 필요한 부분을 분리해 봅니다.";
   }
 
   if (Math.abs(deltas.stressLoad) < 0.05 && Math.abs(deltas.motivation) < 0.05) {

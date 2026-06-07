@@ -68,6 +68,10 @@ const rawExtractionSchema = z.object({
       motivation: z.number().min(0).max(1).optional(),
       socialWithdrawal: z.number().min(0).max(1).optional(),
       supportNeed: z.number().min(0).max(1).optional(),
+      cognitiveDistortionRisk: z.number().min(0).max(1).optional(),
+      motivationalCollapseRisk: z.number().min(0).max(1).optional(),
+      baselineDeviation: z.number().min(0).max(1).optional(),
+      abstentionRisk: z.number().min(0).max(1).optional(),
       confidence: z.number().min(0).max(1).optional(),
       summary: z.string().min(1).max(260).optional(),
       drivers: z.array(z.string().min(1).max(80)).max(6).optional(),
@@ -173,7 +177,7 @@ Return JSON with this exact top-level shape:
 {
   "memoryChunks": [{"content": "short attributable fact", "kind": "semantic|behavior|state|relationship", "salience": 0.0, "evidenceType": "EXTRACTED|INFERRED|AMBIGUOUS", "tags": ["tag"]}],
   "ontologyCandidates": [{"type": "Value|Belief|Goal|EmotionPattern|DecisionPattern|FrictionPattern|EnergyPattern|GrowthTrajectory|RiskSignal|RecoveryHint|CognitiveBiasCandidate", "label": "short Korean label", "summary": "evidence-based Korean summary", "tier": "L1|L2|L3", "certainty": "EXTRACTED|INFERRED|AMBIGUOUS", "confidence": 0.0}],
-  "mentalState": {"stressLoad": 0.0, "burnoutRisk": 0.0, "rumination": 0.0, "emotionalVolatility": 0.0, "motivation": 0.0, "socialWithdrawal": 0.0, "supportNeed": 0.0, "confidence": 0.0, "summary": "non-clinical Korean interpretation", "drivers": ["driver"]},
+  "mentalState": {"stressLoad": 0.0, "burnoutRisk": 0.0, "rumination": 0.0, "emotionalVolatility": 0.0, "motivation": 0.0, "socialWithdrawal": 0.0, "supportNeed": 0.0, "cognitiveDistortionRisk": 0.0, "motivationalCollapseRisk": 0.0, "baselineDeviation": 0.0, "abstentionRisk": 0.0, "confidence": 0.0, "summary": "non-clinical Korean interpretation", "drivers": ["driver"]},
   "behavior": {"questionFrequency": 0.0, "directness": 0.0, "disclosureSpeed": 0.0, "empathyOrientation": 0.0, "solutionOrientation": 0.0, "abstraction": 0.0, "conflictSensitivity": 0.0, "pacing": 0.0, "warmth": 0.0, "confidence": 0.0, "summary": "Korean behavior summary"}
 }
 
@@ -284,6 +288,10 @@ function normalizeState(
     motivation: clamp(state.motivation ?? fallback.motivation),
     socialWithdrawal: clamp(state.socialWithdrawal ?? fallback.socialWithdrawal),
     supportNeed: clamp(state.supportNeed ?? fallback.supportNeed),
+    cognitiveDistortionRisk: clamp(state.cognitiveDistortionRisk ?? fallback.cognitiveDistortionRisk),
+    motivationalCollapseRisk: clamp(state.motivationalCollapseRisk ?? fallback.motivationalCollapseRisk),
+    baselineDeviation: clamp(state.baselineDeviation ?? fallback.baselineDeviation),
+    abstentionRisk: clamp(state.abstentionRisk ?? fallback.abstentionRisk),
     confidence: clamp(state.confidence ?? fallback.confidence),
     summary: compactText(state.summary ?? fallback.summary, 260),
     drivers: (state.drivers?.length ? state.drivers : fallback.drivers).slice(0, 6),

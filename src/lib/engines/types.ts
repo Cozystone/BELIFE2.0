@@ -134,6 +134,10 @@ export interface MentalStateEstimate {
   motivation: number;
   socialWithdrawal: number;
   supportNeed: number;
+  cognitiveDistortionRisk: number;
+  motivationalCollapseRisk: number;
+  baselineDeviation: number;
+  abstentionRisk: number;
   confidence: number;
   summary: string;
   drivers: string[];
@@ -147,7 +151,11 @@ export type MentalStateTrendMetric =
   | "emotionalVolatility"
   | "motivation"
   | "socialWithdrawal"
-  | "supportNeed";
+  | "supportNeed"
+  | "cognitiveDistortionRisk"
+  | "motivationalCollapseRisk"
+  | "baselineDeviation"
+  | "abstentionRisk";
 
 export type MentalStateTrendDeltas = Record<MentalStateTrendMetric, number>;
 

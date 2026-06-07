@@ -94,6 +94,8 @@ export default async function TodayPage() {
             <ScoreBar label="Stress load" value={briefing.state.stressLoad} />
             <ScoreBar label="Burnout risk" value={briefing.state.burnoutRisk} tone="teal" />
             <ScoreBar label="Support need" value={briefing.state.supportNeed} tone="zinc" />
+            <ScoreBar label="Interpretation caution" value={briefing.state.abstentionRisk} tone="zinc" />
+            <ScoreBar label="Motivation drop risk" value={briefing.state.motivationalCollapseRisk} tone="teal" />
           </div>
         </article>
         <article className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">

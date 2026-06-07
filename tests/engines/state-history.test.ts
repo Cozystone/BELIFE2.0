@@ -11,6 +11,10 @@ function state(overrides: Partial<MentalStateEstimate>): MentalStateEstimate {
     motivation: 0.4,
     socialWithdrawal: 0.1,
     supportNeed: 0.2,
+    cognitiveDistortionRisk: 0.18,
+    motivationalCollapseRisk: 0.24,
+    baselineDeviation: 0.1,
+    abstentionRisk: 0.2,
     confidence: 0.5,
     summary: "test state",
     drivers: ["test"],
@@ -40,5 +44,16 @@ describe("buildMentalStateHistoryReport", () => {
     expect(report.previous).toBeNull();
     expect(report.deltas.motivation).toBe(0);
     expect(report.directionSummary).toContain("첫 상태 추정");
+  });
+
+  it("tracks v2 interpretation caution signals", () => {
+    const report = buildMentalStateHistoryReport([
+      state({ cognitiveDistortionRisk: 0.18, abstentionRisk: 0.2, createdAt: "2026-01-01T00:00:00.000Z" }),
+      state({ cognitiveDistortionRisk: 0.42, abstentionRisk: 0.34, createdAt: "2026-01-02T00:00:00.000Z" }),
+    ]);
+
+    expect(report.deltas.cognitiveDistortionRisk).toBeCloseTo(0.24);
+    expect(report.deltas.abstentionRisk).toBeCloseTo(0.14);
+    expect(report.directionSummary).toContain("해석을 조심");
   });
 });

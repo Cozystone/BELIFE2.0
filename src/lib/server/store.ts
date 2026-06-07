@@ -20,6 +20,7 @@ import {
   type StateEstimateRow,
 } from "@/lib/db/schema";
 import { calculateContradictionInverse } from "@/lib/engines/data-trust";
+import { completeMentalStateSignals } from "@/lib/engines/mental-state";
 import { buildOntologyGraph } from "@/lib/engines/ontology";
 import {
   profileEnrichmentDismissalTag,
@@ -200,7 +201,7 @@ function mapEdge(row: OntologyEdgeRow): OntologyEdge {
 }
 
 function mapState(row: StateEstimateRow): MentalStateEstimate {
-  return {
+  return completeMentalStateSignals({
     stressLoad: row.stressLoad,
     burnoutRisk: row.burnoutRisk,
     rumination: row.rumination,
@@ -212,7 +213,7 @@ function mapState(row: StateEstimateRow): MentalStateEstimate {
     summary: row.summary,
     drivers: row.drivers ?? [],
     createdAt: dateToIso(row.createdAt),
-  };
+  });
 }
 
 function shortNodeId(id: string) {
