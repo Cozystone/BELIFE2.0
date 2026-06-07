@@ -72,25 +72,30 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await page.getByRole("button", { name: "Create account" }).click();
 
   await expect(page.getByRole("heading", { name: "처음부터 완벽한 프로필은 필요 없어요" })).toBeVisible();
-  const onboardingStatus = await page.evaluate(async () => {
-    const response = await fetch("/api/onboarding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nickname: "E2E Debug",
-        role: "제품을 만드는 사람",
-        mainWorry: "요즘 같은 걱정을 반복해서 생각합니다.",
-        currentGoal: "BELIFE가 나의 패턴을 더 잘 이해하게 만들고 싶습니다.",
-        importantValue: "정직함과 장기적인 신뢰",
-        stressReaction: "스트레스를 받으면 혼자 오래 생각합니다.",
-        emotionalClimate: "조용하지만 조금 예민합니다.",
-        preferredTone: "차분하고 솔직하게",
-        relationshipHope: "안전하고 오래 갈 수 있는 관계",
-      }),
-    });
-    return response.status;
-  });
-  expect(onboardingStatus).toBe(200);
+  const onboardingValues = [
+    "E2E Debug",
+    "제품을 만드는 사람",
+    "요즘 같은 걱정을 반복해서 생각합니다.",
+    "BELIFE가 나의 패턴을 더 잘 이해하게 만들고 싶습니다.",
+    "정직함과 장기적인 신뢰",
+    "스트레스를 받으면 혼자 오래 생각합니다.",
+    "조용하지만 조금 예민합니다.",
+    "차분하고 솔직하게",
+    "안전하고 오래 갈 수 있는 관계",
+  ];
+  const onboardingInputs = page.locator("main input");
+  await expect(onboardingInputs).toHaveCount(onboardingValues.length);
+  for (const [index, value] of onboardingValues.entries()) {
+    await onboardingInputs.nth(index).fill(value);
+  }
+  const onboardingResponsePromise = page.waitForResponse(
+    (response) => response.url().includes("/api/onboarding") && response.request().method() === "POST",
+    { timeout: 45_000 },
+  );
+  await page.getByRole("button", { name: "Start BELIFE" }).click();
+  expect((await onboardingResponsePromise).status()).toBe(200);
+  await page.waitForURL(/\/app\/talk\?conversation=new&draft=/, { timeout: 30_000 });
+  await expect(page.locator("textarea")).toHaveValue(/BELIFE 첫 대화/);
 
   const briefingStatus = await page.evaluate(async () => {
     const response = await fetch("/api/briefing");

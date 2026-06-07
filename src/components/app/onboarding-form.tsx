@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { belifeFetch } from "@/lib/client/auth-fetch";
+import { buildOnboardingStarterDraft } from "@/lib/engines/onboarding";
+import type { OnboardingAnswers } from "@/lib/engines/types";
 
 const fields = [
   ["nickname", "어떻게 불러드릴까요?", "예: 서연"],
@@ -19,7 +21,7 @@ const fields = [
 
 export function OnboardingForm() {
   const router = useRouter();
-  const [values, setValues] = useState<Record<string, string>>({
+  const [values, setValues] = useState<OnboardingAnswers>({
     nickname: "",
     role: "",
     mainWorry: "",
@@ -44,7 +46,11 @@ export function OnboardingForm() {
         body: JSON.stringify(values),
       });
       if (response.ok) {
-        router.push("/app/talk");
+        const params = new URLSearchParams({
+          conversation: "new",
+          draft: buildOnboardingStarterDraft(values),
+        });
+        router.push(`/app/talk?${params.toString()}`);
         router.refresh();
       } else {
         const body = (await response.json()) as { error?: string };
