@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ollamaGenerate } from "@/lib/ai/ollama";
+import { buildStructuredExtraction } from "@/lib/ai/structured-extraction";
 import { buildConnectionPreview } from "@/lib/engines/compatibility";
 import { calculateDataTrust } from "@/lib/engines/data-trust";
-import { estimateBehavior } from "@/lib/engines/behavior";
 import { estimateMentalState } from "@/lib/engines/mental-state";
-import { createMemoryChunks, extractOntologyCandidates, filterOntologyView } from "@/lib/engines/ontology";
+import { filterOntologyView } from "@/lib/engines/ontology";
 import type {
   BelifeUser,
   Briefing,
@@ -65,13 +65,15 @@ export async function saveOnboarding(user: BelifeUser, answers: OnboardingAnswer
     answers.emotionalClimate,
     answers.relationshipHope,
   ].join("\n");
-  const nodes = extractOntologyCandidates(user.id, initialText);
-  await store.saveMemoryChunks(createMemoryChunks(user.id, initialText));
-  await store.upsertOntologyNodes(user.id, nodes);
-  const behavior = estimateBehavior(initialText, null);
-  const state = estimateMentalState(initialText, null);
-  await store.saveBehavior(user.id, behavior);
-  await store.saveStateEstimate(user.id, state);
+  const extraction = await buildStructuredExtraction({
+    userId: user.id,
+    text: initialText,
+    source: "onboarding",
+  });
+  await store.saveMemoryChunks(extraction.chunks);
+  await store.upsertOntologyNodes(user.id, extraction.nodes);
+  await store.saveBehavior(user.id, extraction.behavior);
+  await store.saveStateEstimate(user.id, extraction.state);
   await refreshDataTrust(user.id);
   return profile;
 }
@@ -104,15 +106,19 @@ export async function handleConversationMessage(input: {
     store.getOntologyNodes(input.user.id),
   ]);
 
-  const chunks = createMemoryChunks(input.user.id, input.content, userMessage.id);
-  const candidateNodes = extractOntologyCandidates(input.user.id, input.content);
-  const state = estimateMentalState(input.content, previousState);
-  const behavior = estimateBehavior(input.content, previousBehavior);
+  const extraction = await buildStructuredExtraction({
+    userId: input.user.id,
+    text: input.content,
+    messageId: userMessage.id,
+    source: input.source,
+    previousState,
+    previousBehavior,
+  });
 
-  await store.saveMemoryChunks(chunks);
-  const savedNodes = await store.upsertOntologyNodes(input.user.id, candidateNodes);
-  await store.saveStateEstimate(input.user.id, state);
-  await store.saveBehavior(input.user.id, behavior);
+  await store.saveMemoryChunks(extraction.chunks);
+  const savedNodes = await store.upsertOntologyNodes(input.user.id, extraction.nodes);
+  await store.saveStateEstimate(input.user.id, extraction.state);
+  await store.saveBehavior(input.user.id, extraction.behavior);
   const dataTrust = await refreshDataTrust(input.user.id);
   const allNodes = mergeNodes(currentNodes, savedNodes);
   const assistantText = await buildAssistantReply({
@@ -120,7 +126,7 @@ export async function handleConversationMessage(input: {
     content: input.content,
     recentMessages,
     nodes: allNodes,
-    stateSummary: state.summary,
+    stateSummary: extraction.state.summary,
     tone: profile?.preferredTone ?? "calm",
   });
 
@@ -135,8 +141,8 @@ export async function handleConversationMessage(input: {
   return {
     userMessage,
     assistantMessage,
-    state,
-    behavior,
+    state: extraction.state,
+    behavior: extraction.behavior,
     dataTrust,
     ontologyUpdates: savedNodes,
   };

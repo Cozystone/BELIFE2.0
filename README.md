@@ -8,6 +8,7 @@ BELIFE is a Korean-first, voice-first personal AI intelligence service. It turns
 - Clerk auth when configured, or BELIFE native auth on Neon when Clerk env vars are absent
 - Neon Postgres + Drizzle, with in-memory demo mode when `DATABASE_URL` is absent
 - Ollama-first AI runtime via `OLLAMA_BASE_URL`
+- Structured Ollama JSON extraction for memory chunks, ontology candidates, behavior signals, and mental-state estimates, with deterministic fallback when Ollama is unavailable
 - Mobile-centered UI with voice input through browser speech APIs
 
 ## Local Development
