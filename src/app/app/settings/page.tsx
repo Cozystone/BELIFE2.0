@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle2, Database, KeyRound, Server, Terminal } from "lucide-react";
 import { DataControlsPanel } from "@/components/app/data-controls-panel";
 import { MemoryCorrectionPanel } from "@/components/app/memory-correction-panel";
+import { MemoryHealthPanel } from "@/components/app/memory-health-panel";
 import { MemoryImportPanel } from "@/components/app/memory-import-panel";
 import { PrivacyPreferencesPanel } from "@/components/app/privacy-preferences-panel";
 import { ProfileEnrichmentPanel } from "@/components/app/profile-enrichment-panel";
@@ -10,6 +11,7 @@ import { getOllamaBaseUrl, getOllamaHealth, getOllamaModel, getOllamaRuntimeDiag
 import { hasDatabaseUrl } from "@/lib/db/client";
 import {
   getDataTrustCenter,
+  getMemoryHealth,
   getPrivacyPreferences,
   getProfileEnrichmentSuggestions,
   requireUserForPage,
@@ -30,12 +32,13 @@ function formatOptionalDate(value?: string) {
 
 export default async function SettingsPage() {
   const user = await requireUserForPage();
-  const [profile, ollamaHealth, enrichmentSuggestions, dataTrustCenter, privacyPreferences] = await Promise.all([
+  const [profile, ollamaHealth, enrichmentSuggestions, dataTrustCenter, privacyPreferences, memoryHealth] = await Promise.all([
     getStore().getProfile(user.id),
     getOllamaHealth(),
     getProfileEnrichmentSuggestions(user.id),
     getDataTrustCenter(user.id),
     getPrivacyPreferences(user.id),
+    getMemoryHealth(user.id),
   ]);
   const readiness = getReadinessReport({ ollamaHealth });
   const aiRuntime = getOllamaRuntimeDiagnostics(ollamaHealth);
@@ -225,6 +228,7 @@ export default async function SettingsPage() {
           {dataTrust.explanation} 현재 세션 수는 {stats.sessionCount}개, 온톨로지 노드는 {stats.ontologyCount}개입니다.
         </p>
       </section>
+      <MemoryHealthPanel report={memoryHealth} />
       <PrivacyPreferencesPanel initialPreferences={privacyPreferences} />
       <MemoryImportPanel />
       <MemoryCorrectionPanel />

@@ -264,6 +264,62 @@ export interface BelifeMemoryInventory {
   };
 }
 
+export type MemoryHealthLabel = "thin" | "building" | "healthy" | "rich";
+export type MemoryHealthSeverity = "low" | "medium" | "high";
+export type MemoryHealthWatchKind = "contradiction" | "stale" | "low_confidence" | "correction";
+export type MemoryHealthAnchorSource = "memory" | "message" | "ontology";
+
+export interface MemoryHealthFreshnessWindow {
+  label: "7d" | "30d" | "90d";
+  count: number;
+}
+
+export interface MemoryHealthWatchItem {
+  id: string;
+  kind: MemoryHealthWatchKind;
+  label: string;
+  severity: MemoryHealthSeverity;
+  reason: string;
+  evidence: string;
+  suggestedAction: string;
+  createdAt?: string;
+}
+
+export interface MemoryHealthAnchor {
+  id: string;
+  source: MemoryHealthAnchorSource;
+  label: string;
+  detail: string;
+  confidence: number;
+  salience?: number;
+  createdAt?: string;
+}
+
+export interface MemoryHealthReport {
+  generatedAt: string;
+  score: number;
+  label: MemoryHealthLabel;
+  summary: string;
+  guardrail: string;
+  freshness: {
+    score: number;
+    latestMemoryAt?: string;
+    latestMessageAt?: string;
+    windows: MemoryHealthFreshnessWindow[];
+  };
+  evidenceBalance: {
+    extracted: number;
+    inferred: number;
+    ambiguous: number;
+    correctionCount: number;
+    ambiguityRatio: number;
+  };
+  contradictionWatchlist: MemoryHealthWatchItem[];
+  forgettingCandidates: MemoryHealthWatchItem[];
+  episodicAnchors: MemoryHealthAnchor[];
+  nextActions: string[];
+}
+
 export interface BelifeDataExport {
   schemaVersion: 1;
   exportedAt: string;

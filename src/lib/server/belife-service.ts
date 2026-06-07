@@ -34,6 +34,7 @@ import {
   relationshipPairTag,
 } from "@/lib/engines/relationship-memory";
 import { buildMentalStateHistoryReport } from "@/lib/engines/state-history";
+import { buildMemoryHealthReport } from "@/lib/engines/memory-health";
 import type {
   BelifeUser,
   Briefing,
@@ -846,6 +847,17 @@ export async function getDataTrustCenter(userId: string) {
   const dataTrust = await refreshDataTrust(userId);
   const [stats, inventory] = await Promise.all([store.getStats(userId), store.getMemoryInventory(userId)]);
   return { dataTrust, audit: buildDataTrustAudit(dataTrust), stats, inventory };
+}
+
+export async function getMemoryHealth(userId: string) {
+  const store = getStore();
+  const [inventory, chunks, nodes, messages] = await Promise.all([
+    store.getMemoryInventory(userId),
+    store.getRecentMemoryChunks(userId, 120),
+    store.getOntologyNodes(userId),
+    store.getRecentMessages(userId, 40),
+  ]);
+  return buildMemoryHealthReport({ inventory, chunks, nodes, messages });
 }
 
 export async function getMemoryTimeline(userId: string, limit?: number) {

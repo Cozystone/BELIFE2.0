@@ -462,6 +462,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Memory Health" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Privacy Preferences" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Memory Import" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Memory Correction" })).toBeVisible();
@@ -504,6 +505,28 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(dataTrustApiResult.score).toBeGreaterThanOrEqual(0);
   expect(dataTrustApiResult.weakestCount).toBe(3);
   expect(dataTrustApiResult.actionCount).toBe(3);
+  const memoryHealthResult = await page.evaluate(async () => {
+    const response = await fetch("/api/memory/health");
+    const body = await response.json();
+    return {
+      status: response.status,
+      score: body.report?.score,
+      label: body.report?.label,
+      guardrail: body.report?.guardrail ?? "",
+      windowCount: body.report?.freshness?.windows?.length ?? 0,
+      anchorCount: body.report?.episodicAnchors?.length ?? 0,
+      nextActionCount: body.report?.nextActions?.length ?? 0,
+    };
+  });
+
+  expect(memoryHealthResult.status).toBe(200);
+  expect(memoryHealthResult.score).toBeGreaterThanOrEqual(0);
+  expect(memoryHealthResult.score).toBeLessThanOrEqual(1);
+  expect(memoryHealthResult.label).toMatch(/thin|building|healthy|rich/);
+  expect(memoryHealthResult.guardrail).toContain("append-only");
+  expect(memoryHealthResult.windowCount).toBe(3);
+  expect(memoryHealthResult.anchorCount).toBeGreaterThan(0);
+  expect(memoryHealthResult.nextActionCount).toBeGreaterThan(0);
   const privacyResult = await page.evaluate(async () => {
     const initial = await fetch("/api/privacy");
     const initialBody = await initial.json();

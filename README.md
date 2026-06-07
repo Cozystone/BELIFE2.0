@@ -15,6 +15,7 @@ BELIFE is a Korean-first, voice-first personal AI intelligence service. It turns
 - Today briefing evidence ledger linking interpretations back to memory, messages, and ontology signals
 - Privacy Preferences through `GET/POST /api/privacy` for evidence visibility and private Human Connection previews
 - Data Trust Center with score breakdown, interpretation guardrails, weakest signals, and next trust-gain actions
+- Memory Health maintenance lens through `GET /api/memory/health`
 - Digital Twin responses are evidence-based and capped by a Data Trust gate
 - Human Connection preview includes private scenario rehearsal through `POST /api/connection/simulate`
 - Internal Human Connection candidate filtering through `GET /api/connection/candidates`
