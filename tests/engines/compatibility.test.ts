@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildConnectionPreview } from "@/lib/engines/compatibility";
+import { buildConnectionPreview, simulateConnectionScenario } from "@/lib/engines/compatibility";
 import type { BehaviorSnapshot, DataTrustScore, OntologyNode } from "@/lib/engines/types";
 
 const trust: DataTrustScore = {
@@ -158,5 +158,42 @@ describe("buildConnectionPreview", () => {
     expect(nextPreview.hiddenEdge.mechanisms.reciprocity).toBe(nextPreview.hiddenEdge.responsiveness);
     expect(nextPreview.hiddenEdge.mechanisms.drift).toBeGreaterThanOrEqual(0);
     expect(nextPreview.hiddenEdge.mechanisms.conflictToxicity).toBeGreaterThanOrEqual(0);
+  });
+
+  it("runs custom relationship simulations without exposing public matching", () => {
+    const preview = buildConnectionPreview([], warmBehavior, trust);
+    const calmSimulation = simulateConnectionScenario(preview, {
+      scenarioType: "misunderstanding",
+      relationshipMode: "friendship",
+      timeHorizon: "immediate",
+      scene: "I want to clarify a small misunderstanding.",
+      pressure: 0.18,
+      vulnerability: 0.42,
+    });
+    const pressuredSimulation = simulateConnectionScenario(preview, {
+      ...calmSimulation.input,
+      scene: "I need to talk about a repeated misunderstanding that feels important and emotionally loaded.",
+      pressure: 0.88,
+      vulnerability: 0.72,
+    });
+
+    expect(calmSimulation.guardrail).toContain("not a prediction");
+    expect(calmSimulation.scenario.title).toContain("Custom");
+    expect(calmSimulation.guidance.openingMove.length).toBeGreaterThan(20);
+    expect(calmSimulation.modeFit).toBe(preview.hiddenEdge.modeScores.friendship);
+    expect(pressuredSimulation.stressLoad).toBeGreaterThan(calmSimulation.stressLoad);
+    expect(pressuredSimulation.scenario.state.disengagementRisk).toBeGreaterThan(
+      calmSimulation.scenario.state.disengagementRisk,
+    );
+    for (const value of [
+      calmSimulation.readiness,
+      calmSimulation.modeFit,
+      calmSimulation.stressLoad,
+      pressuredSimulation.readiness,
+      pressuredSimulation.scenario.confidence,
+    ]) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(1);
+    }
   });
 });

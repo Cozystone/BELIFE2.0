@@ -333,6 +333,9 @@ export type ConnectionScenarioType =
   | "reselection"
   | "longitudinal_drift";
 
+export type ConnectionRelationshipMode = "friendship" | "collaboration" | "mentorship";
+export type ConnectionSimulationHorizon = "immediate" | "next_month" | "long_term";
+
 export interface ConnectionScenarioState {
   trust: number;
   emotionalSafety: number;
@@ -364,6 +367,32 @@ export interface ConnectionScenarioPreview {
   state: ConnectionScenarioState;
   confidence: number;
   simulation: ConnectionScenarioSimulation;
+}
+
+export interface ConnectionSimulationInput {
+  scenarioType: ConnectionScenarioType;
+  relationshipMode: ConnectionRelationshipMode;
+  timeHorizon: ConnectionSimulationHorizon;
+  scene: string;
+  pressure: number;
+  vulnerability: number;
+}
+
+export interface ConnectionSimulationGuidance {
+  openingMove: string;
+  supportMove: string;
+  riskToWatch: string;
+  repairMove: string;
+}
+
+export interface ConnectionSimulationResult {
+  input: ConnectionSimulationInput;
+  scenario: ConnectionScenarioPreview;
+  readiness: number;
+  modeFit: number;
+  stressLoad: number;
+  guidance: ConnectionSimulationGuidance;
+  guardrail: string;
 }
 
 export type ConnectionAxisKey =

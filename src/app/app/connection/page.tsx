@@ -1,5 +1,6 @@
 import { FileText, MessageCircle, Network, Route, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
+import { ConnectionSimulator } from "@/components/app/connection-simulator";
 import { ScoreBar } from "@/components/app/score-bar";
 import { getConnectionPreview, requireUserForPage } from "@/lib/server/belife-service";
 
@@ -149,6 +150,8 @@ export default async function ConnectionPage() {
           </div>
         </article>
       </div>
+
+      <ConnectionSimulator initialPreview={preview} />
 
       <section className="space-y-3">
         <div className="flex items-center gap-3">

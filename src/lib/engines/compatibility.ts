@@ -3,7 +3,12 @@ import type {
   BehaviorSnapshot,
   ConnectionAxisInsight,
   ConnectionHiddenEdge,
+  ConnectionRelationshipMode,
+  ConnectionScenarioType,
   CompatibilityAxes,
+  ConnectionSimulationHorizon,
+  ConnectionSimulationInput,
+  ConnectionSimulationResult,
   ConnectionRelationshipReport,
   ConnectionScenarioPreview,
   ConnectionScenarioSimulation,
@@ -94,6 +99,99 @@ export function buildConnectionPreview(
   };
 }
 
+export const connectionScenarioTypes = [
+  "first_contact",
+  "light_disagreement",
+  "emotional_vulnerability",
+  "pressure",
+  "misunderstanding",
+  "repair_attempt",
+  "collaboration",
+  "reselection",
+  "longitudinal_drift",
+] as const satisfies readonly [ConnectionScenarioType, ...ConnectionScenarioType[]];
+
+export const connectionRelationshipModes = [
+  "friendship",
+  "collaboration",
+  "mentorship",
+] as const satisfies readonly [ConnectionRelationshipMode, ...ConnectionRelationshipMode[]];
+export const connectionSimulationHorizons = [
+  "immediate",
+  "next_month",
+  "long_term",
+] as const satisfies readonly [ConnectionSimulationHorizon, ...ConnectionSimulationHorizon[]];
+
+export function simulateConnectionScenario(
+  preview: CompatibilityAxes,
+  input: ConnectionSimulationInput,
+): ConnectionSimulationResult {
+  const baseScenario = preview.scenarioPreviews.find((scenario) => scenario.type === input.scenarioType) ?? preview.scenarioPreviews[0];
+  const scenario = baseScenario ?? buildFallbackScenario(preview);
+  const normalizedInput = normalizeSimulationInput(input, scenario.type);
+  const modeFit = preview.hiddenEdge.modeScores[normalizedInput.relationshipMode];
+  const sceneSignal = clamp(normalizedInput.scene.trim().length / 260, 0.12, 1);
+  const horizonPressure = horizonPressureFor(normalizedInput.timeHorizon);
+  const stressLoad = clamp(normalizedInput.pressure * 0.58 + normalizedInput.vulnerability * 0.22 + horizonPressure * 0.2);
+  const adjustedState = adjustScenarioState({
+    base: scenario.state,
+    preview,
+    modeFit,
+    sceneSignal,
+    pressure: normalizedInput.pressure,
+    vulnerability: normalizedInput.vulnerability,
+    horizonPressure,
+  });
+  const adjustedConfidence = clamp(
+    scenario.confidence * 0.62 +
+      preview.relationshipReport.confidence * 0.2 +
+      sceneSignal * 0.1 +
+      modeFit * 0.08 -
+      normalizedInput.pressure * 0.04,
+  );
+  const adjustedScenario: ConnectionScenarioPreview = {
+    ...scenario,
+    title: `${scenario.title} - Custom`,
+    likelyDynamic: buildCustomLikelyDynamic(normalizedInput, scenario, adjustedState, stressLoad),
+    supportMove: buildCustomSupportMove(normalizedInput, preview, scenario),
+    riskSignal: buildCustomRiskSignal(normalizedInput, scenario, adjustedState),
+    state: adjustedState,
+    confidence: adjustedConfidence,
+    simulation: buildScenarioSimulation(adjustedState, scenario.type, {
+      confidence: adjustedConfidence,
+      conflictSensitivity: clamp(stressLoad * 0.72 + adjustedState.irritation * 0.28),
+      dialogueCompatibility: preview.dialogueCompatibility,
+      emotionalSafety: preview.emotionalSafety,
+      repairPotential: preview.repairPotential,
+    }),
+  };
+  const readiness = clamp(
+    adjustedState.trust * 0.22 +
+      adjustedState.emotionalSafety * 0.22 +
+      adjustedState.reciprocity * 0.16 +
+      adjustedState.repairWillingness * 0.18 +
+      modeFit * 0.14 -
+      adjustedState.disengagementRisk * 0.12 -
+      stressLoad * 0.08,
+  );
+
+  return {
+    input: normalizedInput,
+    scenario: adjustedScenario,
+    readiness,
+    modeFit,
+    stressLoad,
+    guidance: {
+      openingMove: buildOpeningMove(readiness, normalizedInput),
+      supportMove: adjustedScenario.supportMove,
+      riskToWatch: adjustedScenario.riskSignal,
+      repairMove: buildRepairMove(adjustedState, preview),
+    },
+    guardrail:
+      "This is an internal BELIFE relationship rehearsal, not a prediction, diagnosis, or public matching decision.",
+  };
+}
+
 function buildRelationshipReport(input: {
   axes: Pick<
     CompatibilityAxes,
@@ -162,6 +260,155 @@ function buildRelationshipReport(input: {
     blindSpots,
     nextObservationPrompts,
   };
+}
+
+function normalizeSimulationInput(
+  input: ConnectionSimulationInput,
+  fallbackScenarioType: ConnectionScenarioPreview["type"],
+): ConnectionSimulationInput {
+  return {
+    scenarioType: connectionScenarioTypes.includes(input.scenarioType) ? input.scenarioType : fallbackScenarioType,
+    relationshipMode: connectionRelationshipModes.includes(input.relationshipMode) ? input.relationshipMode : "friendship",
+    timeHorizon: connectionSimulationHorizons.includes(input.timeHorizon) ? input.timeHorizon : "immediate",
+    scene: input.scene.trim().slice(0, 1200),
+    pressure: clamp(input.pressure),
+    vulnerability: clamp(input.vulnerability),
+  };
+}
+
+function buildFallbackScenario(preview: CompatibilityAxes): ConnectionScenarioPreview {
+  const state: ConnectionScenarioState = {
+    trust: preview.hiddenEdge.edgeStrength,
+    emotionalSafety: preview.emotionalSafety,
+    irritation: 0.24,
+    curiosity: preview.structuralSimilarity,
+    reciprocity: preview.dialogueCompatibility,
+    openness: 0.42,
+    repairWillingness: preview.repairPotential,
+    disengagementRisk: preview.hiddenEdge.mechanisms.drift,
+    commitmentTendency: preview.complementarity,
+  };
+  return {
+    type: "first_contact",
+    title: "First Contact",
+    likelyDynamic: "BELIFE has enough signal for an early relationship rehearsal, but not for a deterministic prediction.",
+    supportMove: "Start with a small, observable exchange before making a strong relationship conclusion.",
+    riskSignal: "If the exchange starts demanding certainty too quickly, slow the pace and collect more signal.",
+    state,
+    confidence: preview.relationshipReport.confidence,
+    simulation: buildScenarioSimulation(state, "first_contact", {
+      confidence: preview.relationshipReport.confidence,
+      conflictSensitivity: preview.hiddenEdge.mechanisms.conflictToxicity,
+      dialogueCompatibility: preview.dialogueCompatibility,
+      emotionalSafety: preview.emotionalSafety,
+      repairPotential: preview.repairPotential,
+    }),
+  };
+}
+
+function horizonPressureFor(horizon: ConnectionSimulationHorizon) {
+  if (horizon === "long_term") return 0.44;
+  if (horizon === "next_month") return 0.24;
+  return 0.1;
+}
+
+function adjustScenarioState(input: {
+  base: ConnectionScenarioState;
+  preview: CompatibilityAxes;
+  modeFit: number;
+  sceneSignal: number;
+  pressure: number;
+  vulnerability: number;
+  horizonPressure: number;
+}): ConnectionScenarioState {
+  const modeLift = input.modeFit - 0.5;
+  const safetyBuffer = input.preview.emotionalSafety * input.vulnerability;
+  const repairBuffer = input.preview.repairPotential * (1 - input.pressure);
+  const pressureDrag = input.pressure + input.horizonPressure * 0.42;
+
+  return {
+    trust: clamp(input.base.trust + modeLift * 0.16 + safetyBuffer * 0.14 - pressureDrag * 0.12),
+    emotionalSafety: clamp(input.base.emotionalSafety + safetyBuffer * 0.12 + repairBuffer * 0.06 - pressureDrag * 0.13),
+    irritation: clamp(input.base.irritation + input.pressure * 0.2 + input.horizonPressure * 0.06 - repairBuffer * 0.08),
+    curiosity: clamp(input.base.curiosity + input.sceneSignal * 0.08 + modeLift * 0.08 - input.pressure * 0.04),
+    reciprocity: clamp(input.base.reciprocity + modeLift * 0.12 + input.preview.dialogueCompatibility * 0.06 - pressureDrag * 0.08),
+    openness: clamp(input.base.openness + input.vulnerability * 0.16 + input.sceneSignal * 0.05 - pressureDrag * 0.1),
+    repairWillingness: clamp(input.base.repairWillingness + repairBuffer * 0.14 - input.pressure * 0.06),
+    disengagementRisk: clamp(input.base.disengagementRisk + pressureDrag * 0.16 - repairBuffer * 0.1 - modeLift * 0.06),
+    commitmentTendency: clamp(input.base.commitmentTendency + modeLift * 0.18 - input.horizonPressure * 0.08 - input.pressure * 0.04),
+  };
+}
+
+function buildCustomLikelyDynamic(
+  input: ConnectionSimulationInput,
+  scenario: ConnectionScenarioPreview,
+  state: ConnectionScenarioState,
+  stressLoad: number,
+) {
+  if (stressLoad >= 0.7) {
+    return `${scenario.title} is likely to be shaped by pressure first. BELIFE would watch whether trust (${Math.round(
+      state.trust * 100,
+    )}) can stay ahead of irritation and disengagement before treating the connection as stable.`;
+  }
+  if (input.vulnerability >= 0.62 && state.emotionalSafety >= 0.52) {
+    return `${scenario.title} can become a useful vulnerability test if the other side responds with pacing, reflection, and repair rather than quick certainty.`;
+  }
+  if (state.disengagementRisk >= 0.55) {
+    return `${scenario.title} has a visible distance signal. The next move should reduce pressure and make the expected response smaller and clearer.`;
+  }
+  return `${scenario.title} looks workable as a rehearsal scene. The main question is whether reciprocity and repair stay visible after the first exchange.`;
+}
+
+function buildCustomSupportMove(
+  input: ConnectionSimulationInput,
+  preview: CompatibilityAxes,
+  scenario: ConnectionScenarioPreview,
+) {
+  if (input.relationshipMode === "collaboration") {
+    return `Name the shared task, decision boundary, and pace before solving. Current collaboration fit is ${Math.round(
+      preview.hiddenEdge.modeScores.collaboration * 100,
+    )}.`;
+  }
+  if (input.relationshipMode === "mentorship") {
+    return `Ask for one concrete reflection or next step instead of broad reassurance. Current mentorship fit is ${Math.round(
+      preview.hiddenEdge.modeScores.mentorship * 100,
+    )}.`;
+  }
+  if (input.vulnerability >= 0.58) {
+    return "Start with a small truth, then pause for the other person's response before sharing the full emotional load.";
+  }
+  return scenario.supportMove;
+}
+
+function buildCustomRiskSignal(
+  input: ConnectionSimulationInput,
+  scenario: ConnectionScenarioPreview,
+  state: ConnectionScenarioState,
+) {
+  if (input.pressure >= 0.68) {
+    return "The key risk is asking the relationship to provide certainty while both sides still need pacing and signal.";
+  }
+  if (state.irritation >= 0.52) {
+    return "Watch for explanation turning into defense. If that appears, switch from persuasion to impact-checking.";
+  }
+  return scenario.riskSignal;
+}
+
+function buildOpeningMove(readiness: number, input: ConnectionSimulationInput) {
+  if (readiness >= 0.62) {
+    return "Open directly, but keep the ask small enough that the other person can answer honestly.";
+  }
+  if (input.pressure >= 0.6) {
+    return "Lower the stakes first: name the context, ask for a short response, and avoid making the whole relationship the topic.";
+  }
+  return "Begin with observation before interpretation: describe what happened, then ask how they experienced it.";
+}
+
+function buildRepairMove(state: ConnectionScenarioState, preview: CompatibilityAxes) {
+  if (state.repairWillingness >= 0.58 && preview.repairPotential >= 0.5) {
+    return "If tension appears, reflect the impact first, then suggest one next behavior both sides can test.";
+  }
+  return "If tension appears, pause the interpretation and ask for the smallest correctable misunderstanding.";
 }
 
 function buildHiddenEdge(input: {

@@ -330,6 +330,10 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await expect(page.getByRole("heading", { name: "Human Connection Preview" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Hidden Graph" })).toBeVisible();
   await expect(page.getByText("Edge strength")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Custom Scenario Simulation" })).toBeVisible();
+  await page.getByRole("button", { name: "Run simulation" }).click();
+  await expect(page.getByRole("heading", { name: "Simulation result" })).toBeVisible();
+  await expect(page.getByText(/not a prediction/)).toBeVisible();
   const connectionTimelineResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/timeline?limit=24");
     const body = await response.json();

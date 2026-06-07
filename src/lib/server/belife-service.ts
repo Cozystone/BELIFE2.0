@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ollamaGenerate } from "@/lib/ai/ollama";
 import { buildStructuredExtraction } from "@/lib/ai/structured-extraction";
-import { buildConnectionPreview } from "@/lib/engines/compatibility";
+import { buildConnectionPreview, simulateConnectionScenario } from "@/lib/engines/compatibility";
 import { buildDataTrustAudit, calculateDataTrust } from "@/lib/engines/data-trust";
 import { buildTwinReflection } from "@/lib/engines/digital-twin";
 import { rankMemoryEvidence } from "@/lib/engines/evidence-retrieval";
@@ -25,6 +25,7 @@ import type {
   MessageSource,
   OnboardingAnswers,
   OntologyNode,
+  ConnectionSimulationInput,
   ProfileEnrichmentSuggestion,
   UserProfile,
 } from "@/lib/engines/types";
@@ -485,6 +486,32 @@ export async function getConnectionPreview(userId: string) {
   const preview = buildConnectionPreview(nodes, behavior, dataTrust, previousPreview);
   await store.saveConnectionPreview(userId, preview);
   return preview;
+}
+
+export async function simulateConnectionForUser(userId: string, input: ConnectionSimulationInput) {
+  const store = getStore();
+  const preview = await getConnectionPreview(userId);
+  const simulation = simulateConnectionScenario(preview, input);
+  await store.saveMemoryChunks([
+    {
+      userId,
+      content: `Connection simulation: ${simulation.input.scenarioType} / ${simulation.input.relationshipMode} / ${simulation.input.timeHorizon}. Scene: ${compactText(
+        simulation.input.scene,
+        360,
+      )}. Readiness ${Math.round(simulation.readiness * 100)}, stress ${Math.round(simulation.stressLoad * 100)}.`,
+      kind: "relationship",
+      salience: Math.max(0.42, simulation.readiness * 0.64 + simulation.stressLoad * 0.18),
+      evidenceType: "INFERRED",
+      tags: [
+        "connection-simulation",
+        `scenario:${simulation.input.scenarioType}`,
+        `mode:${simulation.input.relationshipMode}`,
+        `horizon:${simulation.input.timeHorizon}`,
+      ],
+    },
+  ]);
+  await refreshDataTrust(userId);
+  return simulation;
 }
 
 export async function getDataTrustCenter(userId: string) {
