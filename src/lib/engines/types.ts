@@ -102,6 +102,26 @@ export interface MentalStateEstimate {
   createdAt: string;
 }
 
+export type MentalStateTrendMetric =
+  | "stressLoad"
+  | "burnoutRisk"
+  | "rumination"
+  | "emotionalVolatility"
+  | "motivation"
+  | "socialWithdrawal"
+  | "supportNeed";
+
+export type MentalStateTrendDeltas = Record<MentalStateTrendMetric, number>;
+
+export interface MentalStateHistoryReport {
+  generatedAt: string;
+  current: MentalStateEstimate | null;
+  previous: MentalStateEstimate | null;
+  deltas: MentalStateTrendDeltas;
+  directionSummary: string;
+  items: MentalStateEstimate[];
+}
+
 export interface BehaviorSnapshot {
   questionFrequency: number;
   directness: number;

@@ -1,14 +1,18 @@
 import { Activity, Brain, Database, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { ScoreBar } from "@/components/app/score-bar";
+import { StateHistoryPanel } from "@/components/app/state-history-panel";
 import { Button } from "@/components/ui/button";
-import { getBriefing, requireUserForPage } from "@/lib/server/belife-service";
+import { getBriefing, getMentalStateHistory, requireUserForPage } from "@/lib/server/belife-service";
 
 export const dynamic = "force-dynamic";
 
 export default async function TodayPage() {
   const user = await requireUserForPage();
-  const briefing = await getBriefing(user.id);
+  const [briefing, stateHistory] = await Promise.all([
+    getBriefing(user.id),
+    getMentalStateHistory(user.id, 8),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -48,6 +52,8 @@ export default async function TodayPage() {
           <p className="mt-4 text-sm leading-6 text-zinc-300">{briefing.recommendedPrompt}</p>
         </article>
       </div>
+
+      <StateHistoryPanel history={stateHistory} />
 
       <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
         <div className="flex items-center gap-2 text-sm text-zinc-400">

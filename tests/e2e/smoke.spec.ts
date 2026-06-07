@@ -61,6 +61,23 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(briefingStatus).toBe(200);
   await page.goto("/app/today");
   await expect(page.getByRole("main").getByText("Today")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "State History" })).toBeVisible();
+  const stateHistoryResult = await page.evaluate(async () => {
+    const response = await fetch("/api/state/history?limit=8");
+    const body = await response.json();
+    return {
+      status: response.status,
+      hasCurrent: Boolean(body.history.current),
+      itemCount: body.history.items.length,
+    };
+  });
+
+  expect(stateHistoryResult).toMatchObject({
+    status: 200,
+    hasCurrent: true,
+  });
+  expect(stateHistoryResult.itemCount).toBeGreaterThan(0);
+
   await page.goto("/app/self-map");
   await expect(page.getByRole("heading", { name: "Memory Timeline" })).toBeVisible();
   const timelineResult = await page.evaluate(async () => {

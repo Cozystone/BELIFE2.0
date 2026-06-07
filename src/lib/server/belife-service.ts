@@ -7,6 +7,7 @@ import { calculateDataTrust } from "@/lib/engines/data-trust";
 import { estimateMentalState } from "@/lib/engines/mental-state";
 import { filterOntologyView } from "@/lib/engines/ontology";
 import { buildProfileEnrichmentSuggestions, findProfileEnrichmentSuggestion } from "@/lib/engines/profile-enrichment";
+import { buildMentalStateHistoryReport } from "@/lib/engines/state-history";
 import type {
   BelifeUser,
   Briefing,
@@ -260,6 +261,11 @@ export async function getBriefing(userId: string): Promise<Briefing> {
     ontologyHighlights: highlights,
     safetyNote: "BELIFE는 비임상적 자기 이해 도구이며, 진단이나 치료를 대체하지 않습니다.",
   };
+}
+
+export async function getMentalStateHistory(userId: string, limit?: number) {
+  const states = await getStore().getStateHistory(userId, limit);
+  return buildMentalStateHistoryReport(states);
 }
 
 export async function getOntologyForView(userId: string, view: "core" | "expanded" | "full") {

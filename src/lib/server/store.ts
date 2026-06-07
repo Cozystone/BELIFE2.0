@@ -66,6 +66,7 @@ export interface BelifeStore {
   getOntologyNodes(userId: string): Promise<OntologyNode[]>;
   saveStateEstimate(userId: string, state: MentalStateEstimate): Promise<void>;
   getLatestState(userId: string): Promise<MentalStateEstimate | null>;
+  getStateHistory(userId: string, limit?: number): Promise<MentalStateEstimate[]>;
   saveBehavior(userId: string, behavior: BehaviorSnapshot): Promise<void>;
   getLatestBehavior(userId: string): Promise<BehaviorSnapshot | null>;
   saveDataTrust(userId: string, trust: DataTrustScore): Promise<void>;
@@ -331,6 +332,17 @@ class DbBelifeStore implements BelifeStore {
       orderBy: desc(stateEstimates.createdAt),
     });
     return row ? mapState(row) : null;
+  }
+
+  async getStateHistory(userId: string, limit = 12) {
+    const safeLimit = Math.max(1, Math.min(30, limit));
+    const rows = await getDb()
+      .select()
+      .from(stateEstimates)
+      .where(eq(stateEstimates.userId, userId))
+      .orderBy(desc(stateEstimates.createdAt))
+      .limit(safeLimit);
+    return rows.map(mapState).reverse();
   }
 
   async saveBehavior(userId: string, behavior: BehaviorSnapshot) {
@@ -681,6 +693,11 @@ class MemoryBelifeStore implements BelifeStore {
 
   async getLatestState(userId: string) {
     return memoryState.states.get(userId)?.at(-1) ?? null;
+  }
+
+  async getStateHistory(userId: string, limit = 12) {
+    const safeLimit = Math.max(1, Math.min(30, limit));
+    return (memoryState.states.get(userId) ?? []).slice(-safeLimit);
   }
 
   async saveBehavior(userId: string, behavior: BehaviorSnapshot) {
