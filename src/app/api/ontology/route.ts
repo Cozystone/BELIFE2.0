@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { getOntologyForView, requireUserForApi } from "@/lib/server/belife-service";
+import { getOntologyGraphForView, requireUserForApi } from "@/lib/server/belife-service";
 
 export const runtime = "nodejs";
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
   const requestedView = request.nextUrl.searchParams.get("view");
   const view = requestedView === "core" || requestedView === "expanded" || requestedView === "full" ? requestedView : "expanded";
-  const nodes = await getOntologyForView(user.id, view);
+  const graph = await getOntologyGraphForView(user.id, view);
 
-  return Response.json({ view, nodes });
+  return Response.json({ view, nodes: graph.nodes, edges: graph.edges, graph });
 }

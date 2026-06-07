@@ -5,7 +5,7 @@ import { buildStructuredExtraction } from "@/lib/ai/structured-extraction";
 import { buildConnectionPreview } from "@/lib/engines/compatibility";
 import { calculateDataTrust } from "@/lib/engines/data-trust";
 import { estimateMentalState } from "@/lib/engines/mental-state";
-import { filterOntologyView } from "@/lib/engines/ontology";
+import { buildOntologyGraph, filterOntologyView } from "@/lib/engines/ontology";
 import { buildProfileEnrichmentSuggestions, findProfileEnrichmentSuggestion } from "@/lib/engines/profile-enrichment";
 import { buildMentalStateHistoryReport } from "@/lib/engines/state-history";
 import type {
@@ -271,6 +271,11 @@ export async function getMentalStateHistory(userId: string, limit?: number) {
 export async function getOntologyForView(userId: string, view: "core" | "expanded" | "full") {
   const nodes = await getStore().getOntologyNodes(userId);
   return filterOntologyView(nodes, view);
+}
+
+export async function getOntologyGraphForView(userId: string, view: "core" | "expanded" | "full") {
+  const nodes = await getOntologyForView(userId, view);
+  return buildOntologyGraph(nodes);
 }
 
 export async function getProfileEnrichmentSuggestions(userId: string) {

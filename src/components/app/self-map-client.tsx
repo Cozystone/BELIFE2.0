@@ -4,24 +4,24 @@ import { useEffect, useState } from "react";
 import { OntologyGraph } from "@/components/app/ontology-graph";
 import { Button } from "@/components/ui/button";
 import { belifeFetch } from "@/lib/client/auth-fetch";
-import type { OntologyNode } from "@/lib/engines/types";
+import type { OntologyGraphModel } from "@/lib/engines/types";
 import { cn } from "@/lib/utils";
 
 const views = ["core", "expanded", "full"] as const;
 
-export function SelfMapClient({ initialNodes }: { initialNodes: OntologyNode[] }) {
+export function SelfMapClient({ initialGraph }: { initialGraph: OntologyGraphModel }) {
   const [view, setView] = useState<(typeof views)[number]>("expanded");
-  const [nodes, setNodes] = useState(initialNodes);
+  const [graph, setGraph] = useState(initialGraph);
 
   useEffect(() => {
     let alive = true;
     belifeFetch(`/api/ontology?view=${view}`)
       .then((response) => {
         if (!response.ok) return null;
-        return response.json() as Promise<{ nodes: OntologyNode[] }>;
+        return response.json() as Promise<{ graph: OntologyGraphModel }>;
       })
-      .then((body: { nodes: OntologyNode[] } | null) => {
-        if (alive && body) setNodes(body.nodes);
+      .then((body: { graph: OntologyGraphModel } | null) => {
+        if (alive && body) setGraph(body.graph);
       })
       .catch(() => undefined);
     return () => {
@@ -51,9 +51,31 @@ export function SelfMapClient({ initialNodes }: { initialNodes: OntologyNode[] }
           ))}
         </div>
       </div>
-      <OntologyGraph nodes={nodes} />
+      <OntologyGraph graph={graph} />
+      {graph.edges.length ? (
+        <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-medium">Ontology Edges</h2>
+              <p className="mt-1 text-sm text-zinc-500">노드 사이의 해석 가능한 연결입니다.</p>
+            </div>
+            <span className="rounded-md bg-black/40 px-2 py-1 font-mono text-xs text-orange-200">{graph.edges.length}</span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {graph.edges.slice(0, 6).map((edge) => (
+              <article key={edge.id} className="rounded-md border border-white/[0.08] bg-black/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium uppercase text-orange-200">{edge.label}</span>
+                  <span className="font-mono text-xs text-zinc-500">{Math.round(edge.confidence * 100)}</span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-zinc-300">{edge.explanation}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-2">
-        {nodes.map((node) => (
+        {graph.nodes.map((node) => (
           <article key={`${node.type}-${node.label}`} className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
             <div className="flex items-center justify-between text-xs">
               <span className="text-zinc-500">{node.type}</span>

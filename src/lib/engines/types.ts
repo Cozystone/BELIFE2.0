@@ -88,6 +88,33 @@ export interface OntologyEdge {
   confidence: number;
 }
 
+export type OntologyGraphRelation =
+  | "anchors"
+  | "drives"
+  | "shapes"
+  | "amplifies"
+  | "needs_recovery"
+  | "orients_connection"
+  | "co_occurs";
+
+export interface OntologyGraphEdge {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  relation: OntologyGraphRelation;
+  label: string;
+  certainty: EvidenceType;
+  confidence: number;
+  explanation: string;
+}
+
+export interface OntologyGraphModel {
+  generatedAt: string;
+  nodes: OntologyNode[];
+  edges: OntologyGraphEdge[];
+  summary: string;
+}
+
 export interface MentalStateEstimate {
   stressLoad: number;
   burnoutRisk: number;

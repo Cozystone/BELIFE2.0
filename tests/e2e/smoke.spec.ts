@@ -80,6 +80,22 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/self-map");
   await expect(page.getByRole("heading", { name: "Memory Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ontology Edges" })).toBeVisible();
+  const ontologyResult = await page.evaluate(async () => {
+    const response = await fetch("/api/ontology?view=expanded");
+    const body = await response.json();
+    return {
+      status: response.status,
+      nodeCount: body.nodes.length,
+      edgeCount: body.edges.length,
+      graphEdgeCount: body.graph.edges.length,
+    };
+  });
+
+  expect(ontologyResult.status).toBe(200);
+  expect(ontologyResult.nodeCount).toBeGreaterThan(0);
+  expect(ontologyResult.edgeCount).toBeGreaterThan(0);
+  expect(ontologyResult.graphEdgeCount).toBe(ontologyResult.edgeCount);
   const timelineResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/timeline?limit=12");
     const body = await response.json();
