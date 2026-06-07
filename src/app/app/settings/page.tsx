@@ -3,6 +3,7 @@ import { getOllamaBaseUrl, getOllamaModel } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
 import { isClerkConfigured } from "@/lib/server/auth";
 import { requireUserForPage } from "@/lib/server/belife-service";
+import { getReadinessReport } from "@/lib/server/readiness";
 import { getStore } from "@/lib/server/store";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const user = await requireUserForPage();
   const profile = await getStore().getProfile(user.id);
+  const readiness = getReadinessReport();
   const rows = [
     ["Auth", isClerkConfigured() ? "Clerk configured" : "Demo mode", KeyRound],
     ["Storage", hasDatabaseUrl() ? "Neon Postgres" : "In-memory demo", Database],
@@ -20,7 +22,9 @@ export default async function SettingsPage() {
     <div className="space-y-5">
       <section className="rounded-md border border-white/[0.08] bg-[#090909] p-5">
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="mt-2 text-sm text-zinc-500">환경변수가 연결되면 demo mode에서 운영 모드로 전환됩니다.</p>
+        <p className="mt-2 text-sm text-zinc-500">
+          Readiness: <span className="font-mono text-orange-200">{readiness.status}</span>
+        </p>
       </section>
       <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
         <h2 className="font-medium">Profile</h2>
@@ -43,6 +47,22 @@ export default async function SettingsPage() {
             <p className="mt-2 break-words text-sm text-zinc-500">{value}</p>
           </article>
         ))}
+      </section>
+      <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
+        <h2 className="font-medium">Production Readiness</h2>
+        <div className="mt-4 space-y-3">
+          {readiness.checks.map((check) => (
+            <div key={check.key} className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium">{check.label}</p>
+                <span className={check.ok ? "text-xs text-teal-300" : "text-xs text-orange-200"}>
+                  {check.ok ? "ready" : "needs setup"}
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">{check.detail}</p>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );
