@@ -28,21 +28,21 @@ export function buildConnectionPreview(
     confidence,
     summary:
       trust.score >= 55
-        ? "BELIFE can already sketch a useful relationship-fit lens, but it will keep confidence visible."
-        : "This is an early preview. BELIFE needs more natural conversations before making strong connection claims.",
+        ? "BELIFE는 이미 관계 적합성을 해석할 초기 렌즈를 만들 수 있지만, 확신 수준은 계속 드러냅니다."
+        : "아직은 초기 프리뷰입니다. 강한 관계 판단을 하려면 더 자연스러운 대화 신호가 필요합니다.",
     comfortSignals: [
-      hasValue ? "Shared values and meaning language should matter." : "Value signals are still sparse.",
-      behavior?.warmth && behavior.warmth > 0.5 ? "Warm response style may support emotional safety." : "Warmth signal is still forming.",
+      hasValue ? "공유 가치와 의미를 다루는 언어가 중요하게 작동할 수 있습니다." : "가치 신호는 아직 충분히 쌓이지 않았습니다.",
+      behavior?.warmth && behavior.warmth > 0.5 ? "따뜻한 반응 스타일은 정서적 안전감에 도움이 될 수 있습니다." : "따뜻함 신호는 아직 형성 중입니다.",
     ],
     tensionSignals: [
-      hasFriction ? "Stress or energy mismatch could become important in close relationships." : "Friction patterns need more evidence.",
+      hasFriction ? "스트레스나 에너지 리듬의 차이가 가까운 관계에서 중요해질 수 있습니다." : "마찰 패턴은 더 많은 증거가 필요합니다.",
       behavior?.conflictSensitivity && behavior.conflictSensitivity > 0.45
-        ? "Misunderstanding or pressure may need slower repair rituals."
-        : "Conflict style is not yet clear enough to overstate.",
+        ? "오해나 압박 상황에서는 느린 회복 루틴이 필요할 수 있습니다."
+        : "갈등 스타일은 아직 단정할 만큼 선명하지 않습니다.",
     ],
     idealConnectionPattern:
-      "A person who responds with calm curiosity, respects your meaning-making pace, and can repair tension without rushing you.",
+      "차분한 호기심으로 반응하고, 당신이 의미를 정리하는 속도를 존중하며, 긴장을 서두르지 않고 회복할 수 있는 사람.",
     riskyConnectionPattern:
-      "A person who demands instant certainty, dismisses inner complexity, or turns your stress signals into pressure.",
+      "즉각적인 확신을 요구하거나, 내면의 복잡성을 가볍게 여기거나, 당신의 스트레스 신호를 더 큰 압박으로 바꾸는 사람.",
   };
 }

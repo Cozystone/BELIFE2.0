@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export function TwinConsole() {
-  const [question, setQuestion] = useState("지금 내가 왜 이 문제를 계속 반복하는지 알려줘.");
+  const [question, setQuestion] = useState("지금 내가 왜 같은 문제를 계속 반복하는지 알려줘");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -23,7 +23,7 @@ export function TwinConsole() {
         return;
       }
       const body = (await response.json()) as { answer?: string; error?: string };
-      setAnswer(body.answer || body.error || "No answer");
+      setAnswer(body.answer || body.error || "답변을 만들지 못했습니다.");
     } finally {
       setLoading(false);
     }

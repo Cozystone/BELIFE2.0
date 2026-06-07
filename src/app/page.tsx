@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const features = [
-  { title: "Live AI", body: "말하면 오늘의 상태와 패턴을 해석합니다.", Icon: Mic },
-  { title: "Self Map", body: "대화는 기억 조각과 온톨로지로 정리됩니다.", Icon: Brain },
+  { title: "Live AI", body: "말하면 오늘의 상태와 반복 패턴을 해석합니다.", Icon: Mic },
+  { title: "Self Map", body: "대화는 기억 조각과 자기 온톨로지로 정리됩니다.", Icon: Brain },
   { title: "Connection", body: "관계 추천은 공개 매칭 전에 내부 프리뷰로 시작합니다.", Icon: Users },
 ];
 

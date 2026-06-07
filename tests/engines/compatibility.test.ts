@@ -35,6 +35,6 @@ describe("buildConnectionPreview", () => {
     const preview = buildConnectionPreview(nodes, null, trust);
 
     expect(preview.structuralSimilarity).toBeGreaterThan(0.5);
-    expect(preview.idealConnectionPattern).toContain("curiosity");
+    expect(preview.idealConnectionPattern).toContain("호기심");
   });
 });

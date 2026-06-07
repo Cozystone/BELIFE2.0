@@ -7,6 +7,6 @@ describe("estimateMentalState", () => {
 
     expect(state.stressLoad).toBeGreaterThan(0.35);
     expect(state.supportNeed).toBeGreaterThan(0.25);
-    expect(state.summary).not.toContain("diagnosis");
+    expect(state.summary).not.toContain("진단입니다");
   });
 });

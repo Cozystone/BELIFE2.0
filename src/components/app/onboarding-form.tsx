@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 
 const fields = [
   ["nickname", "어떻게 불러드릴까요?", "예: 서연"],
-  ["role", "요즘 당신의 역할은 무엇인가요?", "예: 창업 준비 중인 학생"],
-  ["mainWorry", "지금 가장 자주 떠오르는 걱정은?", "짧게 적어도 괜찮아요"],
-  ["currentGoal", "요즘 가장 중요한 목표는?", "방향만 적어주세요"],
-  ["importantValue", "결정할 때 지키고 싶은 가치는?", "예: 자유, 안정, 성장"],
-  ["stressReaction", "스트레스를 받을 때 보통 어떻게 반응하나요?", "예: 혼자 생각이 많아짐"],
-  ["emotionalClimate", "최근 감정 날씨를 말하면?", "예: 조용히 불안한 편"],
-  ["preferredTone", "BELIFE가 어떤 톤이면 좋겠나요?", "예: 차분하지만 솔직하게"],
-  ["relationshipHope", "더 나은 관계에서 바라는 것은?", "예: 안전하고 오래 가는 대화"],
+  ["role", "요즘 당신의 역할은 무엇인가요?", "예: 창업을 준비하는 대학생"],
+  ["mainWorry", "지금 가장 자주 떠오르는 걱정은 무엇인가요?", "짧게 적어도 괜찮아요"],
+  ["currentGoal", "요즘 가장 중요한 목표는 무엇인가요?", "방향만 적어주세요"],
+  ["importantValue", "결정할 때 지키고 싶은 가치는 무엇인가요?", "예: 자유, 안정, 성장"],
+  ["stressReaction", "스트레스를 받을 때 보통 어떻게 반응하나요?", "예: 혼자 생각이 많아져요"],
+  ["emotionalClimate", "최근 감정 날씨를 말하면 어떤가요?", "예: 조용하지만 불안함"],
+  ["preferredTone", "BELIFE가 어떤 톤이면 좋겠어요?", "예: 차분하지만 솔직하게"],
+  ["relationshipHope", "나에게 좋은 관계에서 바라는 것은 무엇인가요?", "예: 안전하고 오래 갈 수 있음"],
 ] as const;
 
 export function OnboardingForm() {
@@ -51,7 +51,7 @@ export function OnboardingForm() {
       router.refresh();
     } else {
       const body = (await response.json()) as { error?: string };
-      setError(body.error || "Unable to save onboarding");
+      setError(body.error || "온보딩을 저장하지 못했습니다.");
     }
     setSaving(false);
   }

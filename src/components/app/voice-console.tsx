@@ -31,7 +31,7 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
   const [draft, setDraft] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [status, setStatus] = useState("Ready");
+  const [status, setStatus] = useState("준비됨");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const supportsSpeech = useMemo(() => {
@@ -45,9 +45,9 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
     const response = await fetch("/api/conversations", { method: "POST" });
     if (response.status === 401) {
       window.location.assign("/sign-in");
-      throw new Error("Sign in required");
+      throw new Error("로그인이 필요합니다.");
     }
-    if (!response.ok) throw new Error("Unable to create conversation");
+    if (!response.ok) throw new Error("대화를 만들지 못했습니다.");
     const body = (await response.json()) as { conversationId: string };
     setConversationId(body.conversationId);
     return body.conversationId;
@@ -71,19 +71,19 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
     };
     recognition.onend = () => setIsListening(false);
     recognition.onerror = () => {
-      setStatus("Voice input stopped. You can type instead.");
+      setStatus("음성 입력이 멈췄습니다. 텍스트로 이어서 입력할 수 있어요.");
       setIsListening(false);
     };
     recognitionRef.current = recognition;
     recognition.start();
-    setStatus("Listening");
+    setStatus("듣는 중");
     setIsListening(true);
   }
 
   function stopListening() {
     recognitionRef.current?.stop();
     setIsListening(false);
-    setStatus("Ready");
+    setStatus("준비됨");
   }
 
   function speak(text: string) {
@@ -99,7 +99,7 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
     const content = draft.trim();
     if (!content || isSending) return;
     setIsSending(true);
-    setStatus("BELIFE is interpreting");
+    setStatus("BELIFE가 해석하는 중");
     setDraft("");
 
     try {
@@ -111,19 +111,19 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
       });
       if (response.status === 401) {
         window.location.assign("/sign-in");
-        throw new Error("Sign in required");
+        throw new Error("로그인이 필요합니다.");
       }
-      if (!response.ok) throw new Error("Message failed");
+      if (!response.ok) throw new Error("메시지를 보내지 못했습니다.");
       const body = (await response.json()) as {
         userMessage: ConversationMessage;
         assistantMessage: ConversationMessage;
       };
       setMessages((current) => [...current, body.userMessage, body.assistantMessage]);
-      setStatus("Updated memory and state");
+      setStatus("기억과 상태를 업데이트했습니다");
       speak(body.assistantMessage.content);
     } catch (error) {
       setDraft(content);
-      setStatus(error instanceof Error ? error.message : "Unable to send");
+      setStatus(error instanceof Error ? error.message : "보내지 못했습니다.");
     } finally {
       setIsSending(false);
     }
@@ -134,7 +134,7 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
       <div className="border-b border-white/[0.08] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold">Talk to BELIFE</h1>
+            <h1 className="text-xl font-semibold">BELIFE와 대화</h1>
             <p className="mt-1 text-sm text-zinc-500">{status}</p>
           </div>
           <Button
@@ -142,7 +142,7 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
             variant={isListening ? "danger" : "secondary"}
             size="icon"
             onClick={isListening ? stopListening : startListening}
-            title={isListening ? "Stop voice input" : "Start voice input"}
+            title={isListening ? "음성 입력 중지" : "음성 입력 시작"}
             disabled={!supportsSpeech}
           >
             {isListening ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -177,7 +177,7 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
           ))
         ) : (
           <div className="rounded-md border border-white/[0.08] bg-white/[0.04] p-5 text-sm leading-6 text-zinc-400">
-            “BELIFE, 오늘 좀 이상해.”처럼 짧게 말해도 됩니다. 대화는 기억 조각과 자기 구조로 변환됩니다.
+            “BELIFE, 오늘 좀 이상해.”처럼 짧게 말해도 됩니다. 대화는 기억 조각과 자기 구조로 정리됩니다.
           </div>
         )}
       </div>

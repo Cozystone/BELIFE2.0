@@ -40,12 +40,12 @@ export function calculateDataTrust(input: DataTrustInput): DataTrustScore {
     recencyCoverage,
     explanation:
       label === "strong"
-        ? "BELIFE has enough repeated signal to speak with useful confidence."
+        ? "BELIFE가 유용한 확신으로 말할 만큼 반복 신호를 충분히 모았습니다."
         : label === "clear"
-          ? "BELIFE has a meaningful early structure, but it will improve with more natural conversations."
+          ? "초기 자기 구조는 의미 있게 잡혔고, 자연스러운 대화가 쌓일수록 더 선명해집니다."
           : label === "building"
-            ? "BELIFE is beginning to understand your structure. Treat interpretations as useful hypotheses."
-            : "BELIFE is still getting oriented. Early interpretations should stay light.",
+            ? "BELIFE가 당신의 구조를 이해하기 시작했습니다. 해석은 유용한 가설로 받아들이면 좋습니다."
+            : "BELIFE는 아직 방향을 잡는 중입니다. 초기 해석은 가볍게 다루는 것이 좋습니다.",
     createdAt: isoNow(),
   };
 }

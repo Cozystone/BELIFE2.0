@@ -66,6 +66,7 @@ export async function saveOnboarding(user: BelifeUser, answers: OnboardingAnswer
     answers.relationshipHope,
   ].join("\n");
   const nodes = extractOntologyCandidates(user.id, initialText);
+  await store.saveMemoryChunks(createMemoryChunks(user.id, initialText));
   await store.upsertOntologyNodes(user.id, nodes);
   const behavior = estimateBehavior(initialText, null);
   const state = estimateMentalState(initialText, null);
@@ -186,13 +187,17 @@ Answer in Korean. Structure before advice. Keep it concise: 3 short paragraphs m
     });
     if (response) return response;
   } catch {
-    // The deterministic fallback keeps local and preview deployments usable before external Ollama is connected.
+    // Keep production usable while an external Ollama endpoint is being connected.
   }
 
-  return `지금 말에서 가장 먼저 보이는 건, 단순한 기분 문제가 아니라 "${compactText(
+  return `지금 말에서 먼저 보이는 건 단순한 기분 문제가 아니라, 생각과 에너지가 함께 묶여 있다는 점이에요. “${compactText(
     input.content,
     64,
-  )}" 주변에 생각과 에너지가 같이 묶여 있다는 점이에요.\n\nBELIFE가 보기엔 지금은 바로 결론을 내리기보다, 감정 신호와 실제 문제를 분리해서 보는 게 좋아요. 이 해석은 진단이 아니라 현재 대화 기반의 가설입니다.\n\n지금 이 문제에서 제일 줄이고 싶은 것은 불안인가요, 피로인가요, 아니면 선택의 막막함인가요?`;
+  )}”라는 표현 안에 현재 상태를 이해하고 싶어 하는 신호가 있습니다.
+
+BELIFE가 보기에는 바로 결론을 내리기보다 감정 신호와 실제 문제를 분리해서 보는 게 좋습니다. 이 해석은 진단이 아니라, 지금까지의 대화와 자기 구조를 바탕으로 한 가설입니다.
+
+지금 이 문제에서 가장 줄이고 싶은 것은 불안인가요, 피로인가요, 아니면 선택의 막막함인가요?`;
 }
 
 export async function refreshDataTrust(userId: string) {
@@ -220,8 +225,8 @@ export async function getBriefing(userId: string): Promise<Briefing> {
   return {
     headline:
       dataTrust.score >= 50
-        ? "오늘의 구조가 조금씩 선명해지고 있어요."
-        : "BELIFE가 당신의 구조를 만들기 시작했어요.",
+        ? "오늘의 구조가 조금씩 선명해지고 있어요"
+        : "BELIFE가 당신의 구조를 만들기 시작했어요",
     stateSummary: mentalState.summary,
     patternSummary: highlights.length
       ? `${highlights[0].label} 신호가 현재 자기 이해의 중심에 있습니다.`
@@ -268,10 +273,14 @@ Return: 1) what your structure might be doing, 2) what is uncertain, 3) one ques
     const response = await ollamaGenerate({ prompt, temperature: 0.35 });
     if (response) return response;
   } catch {
-    // See comment above: keep the product usable while Ollama endpoint setup is pending.
+    // Keep production usable while an external Ollama endpoint is being connected.
   }
 
-  return `내 구조를 기준으로 보면, 지금 질문은 단순한 답보다 "왜 이 패턴이 반복되는지"를 확인하고 싶어 하는 쪽에 가까워요.\n\n아직 확실하지 않은 부분은 이 패턴이 일시적인 피로에서 온 것인지, 더 오래된 관계/결정 방식에서 온 것인지예요.\n\n내가 지금 피하고 있는 감정과 실제로 해결해야 하는 문제는 각각 무엇일까요?`;
+  return `지금까지의 구조를 기준으로 보면, 이 질문은 단순히 “무엇을 해야 하지?”보다 “왜 같은 패턴이 반복되지?”를 확인하려는 쪽에 가깝습니다.
+
+아직 확실하지 않은 부분은 이것이 일시적인 피로에서 나온 반복인지, 오래된 관계/결정 방식에서 나온 반복인지입니다. BELIFE는 증거가 부족한 부분을 사실처럼 말하지 않겠습니다.
+
+스스로에게 물어볼 질문은 이것입니다. 지금 내가 해결하려는 것은 실제 문제인가요, 아니면 그 문제를 둘러싼 불안과 압박인가요?`;
 }
 
 export async function getConnectionPreview(userId: string) {

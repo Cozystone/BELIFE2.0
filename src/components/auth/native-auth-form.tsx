@@ -42,7 +42,7 @@ export function NativeAuthForm({
       router.refresh();
     } else {
       const body = (await response.json()) as { error?: string };
-      setError(body.error || "Authentication failed.");
+      setError(body.error || "인증에 실패했습니다.");
     }
     setLoading(false);
   }

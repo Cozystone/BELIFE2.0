@@ -37,7 +37,7 @@ export function SelfMapClient({ initialNodes }: { initialNodes: OntologyNode[] }
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Self Map</h1>
-          <p className="mt-1 text-sm text-zinc-500">온톨로지는 원문 저장소가 아니라 해석된 자기 구조입니다.</p>
+          <p className="mt-1 text-sm text-zinc-500">온톨로지는 전문 용어가 아니라, 해석 가능한 자기 구조입니다.</p>
         </div>
         <div className="flex rounded-md border border-white/[0.08] bg-white/[0.04] p-1">
           {views.map((item) => (
