@@ -39,5 +39,27 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(briefingStatus).toBe(200);
   await page.goto("/app/today");
   await expect(page.getByRole("main").getByText("Today")).toBeVisible();
+  await page.goto("/app/settings");
+  await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Data Controls" })).toBeVisible();
+  const exportResult = await page.evaluate(async () => {
+    const response = await fetch("/api/memory/export");
+    const body = await response.json();
+    return {
+      status: response.status,
+      schemaVersion: body.schemaVersion,
+      hasProfile: Boolean(body.profile),
+      messageCount: body.inventory.counts.messages,
+      ontologyNodeCount: body.inventory.counts.ontologyNodes,
+    };
+  });
+
+  expect(exportResult).toMatchObject({
+    status: 200,
+    schemaVersion: 1,
+    hasProfile: true,
+  });
+  expect(exportResult.messageCount).toBeGreaterThanOrEqual(0);
+  expect(exportResult.ontologyNodeCount).toBeGreaterThanOrEqual(0);
   expect(unauthorizedUrls).toEqual([]);
 });

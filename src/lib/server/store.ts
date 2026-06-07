@@ -19,9 +19,12 @@ import {
 import type {
   BehaviorSnapshot,
   BelifeUser,
+  BelifeDataExport,
+  BelifeMemoryInventory,
   CompatibilityAxes,
   ConversationMessage,
   DataTrustScore,
+  EvidenceType,
   MemoryChunk,
   MentalStateEstimate,
   MessageRole,
@@ -67,12 +70,30 @@ export interface BelifeStore {
   getLatestDataTrust(userId: string): Promise<DataTrustScore | null>;
   saveConnectionPreview(userId: string, preview: CompatibilityAxes): Promise<void>;
   getLatestConnectionPreview(userId: string): Promise<CompatibilityAxes | null>;
+  getMemoryInventory(userId: string): Promise<BelifeMemoryInventory>;
+  exportUserData(userId: string): Promise<BelifeDataExport>;
+  resetUserData(user: BelifeUser): Promise<UserProfile>;
   getStats(userId: string): Promise<BelifeStats>;
 }
 
 function dateToIso(value: Date | string | null | undefined) {
   if (!value) return isoNow();
   return value instanceof Date ? value.toISOString() : value;
+}
+
+function latestDateToIso(values: Array<Date | string | null | undefined>) {
+  const timestamps = values
+    .filter(Boolean)
+    .map((value) => new Date(value as Date | string).getTime())
+    .filter((value) => !Number.isNaN(value));
+  if (!timestamps.length) return undefined;
+  return new Date(Math.max(...timestamps)).toISOString();
+}
+
+function dateSafeRecord<T extends Record<string, unknown>>(row: T) {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key, value instanceof Date ? value.toISOString() : value]),
+  );
 }
 
 function mapProfile(row: ProfileRow): UserProfile {
@@ -345,6 +366,96 @@ class DbBelifeStore implements BelifeStore {
     return row?.preview ?? null;
   }
 
+  async getMemoryInventory(userId: string): Promise<BelifeMemoryInventory> {
+    const db = getDb();
+    const [conversationRows, messageRows, chunkRows, nodeRows, stateRows, behaviorRows, trustRows, previewRows] =
+      await Promise.all([
+        db.select({ id: conversations.id, createdAt: conversations.createdAt }).from(conversations).where(eq(conversations.userId, userId)),
+        db.select({ id: messages.id, createdAt: messages.createdAt }).from(messages).where(eq(messages.userId, userId)),
+        db
+          .select({
+            id: memoryChunks.id,
+            evidenceType: memoryChunks.evidenceType,
+            createdAt: memoryChunks.createdAt,
+          })
+          .from(memoryChunks)
+          .where(eq(memoryChunks.userId, userId)),
+        db
+          .select({
+            id: ontologyNodes.id,
+            layer: ontologyNodes.layer,
+            certainty: ontologyNodes.certainty,
+            lastEvidenceAt: ontologyNodes.lastEvidenceAt,
+          })
+          .from(ontologyNodes)
+          .where(eq(ontologyNodes.userId, userId)),
+        db.select({ id: stateEstimates.id, createdAt: stateEstimates.createdAt }).from(stateEstimates).where(eq(stateEstimates.userId, userId)),
+        db.select({ id: behaviorFeatures.id, createdAt: behaviorFeatures.createdAt }).from(behaviorFeatures).where(eq(behaviorFeatures.userId, userId)),
+        db.select({ id: dataTrustSnapshots.id, createdAt: dataTrustSnapshots.createdAt }).from(dataTrustSnapshots).where(eq(dataTrustSnapshots.userId, userId)),
+        db.select({ id: hiddenConnectionEdges.id, createdAt: hiddenConnectionEdges.createdAt }).from(hiddenConnectionEdges).where(eq(hiddenConnectionEdges.userId, userId)),
+      ]);
+
+    return buildMemoryInventory({
+      conversations: conversationRows.length,
+      messages: messageRows.length,
+      memoryChunks: chunkRows.length,
+      ontologyNodes: nodeRows.length,
+      stateEstimates: stateRows.length,
+      behaviorSnapshots: behaviorRows.length,
+      dataTrustSnapshots: trustRows.length,
+      connectionPreviews: previewRows.length,
+      evidenceTypes: [...chunkRows.map((row) => row.evidenceType), ...nodeRows.map((row) => row.certainty)],
+      ontologyLayers: nodeRows.map((row) => row.layer),
+      latest: {
+        messageAt: latestDateToIso(messageRows.map((row) => row.createdAt)),
+        memoryAt: latestDateToIso(chunkRows.map((row) => row.createdAt)),
+        ontologyEvidenceAt: latestDateToIso(nodeRows.map((row) => row.lastEvidenceAt)),
+        stateAt: latestDateToIso(stateRows.map((row) => row.createdAt)),
+        behaviorAt: latestDateToIso(behaviorRows.map((row) => row.createdAt)),
+        dataTrustAt: latestDateToIso(trustRows.map((row) => row.createdAt)),
+        connectionPreviewAt: latestDateToIso(previewRows.map((row) => row.createdAt)),
+      },
+    });
+  }
+
+  async exportUserData(userId: string): Promise<BelifeDataExport> {
+    const db = getDb();
+    const [profile, inventory, conversationRows, messageRows, chunkRows, nodeRows, stateRows, behaviorRows, trustRows, previewRows] =
+      await Promise.all([
+        this.getProfile(userId),
+        this.getMemoryInventory(userId),
+        db.select().from(conversations).where(eq(conversations.userId, userId)),
+        db.select().from(messages).where(eq(messages.userId, userId)).orderBy(messages.createdAt),
+        db.select().from(memoryChunks).where(eq(memoryChunks.userId, userId)).orderBy(memoryChunks.createdAt),
+        db.select().from(ontologyNodes).where(eq(ontologyNodes.userId, userId)).orderBy(ontologyNodes.updatedAt),
+        db.select().from(stateEstimates).where(eq(stateEstimates.userId, userId)).orderBy(stateEstimates.createdAt),
+        db.select().from(behaviorFeatures).where(eq(behaviorFeatures.userId, userId)).orderBy(behaviorFeatures.createdAt),
+        db.select().from(dataTrustSnapshots).where(eq(dataTrustSnapshots.userId, userId)).orderBy(dataTrustSnapshots.createdAt),
+        db.select().from(hiddenConnectionEdges).where(eq(hiddenConnectionEdges.userId, userId)).orderBy(hiddenConnectionEdges.createdAt),
+      ]);
+
+    return {
+      schemaVersion: 1,
+      exportedAt: isoNow(),
+      userId,
+      inventory,
+      profile,
+      conversations: conversationRows.map((row) => dateSafeRecord(row as unknown as Record<string, unknown>)),
+      messages: messageRows.map(mapMessage),
+      memoryChunks: chunkRows.map((row) => dateSafeRecord(row as unknown as Record<string, unknown>)),
+      ontologyNodes: nodeRows.map(mapNode),
+      stateEstimates: stateRows.map(mapState),
+      behaviorSnapshots: behaviorRows.map((row) => dateSafeRecord(row as unknown as Record<string, unknown>)),
+      dataTrustSnapshots: trustRows.map((row) => dateSafeRecord(row as unknown as Record<string, unknown>)),
+      connectionPreviews: previewRows.map((row) => dateSafeRecord(row as unknown as Record<string, unknown>)),
+    };
+  }
+
+  async resetUserData(user: BelifeUser) {
+    await getDb().delete(profiles).where(eq(profiles.userId, user.id));
+    return this.ensureProfile(user);
+  }
+
   async getStats(userId: string): Promise<BelifeStats> {
     const [profile, userMessages, nodes, behavior] = await Promise.all([
       this.getProfile(userId),
@@ -524,6 +635,77 @@ class MemoryBelifeStore implements BelifeStore {
     return memoryState.previews.get(userId)?.at(-1) ?? null;
   }
 
+  async getMemoryInventory(userId: string): Promise<BelifeMemoryInventory> {
+    const conversationsForUser = [...memoryState.conversations.values()].filter((conversation) => conversation.userId === userId);
+    const messageRows = memoryState.messages.filter((message) => message.userId === userId);
+    const chunkRows = memoryState.chunks.filter((chunk) => chunk.userId === userId);
+    const nodeRows = memoryState.nodes.filter((node) => node.userId === userId);
+    const stateRows = memoryState.states.get(userId) ?? [];
+    const behaviorRows = memoryState.behaviors.get(userId) ?? [];
+    const trustRows = memoryState.trusts.get(userId) ?? [];
+    const previewRows = memoryState.previews.get(userId) ?? [];
+
+    return buildMemoryInventory({
+      conversations: conversationsForUser.length,
+      messages: messageRows.length,
+      memoryChunks: chunkRows.length,
+      ontologyNodes: nodeRows.length,
+      stateEstimates: stateRows.length,
+      behaviorSnapshots: behaviorRows.length,
+      dataTrustSnapshots: trustRows.length,
+      connectionPreviews: previewRows.length,
+      evidenceTypes: [...chunkRows.map((chunk) => chunk.evidenceType), ...nodeRows.map((node) => node.certainty)],
+      ontologyLayers: nodeRows.map((node) => node.layer),
+      latest: {
+        messageAt: latestDateToIso(messageRows.map((message) => message.createdAt)),
+        memoryAt: latestDateToIso(chunkRows.map((chunk) => chunk.createdAt)),
+        ontologyEvidenceAt: latestDateToIso(nodeRows.map((node) => node.lastEvidenceAt)),
+        stateAt: latestDateToIso(stateRows.map((state) => state.createdAt)),
+        behaviorAt: latestDateToIso(behaviorRows.map((behavior) => behavior.createdAt)),
+        dataTrustAt: latestDateToIso(trustRows.map((trust) => trust.createdAt)),
+      },
+    });
+  }
+
+  async exportUserData(userId: string): Promise<BelifeDataExport> {
+    const inventory = await this.getMemoryInventory(userId);
+    return {
+      schemaVersion: 1,
+      exportedAt: isoNow(),
+      userId,
+      inventory,
+      profile: memoryState.profiles.get(userId) ?? null,
+      conversations: [...memoryState.conversations.values()]
+        .filter((conversation) => conversation.userId === userId)
+        .map((conversation) => ({ ...conversation })),
+      messages: memoryState.messages.filter((message) => message.userId === userId),
+      memoryChunks: memoryState.chunks.filter((chunk) => chunk.userId === userId).map((chunk) => ({ ...chunk })),
+      ontologyNodes: memoryState.nodes.filter((node) => node.userId === userId),
+      stateEstimates: memoryState.states.get(userId) ?? [],
+      behaviorSnapshots: (memoryState.behaviors.get(userId) ?? []).map((snapshot) => ({ ...snapshot })),
+      dataTrustSnapshots: (memoryState.trusts.get(userId) ?? []).map((snapshot) => ({ ...snapshot })),
+      connectionPreviews: (memoryState.previews.get(userId) ?? []).map((preview) => ({ ...preview })),
+    };
+  }
+
+  async resetUserData(user: BelifeUser) {
+    const conversationIds = new Set(
+      [...memoryState.conversations.values()]
+        .filter((conversation) => conversation.userId === user.id)
+        .map((conversation) => conversation.id),
+    );
+    memoryState.profiles.delete(user.id);
+    for (const id of conversationIds) memoryState.conversations.delete(id);
+    memoryState.messages = memoryState.messages.filter((message) => message.userId !== user.id);
+    memoryState.chunks = memoryState.chunks.filter((chunk) => chunk.userId !== user.id);
+    memoryState.nodes = memoryState.nodes.filter((node) => node.userId !== user.id);
+    memoryState.states.delete(user.id);
+    memoryState.behaviors.delete(user.id);
+    memoryState.trusts.delete(user.id);
+    memoryState.previews.delete(user.id);
+    return this.ensureProfile(user);
+  }
+
   async getStats(userId: string): Promise<BelifeStats> {
     return buildStats(
       memoryState.profiles.get(userId) ?? null,
@@ -532,6 +714,44 @@ class MemoryBelifeStore implements BelifeStore {
       memoryState.behaviors.get(userId)?.at(-1) ?? null,
     );
   }
+}
+
+function buildMemoryInventory(input: {
+  conversations: number;
+  messages: number;
+  memoryChunks: number;
+  ontologyNodes: number;
+  stateEstimates: number;
+  behaviorSnapshots: number;
+  dataTrustSnapshots: number;
+  connectionPreviews: number;
+  evidenceTypes: EvidenceType[];
+  ontologyLayers: Array<"core" | "active" | "archive">;
+  latest: BelifeMemoryInventory["latest"];
+}): BelifeMemoryInventory {
+  return {
+    counts: {
+      conversations: input.conversations,
+      messages: input.messages,
+      memoryChunks: input.memoryChunks,
+      ontologyNodes: input.ontologyNodes,
+      stateEstimates: input.stateEstimates,
+      behaviorSnapshots: input.behaviorSnapshots,
+      dataTrustSnapshots: input.dataTrustSnapshots,
+      connectionPreviews: input.connectionPreviews,
+    },
+    evidenceMix: {
+      extracted: input.evidenceTypes.filter((type) => type === "EXTRACTED").length,
+      inferred: input.evidenceTypes.filter((type) => type === "INFERRED").length,
+      ambiguous: input.evidenceTypes.filter((type) => type === "AMBIGUOUS").length,
+    },
+    ontologyLayers: {
+      core: input.ontologyLayers.filter((layer) => layer === "core").length,
+      active: input.ontologyLayers.filter((layer) => layer === "active").length,
+      archive: input.ontologyLayers.filter((layer) => layer === "archive").length,
+    },
+    latest: input.latest,
+  };
 }
 
 function buildStats(

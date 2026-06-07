@@ -130,6 +130,54 @@ export interface DataTrustScore {
   createdAt: string;
 }
 
+export interface BelifeMemoryInventory {
+  counts: {
+    conversations: number;
+    messages: number;
+    memoryChunks: number;
+    ontologyNodes: number;
+    stateEstimates: number;
+    behaviorSnapshots: number;
+    dataTrustSnapshots: number;
+    connectionPreviews: number;
+  };
+  evidenceMix: {
+    extracted: number;
+    inferred: number;
+    ambiguous: number;
+  };
+  ontologyLayers: {
+    core: number;
+    active: number;
+    archive: number;
+  };
+  latest: {
+    messageAt?: string;
+    memoryAt?: string;
+    ontologyEvidenceAt?: string;
+    stateAt?: string;
+    behaviorAt?: string;
+    dataTrustAt?: string;
+    connectionPreviewAt?: string;
+  };
+}
+
+export interface BelifeDataExport {
+  schemaVersion: 1;
+  exportedAt: string;
+  userId: string;
+  inventory: BelifeMemoryInventory;
+  profile: UserProfile | null;
+  conversations: Record<string, unknown>[];
+  messages: ConversationMessage[];
+  memoryChunks: Record<string, unknown>[];
+  ontologyNodes: OntologyNode[];
+  stateEstimates: MentalStateEstimate[];
+  behaviorSnapshots: Record<string, unknown>[];
+  dataTrustSnapshots: Record<string, unknown>[];
+  connectionPreviews: Record<string, unknown>[];
+}
+
 export type ConnectionScenarioType =
   | "first_contact"
   | "light_disagreement"

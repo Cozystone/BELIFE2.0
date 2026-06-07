@@ -361,6 +361,23 @@ export async function getConnectionPreview(userId: string) {
   return preview;
 }
 
+export async function getDataTrustCenter(userId: string) {
+  const store = getStore();
+  const dataTrust = await refreshDataTrust(userId);
+  const [stats, inventory] = await Promise.all([store.getStats(userId), store.getMemoryInventory(userId)]);
+  return { dataTrust, stats, inventory };
+}
+
+export async function exportBelifeData(userId: string) {
+  return getStore().exportUserData(userId);
+}
+
+export async function resetBelifeMemory(user: BelifeUser) {
+  const profile = await getStore().resetUserData(user);
+  const dataTrust = await refreshDataTrust(user.id);
+  return { profile, dataTrust };
+}
+
 function mergeProfileAnswer(
   profile: UserProfile,
   field: NonNullable<ProfileEnrichmentSuggestion["targetField"]>,
