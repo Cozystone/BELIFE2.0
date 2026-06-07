@@ -113,6 +113,11 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Data Controls" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Profile Enrichment" })).toBeVisible();
+  const skipSuggestion = page.getByRole("button", { name: "Skip for now" }).first();
+  await expect(skipSuggestion).toBeVisible();
+  await skipSuggestion.click();
+  await expect(page.getByText("이번 제안은 건너뛰었습니다.")).toBeVisible();
   const exportResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/export");
     const body = await response.json();

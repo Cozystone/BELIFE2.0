@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { belifeFetch } from "@/lib/client/auth-fetch";
@@ -39,6 +39,11 @@ export function ProfileEnrichmentPanel({
     }
   }
 
+  function dismiss(id: string) {
+    setSuggestions((current) => current.filter((suggestion) => suggestion.id !== id));
+    setStatus("이번 제안은 건너뛰었습니다.");
+  }
+
   return (
     <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
       <div className="flex items-center gap-2">
@@ -57,17 +62,28 @@ export function ProfileEnrichmentPanel({
                 <span className="font-mono text-xs text-orange-200">{Math.round(suggestion.confidence * 100)}</span>
               </div>
               <p className="mt-3 text-sm leading-6 text-zinc-300">{suggestion.detail}</p>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="mt-3"
-                onClick={() => accept(suggestion.id)}
-                disabled={savingId === suggestion.id}
-              >
-                <Check className="h-3.5 w-3.5" />
-                Add to BELIFE
-              </Button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => accept(suggestion.id)}
+                  disabled={savingId === suggestion.id}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Add to BELIFE
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => dismiss(suggestion.id)}
+                  disabled={savingId === suggestion.id}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Skip for now
+                </Button>
+              </div>
             </article>
           ))
         ) : (
