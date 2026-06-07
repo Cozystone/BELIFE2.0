@@ -28,6 +28,37 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   page.on("response", (response) => {
     if (response.status() === 401) unauthorizedUrls.push(response.url());
   });
+  await page.addInitScript(() => {
+    class MockSpeechRecognition {
+      lang = "";
+      interimResults = false;
+      continuous = false;
+      onresult: ((event: { results: Array<{ 0: { transcript: string }; isFinal: boolean }> }) => void) | null = null;
+      onend: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+
+      start() {
+        window.setTimeout(() => {
+          this.onresult?.({
+            results: [{ 0: { transcript: "voice transcript e2e" }, isFinal: true }],
+          });
+        }, 0);
+      }
+
+      stop() {
+        window.setTimeout(() => this.onend?.(), 0);
+      }
+
+      abort() {
+        window.setTimeout(() => this.onend?.(), 0);
+      }
+    }
+
+    Object.defineProperty(window, "SpeechRecognition", {
+      configurable: true,
+      value: MockSpeechRecognition,
+    });
+  });
 
   await page.goto("/sign-up");
   await expect(page.getByRole("heading", { name: "Create your BELIFE" })).toBeVisible();
@@ -116,6 +147,23 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await page.goto("/app/talk");
   await expect(exactMessage(page, continuitySeed)).toBeVisible();
   await expect(exactMessage(page, staleContent)).toHaveCount(0);
+  const talkInput = page.locator("textarea");
+  const voiceButton = page.getByRole("button", { name: "Voice" });
+  await voiceButton.dispatchEvent("pointerdown", {
+    pointerId: 1,
+    pointerType: "touch",
+    isPrimary: true,
+    buttons: 1,
+  });
+  await expect(talkInput).toHaveValue("voice transcript e2e");
+  await page.getByRole("button", { name: "Stop" }).dispatchEvent("pointerup", {
+    pointerId: 1,
+    pointerType: "touch",
+    isPrimary: true,
+    buttons: 0,
+  });
+  await expect(talkInput).toHaveValue("voice transcript e2e");
+  await talkInput.fill("");
   const staleConversationLink = page.locator(`a[href="/app/talk?conversation=${staleConversationResult.conversationId}"]`);
   const activeConversationLink = page.locator(`a[href="/app/talk?conversation=${ownerConversationId}"]`);
   await expect(staleConversationLink).toBeVisible();
@@ -132,7 +180,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   ]);
   await expect(exactMessage(page, continuitySeed)).toBeVisible();
   await expect(exactMessage(page, staleContent)).toHaveCount(0);
-  await page.locator("textarea").fill(continuityFollowup);
+  await talkInput.fill(continuityFollowup);
   const followupResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&

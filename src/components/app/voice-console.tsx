@@ -1,7 +1,7 @@
 "use client";
 
 import { Mic, Plus, Send, Square, Volume2 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type PointerEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { belifeFetch } from "@/lib/client/auth-fetch";
 import type { ConversationMessage } from "@/lib/engines/types";
@@ -45,6 +45,8 @@ export function VoiceConsole({ initialMessages, initialConversationId }: VoiceCo
   const [isSending, setIsSending] = useState(false);
   const [status, setStatus] = useState(initialConversationId ? "최근 대화를 이어갑니다" : "준비됨");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const holdPointerIdRef = useRef<number | null>(null);
+  const suppressNextVoiceClickRef = useRef(false);
 
   const supportsSpeech = useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -62,7 +64,7 @@ export function VoiceConsole({ initialMessages, initialConversationId }: VoiceCo
     return body.conversationId;
   }
 
-  function startListening() {
+  function startListening(mode: "tap" | "hold" = "tap") {
     if (!supportsSpeech || isListening) return;
     const speechWindow = window as SpeechWindow;
     const Constructor = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
@@ -85,14 +87,57 @@ export function VoiceConsole({ initialMessages, initialConversationId }: VoiceCo
     };
     recognitionRef.current = recognition;
     recognition.start();
-    setStatus("듣는 중");
+    setStatus(mode === "hold" ? "누르고 있는 동안 듣는 중" : "듣는 중");
     setIsListening(true);
   }
 
-  function stopListening() {
+  function stopListening(nextStatus = "준비됨") {
     recognitionRef.current?.stop();
     setIsListening(false);
-    setStatus("준비됨");
+    setStatus(nextStatus);
+  }
+
+  function capturePointer(event: PointerEvent<HTMLButtonElement>) {
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Some synthetic pointer events do not support capture; hold-to-talk still works without it.
+    }
+  }
+
+  function releasePointer(event: PointerEvent<HTMLButtonElement>) {
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore release failures when the pointer was not captured by the browser.
+    }
+  }
+
+  function startHoldToTalk(event: PointerEvent<HTMLButtonElement>) {
+    if (!supportsSpeech || isSending || holdPointerIdRef.current !== null) return;
+    holdPointerIdRef.current = event.pointerId;
+    suppressNextVoiceClickRef.current = true;
+    capturePointer(event);
+    startListening("hold");
+  }
+
+  function stopHoldToTalk(event: PointerEvent<HTMLButtonElement>) {
+    if (holdPointerIdRef.current !== event.pointerId) return;
+    holdPointerIdRef.current = null;
+    releasePointer(event);
+    stopListening("전사를 확인해 주세요");
+  }
+
+  function toggleVoiceFromClick() {
+    if (suppressNextVoiceClickRef.current) {
+      suppressNextVoiceClickRef.current = false;
+      return;
+    }
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening("tap");
+    }
   }
 
   function startFreshConversation() {
@@ -179,7 +224,7 @@ export function VoiceConsole({ initialMessages, initialConversationId }: VoiceCo
               type="button"
               variant={isListening ? "danger" : "secondary"}
               size="icon"
-              onClick={isListening ? stopListening : startListening}
+              onClick={isListening ? () => stopListening() : () => startListening("tap")}
               title={isListening ? "음성 입력 중지" : "음성 입력 시작"}
               disabled={!supportsSpeech}
             >
@@ -230,7 +275,16 @@ export function VoiceConsole({ initialMessages, initialConversationId }: VoiceCo
           className="min-h-24 w-full resize-none rounded-md border border-white/[0.1] bg-black px-3 py-3 text-base leading-6 text-white outline-none transition placeholder:text-zinc-600 focus:border-orange-400/60"
         />
         <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-          <Button type="button" variant="secondary" onClick={isListening ? stopListening : startListening} disabled={!supportsSpeech}>
+          <Button
+            type="button"
+            variant="secondary"
+            onPointerDown={startHoldToTalk}
+            onPointerUp={stopHoldToTalk}
+            onPointerCancel={stopHoldToTalk}
+            onClick={toggleVoiceFromClick}
+            title={isListening ? "음성 입력 중지" : "누르고 말하기"}
+            disabled={!supportsSpeech || isSending}
+          >
             <Mic className="h-4 w-4" />
             {isListening ? "Stop" : "Voice"}
           </Button>
