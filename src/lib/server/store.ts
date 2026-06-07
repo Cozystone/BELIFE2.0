@@ -8,15 +8,18 @@ import {
   hiddenConnectionEdges,
   memoryChunks,
   messages,
+  ontologyEdges,
   ontologyNodes,
   profiles,
   stateEstimates,
   type MessageRow,
+  type OntologyEdgeRow,
   type OntologyNodeRow,
   type ProfileRow,
   type StateEstimateRow,
 } from "@/lib/db/schema";
 import { calculateContradictionInverse } from "@/lib/engines/data-trust";
+import { buildOntologyGraph } from "@/lib/engines/ontology";
 import {
   profileEnrichmentDismissalTag,
   profileEnrichmentIdFromTag,
@@ -38,6 +41,7 @@ import type {
   MessageRole,
   MessageSource,
   OnboardingAnswers,
+  OntologyEdge,
   OntologyNode,
   UserProfile,
 } from "@/lib/engines/types";
@@ -74,6 +78,7 @@ export interface BelifeStore {
   saveMemoryChunks(chunks: MemoryChunk[]): Promise<void>;
   upsertOntologyNodes(userId: string, nodes: OntologyNode[]): Promise<OntologyNode[]>;
   getOntologyNodes(userId: string): Promise<OntologyNode[]>;
+  getOntologyEdges(userId: string): Promise<OntologyEdge[]>;
   saveStateEstimate(userId: string, state: MentalStateEstimate): Promise<void>;
   getLatestState(userId: string): Promise<MentalStateEstimate | null>;
   getStateHistory(userId: string, limit?: number): Promise<MentalStateEstimate[]>;
@@ -155,6 +160,19 @@ function mapNode(row: OntologyNodeRow): OntologyNode {
     evidenceCount: row.evidenceCount,
     status: row.status,
     lastEvidenceAt: dateToIso(row.lastEvidenceAt),
+  };
+}
+
+function mapEdge(row: OntologyEdgeRow): OntologyEdge {
+  return {
+    id: row.id,
+    userId: row.userId,
+    sourceNodeId: row.sourceNodeId,
+    targetNodeId: row.targetNodeId,
+    relation: row.relation,
+    certainty: row.certainty,
+    confidence: row.confidence,
+    createdAt: dateToIso(row.createdAt),
   };
 }
 
@@ -378,12 +396,37 @@ class DbBelifeStore implements BelifeStore {
       }
     }
 
+    await this.syncOntologyEdges(userId);
     return saved;
   }
 
   async getOntologyNodes(userId: string) {
     const rows = await getDb().select().from(ontologyNodes).where(eq(ontologyNodes.userId, userId));
     return rows.map(mapNode);
+  }
+
+  async getOntologyEdges(userId: string) {
+    const rows = await getDb().select().from(ontologyEdges).where(eq(ontologyEdges.userId, userId));
+    return rows.map(mapEdge);
+  }
+
+  private async syncOntologyEdges(userId: string) {
+    const db = getDb();
+    const nodes = await this.getOntologyNodes(userId);
+    const graphEdges = buildOntologyGraph(nodes).edges;
+    await db.delete(ontologyEdges).where(eq(ontologyEdges.userId, userId));
+    if (!graphEdges.length) return;
+
+    await db.insert(ontologyEdges).values(
+      graphEdges.map((edge) => ({
+        userId,
+        sourceNodeId: edge.sourceNodeId,
+        targetNodeId: edge.targetNodeId,
+        relation: edge.relation,
+        certainty: edge.certainty,
+        confidence: edge.confidence,
+      })),
+    );
   }
 
   async saveStateEstimate(userId: string, state: MentalStateEstimate) {
@@ -459,7 +502,7 @@ class DbBelifeStore implements BelifeStore {
 
   async getMemoryInventory(userId: string): Promise<BelifeMemoryInventory> {
     const db = getDb();
-    const [conversationRows, messageRows, chunkRows, nodeRows, stateRows, behaviorRows, trustRows, previewRows] =
+    const [conversationRows, messageRows, chunkRows, nodeRows, edgeRows, stateRows, behaviorRows, trustRows, previewRows] =
       await Promise.all([
         db.select({ id: conversations.id, createdAt: conversations.createdAt }).from(conversations).where(eq(conversations.userId, userId)),
         db.select({ id: messages.id, createdAt: messages.createdAt }).from(messages).where(eq(messages.userId, userId)),
@@ -480,6 +523,10 @@ class DbBelifeStore implements BelifeStore {
           })
           .from(ontologyNodes)
           .where(eq(ontologyNodes.userId, userId)),
+        db
+          .select({ id: ontologyEdges.id, certainty: ontologyEdges.certainty, createdAt: ontologyEdges.createdAt })
+          .from(ontologyEdges)
+          .where(eq(ontologyEdges.userId, userId)),
         db.select({ id: stateEstimates.id, createdAt: stateEstimates.createdAt }).from(stateEstimates).where(eq(stateEstimates.userId, userId)),
         db.select({ id: behaviorFeatures.id, createdAt: behaviorFeatures.createdAt }).from(behaviorFeatures).where(eq(behaviorFeatures.userId, userId)),
         db.select({ id: dataTrustSnapshots.id, createdAt: dataTrustSnapshots.createdAt }).from(dataTrustSnapshots).where(eq(dataTrustSnapshots.userId, userId)),
@@ -491,16 +538,21 @@ class DbBelifeStore implements BelifeStore {
       messages: messageRows.length,
       memoryChunks: chunkRows.length,
       ontologyNodes: nodeRows.length,
+      ontologyEdges: edgeRows.length,
       stateEstimates: stateRows.length,
       behaviorSnapshots: behaviorRows.length,
       dataTrustSnapshots: trustRows.length,
       connectionPreviews: previewRows.length,
-      evidenceTypes: [...chunkRows.map((row) => row.evidenceType), ...nodeRows.map((row) => row.certainty)],
+      evidenceTypes: [
+        ...chunkRows.map((row) => row.evidenceType),
+        ...nodeRows.map((row) => row.certainty),
+        ...edgeRows.map((row) => row.certainty),
+      ],
       ontologyLayers: nodeRows.map((row) => row.layer),
       latest: {
         messageAt: latestDateToIso(messageRows.map((row) => row.createdAt)),
         memoryAt: latestDateToIso(chunkRows.map((row) => row.createdAt)),
-        ontologyEvidenceAt: latestDateToIso(nodeRows.map((row) => row.lastEvidenceAt)),
+        ontologyEvidenceAt: latestDateToIso([...nodeRows.map((row) => row.lastEvidenceAt), ...edgeRows.map((row) => row.createdAt)]),
         stateAt: latestDateToIso(stateRows.map((row) => row.createdAt)),
         behaviorAt: latestDateToIso(behaviorRows.map((row) => row.createdAt)),
         dataTrustAt: latestDateToIso(trustRows.map((row) => row.createdAt)),
@@ -588,7 +640,7 @@ class DbBelifeStore implements BelifeStore {
 
   async exportUserData(userId: string): Promise<BelifeDataExport> {
     const db = getDb();
-    const [profile, inventory, conversationRows, messageRows, chunkRows, nodeRows, stateRows, behaviorRows, trustRows, previewRows] =
+    const [profile, inventory, conversationRows, messageRows, chunkRows, nodeRows, edgeRows, stateRows, behaviorRows, trustRows, previewRows] =
       await Promise.all([
         this.getProfile(userId),
         this.getMemoryInventory(userId),
@@ -596,6 +648,7 @@ class DbBelifeStore implements BelifeStore {
         db.select().from(messages).where(eq(messages.userId, userId)).orderBy(messages.createdAt),
         db.select().from(memoryChunks).where(eq(memoryChunks.userId, userId)).orderBy(memoryChunks.createdAt),
         db.select().from(ontologyNodes).where(eq(ontologyNodes.userId, userId)).orderBy(ontologyNodes.updatedAt),
+        db.select().from(ontologyEdges).where(eq(ontologyEdges.userId, userId)).orderBy(ontologyEdges.createdAt),
         db.select().from(stateEstimates).where(eq(stateEstimates.userId, userId)).orderBy(stateEstimates.createdAt),
         db.select().from(behaviorFeatures).where(eq(behaviorFeatures.userId, userId)).orderBy(behaviorFeatures.createdAt),
         db.select().from(dataTrustSnapshots).where(eq(dataTrustSnapshots.userId, userId)).orderBy(dataTrustSnapshots.createdAt),
@@ -612,6 +665,7 @@ class DbBelifeStore implements BelifeStore {
       messages: messageRows.map(mapMessage),
       memoryChunks: chunkRows.map((row) => dateSafeRecord(row as unknown as Record<string, unknown>)),
       ontologyNodes: nodeRows.map(mapNode),
+      ontologyEdges: edgeRows.map(mapEdge),
       stateEstimates: stateRows.map(mapState),
       behaviorSnapshots: behaviorRows.map((row) => dateSafeRecord(row as unknown as Record<string, unknown>)),
       dataTrustSnapshots: trustRows.map((row) => dateSafeRecord(row as unknown as Record<string, unknown>)),
@@ -652,6 +706,7 @@ interface MemoryState {
   messages: ConversationMessage[];
   chunks: MemoryChunk[];
   nodes: OntologyNode[];
+  edges: OntologyEdge[];
   states: Map<string, MentalStateEstimate[]>;
   behaviors: Map<string, BehaviorSnapshot[]>;
   trusts: Map<string, DataTrustScore[]>;
@@ -664,6 +719,7 @@ const memoryState: MemoryState = {
   messages: [],
   chunks: [],
   nodes: [],
+  edges: [],
   states: new Map(),
   behaviors: new Map(),
   trusts: new Map(),
@@ -823,11 +879,34 @@ class MemoryBelifeStore implements BelifeStore {
         saved.push(created);
       }
     }
+    this.syncOntologyEdges(userId);
     return saved;
   }
 
   async getOntologyNodes(userId: string) {
     return memoryState.nodes.filter((node) => node.userId === userId);
+  }
+
+  async getOntologyEdges(userId: string) {
+    return memoryState.edges.filter((edge) => edge.userId === userId);
+  }
+
+  private syncOntologyEdges(userId: string) {
+    const nodes = memoryState.nodes.filter((node) => node.userId === userId);
+    const graphEdges = buildOntologyGraph(nodes).edges;
+    memoryState.edges = [
+      ...memoryState.edges.filter((edge) => edge.userId !== userId),
+      ...graphEdges.map((edge) => ({
+        id: randomUUID(),
+        userId,
+        sourceNodeId: edge.sourceNodeId,
+        targetNodeId: edge.targetNodeId,
+        relation: edge.relation,
+        certainty: edge.certainty,
+        confidence: edge.confidence,
+        createdAt: isoNow(),
+      })),
+    ];
   }
 
   async saveStateEstimate(userId: string, state: MentalStateEstimate) {
@@ -872,6 +951,7 @@ class MemoryBelifeStore implements BelifeStore {
     const messageRows = memoryState.messages.filter((message) => message.userId === userId);
     const chunkRows = memoryState.chunks.filter((chunk) => chunk.userId === userId);
     const nodeRows = memoryState.nodes.filter((node) => node.userId === userId);
+    const edgeRows = memoryState.edges.filter((edge) => edge.userId === userId);
     const stateRows = memoryState.states.get(userId) ?? [];
     const behaviorRows = memoryState.behaviors.get(userId) ?? [];
     const trustRows = memoryState.trusts.get(userId) ?? [];
@@ -882,16 +962,21 @@ class MemoryBelifeStore implements BelifeStore {
       messages: messageRows.length,
       memoryChunks: chunkRows.length,
       ontologyNodes: nodeRows.length,
+      ontologyEdges: edgeRows.length,
       stateEstimates: stateRows.length,
       behaviorSnapshots: behaviorRows.length,
       dataTrustSnapshots: trustRows.length,
       connectionPreviews: previewRows.length,
-      evidenceTypes: [...chunkRows.map((chunk) => chunk.evidenceType), ...nodeRows.map((node) => node.certainty)],
+      evidenceTypes: [
+        ...chunkRows.map((chunk) => chunk.evidenceType),
+        ...nodeRows.map((node) => node.certainty),
+        ...edgeRows.map((edge) => edge.certainty),
+      ],
       ontologyLayers: nodeRows.map((node) => node.layer),
       latest: {
         messageAt: latestDateToIso(messageRows.map((message) => message.createdAt)),
         memoryAt: latestDateToIso(chunkRows.map((chunk) => chunk.createdAt)),
-        ontologyEvidenceAt: latestDateToIso(nodeRows.map((node) => node.lastEvidenceAt)),
+        ontologyEvidenceAt: latestDateToIso([...nodeRows.map((node) => node.lastEvidenceAt), ...edgeRows.map((edge) => edge.createdAt)]),
         stateAt: latestDateToIso(stateRows.map((state) => state.createdAt)),
         behaviorAt: latestDateToIso(behaviorRows.map((behavior) => behavior.createdAt)),
         dataTrustAt: latestDateToIso(trustRows.map((trust) => trust.createdAt)),
@@ -981,6 +1066,7 @@ class MemoryBelifeStore implements BelifeStore {
       messages: memoryState.messages.filter((message) => message.userId === userId),
       memoryChunks: memoryState.chunks.filter((chunk) => chunk.userId === userId).map((chunk) => ({ ...chunk })),
       ontologyNodes: memoryState.nodes.filter((node) => node.userId === userId),
+      ontologyEdges: memoryState.edges.filter((edge) => edge.userId === userId).map((edge) => ({ ...edge })),
       stateEstimates: memoryState.states.get(userId) ?? [],
       behaviorSnapshots: (memoryState.behaviors.get(userId) ?? []).map((snapshot) => ({ ...snapshot })),
       dataTrustSnapshots: (memoryState.trusts.get(userId) ?? []).map((snapshot) => ({ ...snapshot })),
@@ -999,6 +1085,7 @@ class MemoryBelifeStore implements BelifeStore {
     memoryState.messages = memoryState.messages.filter((message) => message.userId !== user.id);
     memoryState.chunks = memoryState.chunks.filter((chunk) => chunk.userId !== user.id);
     memoryState.nodes = memoryState.nodes.filter((node) => node.userId !== user.id);
+    memoryState.edges = memoryState.edges.filter((edge) => edge.userId !== user.id);
     memoryState.states.delete(user.id);
     memoryState.behaviors.delete(user.id);
     memoryState.trusts.delete(user.id);
@@ -1036,6 +1123,7 @@ function buildMemoryInventory(input: {
   messages: number;
   memoryChunks: number;
   ontologyNodes: number;
+  ontologyEdges: number;
   stateEstimates: number;
   behaviorSnapshots: number;
   dataTrustSnapshots: number;
@@ -1050,6 +1138,7 @@ function buildMemoryInventory(input: {
       messages: input.messages,
       memoryChunks: input.memoryChunks,
       ontologyNodes: input.ontologyNodes,
+      ontologyEdges: input.ontologyEdges,
       stateEstimates: input.stateEstimates,
       behaviorSnapshots: input.behaviorSnapshots,
       dataTrustSnapshots: input.dataTrustSnapshots,

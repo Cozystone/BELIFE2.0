@@ -160,4 +160,5 @@ export type NativeAuthAccountRow = typeof nativeAuthAccounts.$inferSelect;
 export type NativeAuthSessionRow = typeof nativeAuthSessions.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
 export type OntologyNodeRow = typeof ontologyNodes.$inferSelect;
+export type OntologyEdgeRow = typeof ontologyEdges.$inferSelect;
 export type MentalStateInsert = MentalStateEstimate;

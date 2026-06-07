@@ -96,6 +96,7 @@ export interface OntologyEdge {
   relation: string;
   certainty: EvidenceType;
   confidence: number;
+  createdAt?: string;
 }
 
 export type OntologyGraphRelation =
@@ -193,6 +194,7 @@ export interface BelifeMemoryInventory {
     messages: number;
     memoryChunks: number;
     ontologyNodes: number;
+    ontologyEdges: number;
     stateEstimates: number;
     behaviorSnapshots: number;
     dataTrustSnapshots: number;
@@ -229,6 +231,7 @@ export interface BelifeDataExport {
   messages: ConversationMessage[];
   memoryChunks: Record<string, unknown>[];
   ontologyNodes: OntologyNode[];
+  ontologyEdges: OntologyEdge[];
   stateEstimates: MentalStateEstimate[];
   behaviorSnapshots: Record<string, unknown>[];
   dataTrustSnapshots: Record<string, unknown>[];

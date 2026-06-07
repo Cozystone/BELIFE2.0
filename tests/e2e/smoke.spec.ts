@@ -335,6 +335,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       hasProfile: Boolean(body.profile),
       messageCount: body.inventory.counts.messages,
       ontologyNodeCount: body.inventory.counts.ontologyNodes,
+      ontologyEdgeCount: body.inventory.counts.ontologyEdges,
+      exportedOntologyEdgeCount: body.ontologyEdges.length,
       connectionPreviewCount: body.inventory.counts.connectionPreviews,
       hasSkippedEnrichmentMemory,
       hasHiddenEdge,
@@ -350,6 +352,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   });
   expect(exportResult.messageCount).toBeGreaterThanOrEqual(0);
   expect(exportResult.ontologyNodeCount).toBeGreaterThanOrEqual(0);
+  expect(exportResult.ontologyEdgeCount).toBeGreaterThan(0);
+  expect(exportResult.exportedOntologyEdgeCount).toBe(exportResult.ontologyEdgeCount);
   expect(exportResult.connectionPreviewCount).toBeGreaterThan(0);
 
   const crossUserResult = await page.evaluate(async (conversationId) => {
