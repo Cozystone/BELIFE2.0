@@ -1,6 +1,7 @@
 import { getOllamaHealth, getOllamaModel } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
 import { isClerkConfigured } from "@/lib/server/auth";
+import { isNativeAuthAvailable } from "@/lib/server/native-auth";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,6 @@ export async function GET() {
       extractor: getOllamaModel("extractor"),
     },
     storage: hasDatabaseUrl() ? "neon-postgres" : "demo-memory",
-    auth: isClerkConfigured() ? "clerk" : "demo",
+    auth: isClerkConfigured() ? "clerk" : isNativeAuthAvailable() ? "native" : "demo",
   });
 }

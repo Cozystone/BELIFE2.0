@@ -5,7 +5,7 @@ BELIFE is a Korean-first, voice-first personal AI intelligence service. It turns
 ## Stack
 
 - Next.js App Router
-- Clerk auth, with demo mode when Clerk env vars are absent
+- Clerk auth when configured, or BELIFE native auth on Neon when Clerk env vars are absent
 - Neon Postgres + Drizzle, with in-memory demo mode when `DATABASE_URL` is absent
 - Ollama-first AI runtime via `OLLAMA_BASE_URL`
 - Mobile-centered UI with voice input through browser speech APIs
@@ -18,14 +18,19 @@ cp .env.example .env.local
 npm run dev
 ```
 
-If Clerk and Neon are not configured, the app runs in demo mode. For production, set:
+If Neon is not configured, the app runs in local demo mode. For production, set:
 
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
 - `DATABASE_URL`
 - `OLLAMA_BASE_URL`
 - `OLLAMA_MODEL_CHAT`
 - `OLLAMA_MODEL_EXTRACTOR`
+
+Clerk remains supported through:
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+
+When Clerk is absent and `DATABASE_URL` exists, BELIFE native auth provides email/password signup with scrypt password hashing and hashed server-side session tokens.
 
 ## Database
 

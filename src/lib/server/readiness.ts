@@ -1,6 +1,7 @@
 import { getOllamaBaseUrl, getOllamaModel } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
 import { isClerkConfigured } from "./auth";
+import { isNativeAuthAvailable } from "./native-auth";
 
 export type ReadinessStatus = "ready" | "degraded" | "setup-required";
 
@@ -21,6 +22,8 @@ export interface ReadinessReport {
 export function getReadinessReport(): ReadinessReport {
   const databaseOk = hasDatabaseUrl();
   const clerkOk = isClerkConfigured();
+  const nativeAuthOk = isNativeAuthAvailable();
+  const authOk = clerkOk || nativeAuthOk;
   const ollamaOk = Boolean(process.env.OLLAMA_BASE_URL);
 
   const checks: ReadinessCheck[] = [
@@ -33,9 +36,13 @@ export function getReadinessReport(): ReadinessReport {
     },
     {
       key: "auth",
-      label: "Clerk authentication",
-      ok: clerkOk,
-      detail: clerkOk ? "Clerk keys are configured." : "Clerk keys are missing; app is running demo auth.",
+      label: "Authentication",
+      ok: authOk,
+      detail: clerkOk
+        ? "Clerk keys are configured."
+        : nativeAuthOk
+          ? "BELIFE native auth is active on Neon."
+          : "No production auth is configured; app is running local demo auth.",
       requiredForProduction: true,
     },
     {
@@ -58,7 +65,7 @@ export function getReadinessReport(): ReadinessReport {
     checks,
     nextActions: missingRequired.map((check) => {
       if (check.key === "auth") {
-        return "Accept Clerk Marketplace terms, install Clerk, then pull Vercel env vars.";
+        return "Connect Neon for native auth, or accept Clerk Marketplace terms and install Clerk.";
       }
       if (check.key === "ollama") {
         return "Set OLLAMA_BASE_URL to an externally reachable Ollama server and redeploy.";

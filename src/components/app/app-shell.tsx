@@ -26,11 +26,11 @@ const nav = [
 export function AppShell({
   children,
   userName,
-  isClerkEnabled,
+  authMode,
 }: {
   children: React.ReactNode;
   userName: string;
-  isClerkEnabled: boolean;
+  authMode: "clerk" | "native" | "demo";
 }) {
   const pathname = usePathname();
 
@@ -68,9 +68,11 @@ export function AppShell({
         <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between border-t border-white/[0.08] pt-4">
           <div>
             <p className="text-sm font-medium">{userName}</p>
-            <p className="text-xs text-zinc-500">{isClerkEnabled ? "Secure session" : "Demo mode"}</p>
+            <p className="text-xs text-zinc-500">
+              {authMode === "clerk" ? "Clerk session" : authMode === "native" ? "Native session" : "Demo mode"}
+            </p>
           </div>
-          {isClerkEnabled ? <UserButton /> : null}
+          {authMode === "clerk" ? <UserButton /> : null}
         </div>
       </aside>
 

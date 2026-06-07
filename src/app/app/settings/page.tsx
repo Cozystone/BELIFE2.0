@@ -1,10 +1,12 @@
 import { Database, KeyRound, Server } from "lucide-react";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { getOllamaBaseUrl, getOllamaModel } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
 import { isClerkConfigured } from "@/lib/server/auth";
 import { requireUserForPage } from "@/lib/server/belife-service";
 import { getReadinessReport } from "@/lib/server/readiness";
 import { getStore } from "@/lib/server/store";
+import { isNativeAuthAvailable } from "@/lib/server/native-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +40,11 @@ export default async function SettingsPage() {
             <dd className="mt-1 text-zinc-100">{profile?.currentGoal || "Not set yet"}</dd>
           </div>
         </dl>
+        {isNativeAuthAvailable() ? (
+          <div className="mt-5">
+            <SignOutButton />
+          </div>
+        ) : null}
       </section>
       <section className="grid gap-3 md:grid-cols-3">
         {rows.map(([label, value, Icon]) => (

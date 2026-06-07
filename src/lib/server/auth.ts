@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import type { BelifeUser } from "@/lib/engines/types";
+import { getNativeBelifeUser, shouldAllowDemoUser } from "./native-auth";
 
 export function isClerkConfigured() {
   return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY);
@@ -7,12 +8,19 @@ export function isClerkConfigured() {
 
 export async function getBelifeUser(): Promise<BelifeUser | null> {
   if (!isClerkConfigured()) {
-    return {
-      id: "demo-user",
-      name: "BELIFE Demo",
-      email: "demo@belife.local",
-      isDemo: true,
-    };
+    const nativeUser = await getNativeBelifeUser();
+    if (nativeUser) return nativeUser;
+
+    if (shouldAllowDemoUser()) {
+      return {
+        id: "demo-user",
+        name: "BELIFE Demo",
+        email: "demo@belife.local",
+        isDemo: true,
+      };
+    }
+
+    return null;
   }
 
   try {

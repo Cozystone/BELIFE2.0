@@ -32,6 +32,30 @@ export const profiles = pgTable("profiles", {
   ...timestamps,
 });
 
+export const nativeAuthAccounts = pgTable(
+  "native_auth_accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: text("email").notNull(),
+    displayName: text("display_name").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("native_auth_accounts_email_idx").on(table.email)],
+);
+
+export const nativeAuthSessions = pgTable(
+  "native_auth_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    accountId: uuid("account_id").notNull().references(() => nativeAuthAccounts.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("native_auth_sessions_token_hash_idx").on(table.tokenHash)],
+);
+
 export const conversations = pgTable("conversations", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull().references(() => profiles.userId, { onDelete: "cascade" }),
@@ -132,6 +156,8 @@ export const hiddenConnectionEdges = pgTable("hidden_connection_edges", {
 
 export type StateEstimateRow = typeof stateEstimates.$inferSelect;
 export type ProfileRow = typeof profiles.$inferSelect;
+export type NativeAuthAccountRow = typeof nativeAuthAccounts.$inferSelect;
+export type NativeAuthSessionRow = typeof nativeAuthSessions.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
 export type OntologyNodeRow = typeof ontologyNodes.$inferSelect;
 export type MentalStateInsert = MentalStateEstimate;
