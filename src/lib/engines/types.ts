@@ -278,6 +278,16 @@ export interface ConnectionScenarioState {
   commitmentTendency: number;
 }
 
+export interface ConnectionScenarioSimulation {
+  iterations: number;
+  stability: number;
+  riskBand: "narrow" | "moderate" | "wide";
+  bestCase: ConnectionScenarioState;
+  likelyCase: ConnectionScenarioState;
+  riskCase: ConnectionScenarioState;
+  notes: string[];
+}
+
 export interface ConnectionScenarioPreview {
   type: ConnectionScenarioType;
   title: string;
@@ -286,6 +296,7 @@ export interface ConnectionScenarioPreview {
   riskSignal: string;
   state: ConnectionScenarioState;
   confidence: number;
+  simulation: ConnectionScenarioSimulation;
 }
 
 export type ConnectionAxisKey =

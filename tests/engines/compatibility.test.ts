@@ -81,9 +81,23 @@ describe("buildConnectionPreview", () => {
       expect(scenario.riskSignal.length).toBeGreaterThan(10);
       expect(scenario.confidence).toBeGreaterThanOrEqual(0);
       expect(scenario.confidence).toBeLessThanOrEqual(1);
+      expect(scenario.simulation.iterations).toBe(7);
+      expect(scenario.simulation.stability).toBeGreaterThanOrEqual(0);
+      expect(scenario.simulation.stability).toBeLessThanOrEqual(1);
+      expect(["narrow", "moderate", "wide"]).toContain(scenario.simulation.riskBand);
       for (const value of Object.values(scenario.state)) {
         expect(value).toBeGreaterThanOrEqual(0);
         expect(value).toBeLessThanOrEqual(1);
+      }
+      for (const simulatedState of [
+        scenario.simulation.bestCase,
+        scenario.simulation.likelyCase,
+        scenario.simulation.riskCase,
+      ]) {
+        for (const value of Object.values(simulatedState)) {
+          expect(value).toBeGreaterThanOrEqual(0);
+          expect(value).toBeLessThanOrEqual(1);
+        }
       }
     }
   });
@@ -117,9 +131,11 @@ describe("buildConnectionPreview", () => {
 
     expect(reselection?.title).toBe("Reselection");
     expect(reselection?.state.commitmentTendency).toBeGreaterThan(0.3);
+    expect(reselection?.simulation.bestCase.trust).toBeGreaterThanOrEqual(reselection?.simulation.riskCase.trust ?? 1);
     expect(reselection?.supportMove).toContain("계속 남기고 싶은 리듬");
     expect(drift?.title).toBe("Longitudinal Drift");
     expect(drift?.state.repairWillingness).toBeGreaterThan(0.3);
+    expect(drift?.simulation.riskCase.disengagementRisk).toBeGreaterThanOrEqual(drift?.simulation.bestCase.disengagementRisk ?? 1);
     expect(drift?.riskSignal).toContain("drift 신호");
   });
 });

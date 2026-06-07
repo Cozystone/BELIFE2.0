@@ -5,6 +5,7 @@ import type {
   CompatibilityAxes,
   ConnectionRelationshipReport,
   ConnectionScenarioPreview,
+  ConnectionScenarioSimulation,
   ConnectionScenarioState,
   DataTrustScore,
   OntologyNode,
@@ -223,6 +224,131 @@ function buildAxisInsights(
   ];
 }
 
+function buildScenarioSimulation(
+  base: ConnectionScenarioState,
+  type: ConnectionScenarioPreview["type"],
+  context: {
+    confidence: number;
+    conflictSensitivity: number;
+    dialogueCompatibility: number;
+    emotionalSafety: number;
+    repairPotential: number;
+  },
+): ConnectionScenarioSimulation {
+  const scenarioPressure: Record<ConnectionScenarioPreview["type"], number> = {
+    first_contact: 0.1,
+    light_disagreement: 0.18,
+    emotional_vulnerability: 0.2,
+    pressure: 0.28,
+    misunderstanding: 0.26,
+    repair_attempt: 0.19,
+    collaboration: 0.14,
+    reselection: 0.22,
+    longitudinal_drift: 0.3,
+  };
+  const volatility = clamp(
+    scenarioPressure[type] +
+      context.conflictSensitivity * 0.34 +
+      (1 - context.dialogueCompatibility) * 0.18 +
+      (1 - context.confidence) * 0.14,
+    0.06,
+    0.48,
+  );
+  const resilience = clamp(
+    context.repairPotential * 0.4 + context.emotionalSafety * 0.34 + context.confidence * 0.16,
+    0.06,
+    0.86,
+  );
+  const offsets = [-1, -0.62, -0.28, 0, 0.31, 0.68, 1];
+  const samples = offsets.map((offset) => perturbScenarioState(base, offset, volatility, resilience));
+  const ranked = [...samples].sort((left, right) => stateHealthScore(right) - stateHealthScore(left));
+  const spread = stateSpread(samples);
+  const stability = clamp(1 - spread * 0.92 - volatility * 0.18 + resilience * 0.14);
+  const riskBand: ConnectionScenarioSimulation["riskBand"] =
+    spread < 0.12 ? "narrow" : spread < 0.22 ? "moderate" : "wide";
+
+  return {
+    iterations: samples.length,
+    stability,
+    riskBand,
+    bestCase: ranked[0],
+    likelyCase: averageScenarioState(samples),
+    riskCase: ranked.at(-1) ?? ranked[0],
+    notes: simulationNotes({ riskBand, stability, riskCase: ranked.at(-1) ?? ranked[0] }),
+  };
+}
+
+function perturbScenarioState(
+  base: ConnectionScenarioState,
+  offset: number,
+  volatility: number,
+  resilience: number,
+): ConnectionScenarioState {
+  const stress = Math.max(0, offset) * volatility;
+  const support = Math.max(0, -offset) * resilience;
+  return {
+    trust: clamp(base.trust + support * 0.13 - stress * 0.15),
+    emotionalSafety: clamp(base.emotionalSafety + support * 0.12 - stress * 0.16),
+    irritation: clamp(base.irritation + stress * 0.2 - support * 0.1),
+    curiosity: clamp(base.curiosity + support * 0.08 - stress * 0.07),
+    reciprocity: clamp(base.reciprocity + support * 0.1 - stress * 0.12),
+    openness: clamp(base.openness + support * 0.11 - stress * 0.11),
+    repairWillingness: clamp(base.repairWillingness + support * 0.12 - stress * 0.08),
+    disengagementRisk: clamp(base.disengagementRisk + stress * 0.2 - support * 0.12),
+    commitmentTendency: clamp(base.commitmentTendency + support * 0.1 - stress * 0.1),
+  };
+}
+
+function stateHealthScore(state: ConnectionScenarioState) {
+  return (
+    state.trust +
+    state.emotionalSafety +
+    state.curiosity * 0.5 +
+    state.reciprocity +
+    state.openness * 0.6 +
+    state.repairWillingness +
+    state.commitmentTendency -
+    state.irritation -
+    state.disengagementRisk * 1.2
+  );
+}
+
+function averageScenarioState(samples: ConnectionScenarioState[]): ConnectionScenarioState {
+  const keys = Object.keys(samples[0]) as Array<keyof ConnectionScenarioState>;
+  return keys.reduce((accumulator, key) => {
+    accumulator[key] = clamp(samples.reduce((sum, sample) => sum + sample[key], 0) / samples.length);
+    return accumulator;
+  }, {} as ConnectionScenarioState);
+}
+
+function stateSpread(samples: ConnectionScenarioState[]) {
+  const keys = Object.keys(samples[0]) as Array<keyof ConnectionScenarioState>;
+  const totalSpread = keys.reduce((sum, key) => {
+    const values = samples.map((sample) => sample[key]);
+    return sum + (Math.max(...values) - Math.min(...values));
+  }, 0);
+  return totalSpread / keys.length;
+}
+
+function simulationNotes(input: {
+  riskBand: ConnectionScenarioSimulation["riskBand"];
+  stability: number;
+  riskCase: ConnectionScenarioState;
+}) {
+  const notes = [
+    input.riskBand === "wide"
+      ? "상황 압력이 커지면 결과 범위가 넓어질 수 있습니다."
+      : "현재 신호에서는 장면 결과 범위가 비교적 제한적입니다.",
+  ];
+  if (input.riskCase.disengagementRisk >= 0.55) {
+    notes.push("위험 샘플에서는 거리두기 신호가 먼저 커질 수 있습니다.");
+  }
+  if (input.stability >= 0.68) {
+    notes.push("반복 샘플에서도 관계 상태가 비교적 안정적으로 유지됩니다.");
+  }
+  return notes;
+}
+
 function scoreLevel(score: number): ConnectionAxisInsight["level"] {
   if (score >= 0.72) return "strong";
   if (score >= 0.56) return "clear";
@@ -277,7 +403,7 @@ function buildScenarioPreviews(input: {
     commitmentTendency: clamp(values.commitmentTendency ?? axes.complementarity),
   });
 
-  return [
+  const scenarios: Omit<ConnectionScenarioPreview, "simulation">[] = [
     {
       type: "first_contact",
       title: "First Contact",
@@ -450,4 +576,15 @@ function buildScenarioPreviews(input: {
       confidence: scenarioConfidence,
     },
   ];
+
+  return scenarios.map((scenario) => ({
+    ...scenario,
+    simulation: buildScenarioSimulation(scenario.state, scenario.type, {
+      confidence: scenario.confidence,
+      conflictSensitivity,
+      dialogueCompatibility: axes.dialogueCompatibility,
+      emotionalSafety: axes.emotionalSafety,
+      repairPotential: axes.repairPotential,
+    }),
+  }));
 }

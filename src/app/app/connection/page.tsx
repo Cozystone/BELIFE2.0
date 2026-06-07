@@ -203,6 +203,19 @@ export default async function ConnectionPage() {
                 <ScoreBar label="Safety" value={scenario.state.emotionalSafety} />
                 <ScoreBar label="Risk" value={scenario.state.disengagementRisk} tone="zinc" />
               </div>
+              <div className="mt-4 rounded-md border border-white/[0.08] bg-black/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-medium uppercase text-zinc-400">Simulation spread</p>
+                  <span className="rounded-md bg-white/[0.06] px-2 py-1 font-mono text-[11px] text-zinc-300">
+                    {scenario.simulation.riskBand} / {scenario.simulation.iterations}
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <ScoreBar label="Stability" value={scenario.simulation.stability} tone="teal" />
+                  <ScoreBar label="Best trust" value={scenario.simulation.bestCase.trust} />
+                  <ScoreBar label="Risk case" value={scenario.simulation.riskCase.disengagementRisk} tone="zinc" />
+                </div>
+              </div>
               <Link
                 href={talkDraftHref(
                   `${scenario.title} 관계 장면을 연습하고 싶어. 예상 흐름은 "${scenario.likelyDynamic}"이고, 도움이 되는 움직임은 "${scenario.supportMove}", 조심할 신호는 "${scenario.riskSignal}"이야. 내 패턴을 기준으로 실제로 어떻게 말하면 좋을지 짧은 대화 스크립트로 도와줘.`,
