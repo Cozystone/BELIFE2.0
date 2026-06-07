@@ -304,16 +304,20 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   const skipSuggestion = page.getByRole("button", { name: "Skip for now" }).first();
   await expect(skipSuggestion).toBeVisible();
   await skipSuggestion.click();
-  await expect(page.getByText("이번 제안은 건너뛰었습니다.")).toBeVisible();
+  await expect(page.getByText("이번 제안은 다시 띄우지 않을게요.")).toBeVisible();
   const exportResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/export");
     const body = await response.json();
+    const hasSkippedEnrichmentMemory = body.memoryChunks.some((chunk: { tags?: string[] }) =>
+      chunk.tags?.includes("profile-enrichment-dismissal"),
+    );
     return {
       status: response.status,
       schemaVersion: body.schemaVersion,
       hasProfile: Boolean(body.profile),
       messageCount: body.inventory.counts.messages,
       ontologyNodeCount: body.inventory.counts.ontologyNodes,
+      hasSkippedEnrichmentMemory,
     };
   });
 
@@ -321,6 +325,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     status: 200,
     schemaVersion: 1,
     hasProfile: true,
+    hasSkippedEnrichmentMemory: true,
   });
   expect(exportResult.messageCount).toBeGreaterThanOrEqual(0);
   expect(exportResult.ontologyNodeCount).toBeGreaterThanOrEqual(0);

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildProfileEnrichmentSuggestions } from "@/lib/engines/profile-enrichment";
+import {
+  buildProfileEnrichmentSuggestions,
+  filterDismissedProfileEnrichmentSuggestions,
+} from "@/lib/engines/profile-enrichment";
 import type { OntologyNode, UserProfile } from "@/lib/engines/types";
 
 const now = new Date().toISOString();
@@ -60,5 +63,16 @@ describe("buildProfileEnrichmentSuggestions", () => {
     const promotion = suggestions.find((suggestion) => suggestion.kind === "ontology_promotion");
     expect(promotion).toBeDefined();
     expect(promotion?.question).toContain("기억");
+  });
+
+  it("filters suggestions that the user has explicitly skipped", () => {
+    const suggestions = buildProfileEnrichmentSuggestions({
+      profile: profile(),
+      nodes: [node({ tier: "L1", layer: "core" })],
+    });
+    const filtered = filterDismissedProfileEnrichmentSuggestions(suggestions, [suggestions[0].id]);
+
+    expect(suggestions.length).toBeGreaterThan(0);
+    expect(filtered).not.toContainEqual(suggestions[0]);
   });
 });

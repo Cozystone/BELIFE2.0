@@ -7,6 +7,9 @@ import type {
 } from "./types";
 import { compactText } from "@/lib/utils";
 
+export const profileEnrichmentDismissalTag = "profile-enrichment-dismissal";
+const profileEnrichmentIdTagPrefix = "profile-enrichment-id:";
+
 const fieldByNodeType: Partial<Record<OntologyNodeType, ProfileEnrichmentField>> = {
   Goal: "currentGoal",
   Value: "importantValue",
@@ -79,6 +82,22 @@ export function buildProfileEnrichmentSuggestions(input: {
   }
 
   return dedupeSuggestions(suggestions).slice(0, input.limit ?? 3);
+}
+
+export function profileEnrichmentIdTag(id: string) {
+  return `${profileEnrichmentIdTagPrefix}${id}`.slice(0, 220);
+}
+
+export function profileEnrichmentIdFromTag(tag: string) {
+  return tag.startsWith(profileEnrichmentIdTagPrefix) ? tag.slice(profileEnrichmentIdTagPrefix.length) : null;
+}
+
+export function filterDismissedProfileEnrichmentSuggestions(
+  suggestions: ProfileEnrichmentSuggestion[],
+  dismissedIds: Iterable<string>,
+) {
+  const dismissed = new Set(dismissedIds);
+  return suggestions.filter((suggestion) => !dismissed.has(suggestion.id));
 }
 
 export function findProfileEnrichmentSuggestion(input: {

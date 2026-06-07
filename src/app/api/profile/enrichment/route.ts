@@ -1,4 +1,10 @@
-import { acceptProfileEnrichment, getProfileEnrichmentSuggestions, profileEnrichmentSchema, requireUserForApi } from "@/lib/server/belife-service";
+import {
+  acceptProfileEnrichment,
+  dismissProfileEnrichment,
+  getProfileEnrichmentSuggestions,
+  profileEnrichmentSchema,
+  requireUserForApi,
+} from "@/lib/server/belife-service";
 
 export const runtime = "nodejs";
 
@@ -21,6 +27,22 @@ export async function POST(request: Request) {
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Unable to accept profile enrichment." },
+      { status: 400 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const { user, response } = await requireUserForApi();
+  if (!user) return response;
+
+  try {
+    const input = profileEnrichmentSchema.parse(await request.json());
+    const result = await dismissProfileEnrichment(user.id, input.id);
+    return Response.json(result);
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Unable to skip profile enrichment." },
       { status: 400 },
     );
   }

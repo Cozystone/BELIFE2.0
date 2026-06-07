@@ -39,9 +39,28 @@ export function ProfileEnrichmentPanel({
     }
   }
 
-  function dismiss(id: string) {
-    setSuggestions((current) => current.filter((suggestion) => suggestion.id !== id));
-    setStatus("이번 제안은 건너뛰었습니다.");
+  async function dismiss(id: string) {
+    setSavingId(id);
+    setStatus("");
+    try {
+      const response = await belifeFetch("/api/profile/enrichment", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      if (response.ok) {
+        setSuggestions((current) => current.filter((suggestion) => suggestion.id !== id));
+        setStatus("이번 제안은 다시 띄우지 않을게요.");
+      } else {
+        const body = (await response.json()) as { error?: string };
+        setStatus(body.error || "제안을 건너뛰지 못했습니다.");
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "제안을 건너뛰지 못했습니다.");
+    } finally {
+      setSavingId(null);
+    }
   }
 
   return (

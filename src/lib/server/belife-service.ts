@@ -7,7 +7,13 @@ import { calculateDataTrust } from "@/lib/engines/data-trust";
 import { buildTwinReflection } from "@/lib/engines/digital-twin";
 import { estimateMentalState } from "@/lib/engines/mental-state";
 import { buildOntologyGraph, filterOntologyView } from "@/lib/engines/ontology";
-import { buildProfileEnrichmentSuggestions, findProfileEnrichmentSuggestion } from "@/lib/engines/profile-enrichment";
+import {
+  buildProfileEnrichmentSuggestions,
+  filterDismissedProfileEnrichmentSuggestions,
+  findProfileEnrichmentSuggestion,
+  profileEnrichmentDismissalTag,
+  profileEnrichmentIdTag,
+} from "@/lib/engines/profile-enrichment";
 import { buildMentalStateHistoryReport } from "@/lib/engines/state-history";
 import type {
   BelifeUser,
@@ -300,8 +306,12 @@ export async function getOntologyGraphForView(userId: string, view: "core" | "ex
 
 export async function getProfileEnrichmentSuggestions(userId: string) {
   const store = getStore();
-  const [profile, nodes] = await Promise.all([store.getProfile(userId), store.getOntologyNodes(userId)]);
-  return buildProfileEnrichmentSuggestions({ profile, nodes });
+  const [profile, nodes, dismissedIds] = await Promise.all([
+    store.getProfile(userId),
+    store.getOntologyNodes(userId),
+    store.getDismissedProfileEnrichmentIds(userId),
+  ]);
+  return filterDismissedProfileEnrichmentSuggestions(buildProfileEnrichmentSuggestions({ profile, nodes }), dismissedIds);
 }
 
 export async function acceptProfileEnrichment(userId: string, suggestionId: string) {
@@ -338,6 +348,24 @@ export async function acceptProfileEnrichment(userId: string, suggestionId: stri
   ]);
   const dataTrust = await refreshDataTrust(userId);
   return { suggestion, profile: updatedProfile, dataTrust };
+}
+
+export async function dismissProfileEnrichment(userId: string, suggestionId: string) {
+  const store = getStore();
+  const [profile, nodes] = await Promise.all([store.getProfile(userId), store.getOntologyNodes(userId)]);
+  const suggestion = findProfileEnrichmentSuggestion({ id: suggestionId, profile, nodes });
+  await store.saveMemoryChunks([
+    {
+      userId,
+      content: `사용자가 프로필 보강 제안을 보류했습니다: ${suggestion?.title ?? suggestionId}`,
+      kind: "semantic",
+      salience: 0.32,
+      evidenceType: "EXTRACTED",
+      tags: ["profile-enrichment", profileEnrichmentDismissalTag, profileEnrichmentIdTag(suggestionId)],
+    },
+  ]);
+  const dataTrust = await refreshDataTrust(userId);
+  return { dismissedId: suggestionId, suggestion: suggestion ?? null, dataTrust };
 }
 
 export async function getTwinAnswer(userId: string, question: string) {

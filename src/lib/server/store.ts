@@ -17,6 +17,10 @@ import {
   type StateEstimateRow,
 } from "@/lib/db/schema";
 import { calculateContradictionInverse } from "@/lib/engines/data-trust";
+import {
+  profileEnrichmentDismissalTag,
+  profileEnrichmentIdFromTag,
+} from "@/lib/engines/profile-enrichment";
 import type {
   BehaviorSnapshot,
   BelifeUser,
@@ -81,6 +85,7 @@ export interface BelifeStore {
   getLatestConnectionPreview(userId: string): Promise<CompatibilityAxes | null>;
   getMemoryInventory(userId: string): Promise<BelifeMemoryInventory>;
   getMemoryTimeline(userId: string, limit?: number): Promise<BelifeMemoryTimeline>;
+  getDismissedProfileEnrichmentIds(userId: string): Promise<Set<string>>;
   exportUserData(userId: string): Promise<BelifeDataExport>;
   resetUserData(user: BelifeUser): Promise<UserProfile>;
   getStats(userId: string): Promise<BelifeStats>;
@@ -573,6 +578,14 @@ class DbBelifeStore implements BelifeStore {
     return { generatedAt: isoNow(), items };
   }
 
+  async getDismissedProfileEnrichmentIds(userId: string) {
+    const rows = await getDb()
+      .select({ tags: memoryChunks.tags })
+      .from(memoryChunks)
+      .where(eq(memoryChunks.userId, userId));
+    return dismissedProfileEnrichmentIdsFromTags(rows.map((row) => row.tags ?? []));
+  }
+
   async exportUserData(userId: string): Promise<BelifeDataExport> {
     const db = getDb();
     const [profile, inventory, conversationRows, messageRows, chunkRows, nodeRows, stateRows, behaviorRows, trustRows, previewRows] =
@@ -948,6 +961,11 @@ class MemoryBelifeStore implements BelifeStore {
     return { generatedAt: isoNow(), items };
   }
 
+  async getDismissedProfileEnrichmentIds(userId: string) {
+    const chunks = memoryState.chunks.filter((chunk) => chunk.userId === userId);
+    return dismissedProfileEnrichmentIdsFromTags(chunks.map((chunk) => chunk.tags));
+  }
+
   async exportUserData(userId: string): Promise<BelifeDataExport> {
     const inventory = await this.getMemoryInventory(userId);
     return {
@@ -998,6 +1016,18 @@ class MemoryBelifeStore implements BelifeStore {
       [...chunks.map((chunk) => chunk.evidenceType), ...nodes.map((node) => node.certainty)],
     );
   }
+}
+
+function dismissedProfileEnrichmentIdsFromTags(tagSets: string[][]) {
+  const ids = new Set<string>();
+  for (const tags of tagSets) {
+    if (!tags.includes(profileEnrichmentDismissalTag)) continue;
+    for (const tag of tags) {
+      const id = profileEnrichmentIdFromTag(tag);
+      if (id) ids.add(id);
+    }
+  }
+  return ids;
 }
 
 function buildMemoryInventory(input: {
