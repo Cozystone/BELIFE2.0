@@ -192,6 +192,7 @@ export interface DataTrustScore {
   behaviorCoverage: number;
   contradictionInverse: number;
   recencyCoverage: number;
+  memoryQuality: number;
   explanation: string;
   createdAt: string;
 }

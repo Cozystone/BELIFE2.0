@@ -56,6 +56,7 @@ export interface BelifeStats {
   behaviorCoverage: number;
   contradictionInverse: number;
   recencyCoverage: number;
+  memoryQuality: number;
   sessionCount: number;
   ontologyCount: number;
 }
@@ -1322,16 +1323,47 @@ function buildStats(
     : [];
   const filled = fields.filter((value) => value && value.trim().length > 0).length;
   const sessionCount = new Set(userMessages.map((message) => message.conversationId)).size;
+  const activeNodes = nodes.filter((node) => node.status !== "archived" && node.layer !== "archive");
   return {
     profileCompleteness: fields.length ? filled / fields.length : 0,
     validSessionDensity: Math.min(1, userMessages.filter((message) => message.role === "user").length / 8),
-    ontologyStability: Math.min(1, nodes.reduce((sum, node) => sum + node.evidenceCount, 0) / 18),
+    ontologyStability: Math.min(1, activeNodes.reduce((sum, node) => sum + node.evidenceCount, 0) / 18),
     behaviorCoverage: behavior ? behavior.confidence : 0,
     contradictionInverse: calculateContradictionInverse(evidenceTypes),
     recencyCoverage: userMessages.length ? 0.8 : 0.1,
+    memoryQuality: calculateMemoryQuality(nodes, evidenceTypes),
     sessionCount,
-    ontologyCount: nodes.length,
+    ontologyCount: activeNodes.length,
   };
+}
+
+function calculateMemoryQuality(nodes: OntologyNode[], evidenceTypes: EvidenceType[]) {
+  const activeNodes = nodes.filter((node) => node.status !== "archived" && node.layer !== "archive");
+  const archivedNodes = nodes.length - activeNodes.length;
+  const activeConfidence = activeNodes.length
+    ? activeNodes.reduce((sum, node) => sum + node.confidence, 0) / activeNodes.length
+    : 0;
+  const archiveInverse = nodes.length ? 1 - archivedNodes / nodes.length : 0.7;
+  const activeRatio = nodes.length ? activeNodes.length / nodes.length : 0;
+  const extractedRatio = evidenceTypes.length
+    ? evidenceTypes.filter((type) => type === "EXTRACTED").length / evidenceTypes.length
+    : 0.25;
+  const ambiguousRatio = evidenceTypes.length
+    ? evidenceTypes.filter((type) => type === "AMBIGUOUS").length / evidenceTypes.length
+    : 0;
+
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      activeConfidence * 0.42 +
+        archiveInverse * 0.22 +
+        activeRatio * 0.16 +
+        extractedRatio * 0.14 -
+        ambiguousRatio * 0.12 +
+        Math.min(0.06, activeNodes.length * 0.01),
+    ),
+  );
 }
 
 const dbStore = new DbBelifeStore();

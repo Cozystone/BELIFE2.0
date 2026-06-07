@@ -157,6 +157,7 @@ export default async function SettingsPage() {
             <ScoreBar label="Behavior coverage" value={dataTrust.behaviorCoverage} tone="teal" />
             <ScoreBar label="Contradiction inverse" value={dataTrust.contradictionInverse} tone="zinc" />
             <ScoreBar label="Recency coverage" value={dataTrust.recencyCoverage} />
+            <ScoreBar label="Memory quality" value={dataTrust.memoryQuality} tone="teal" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {inventoryRows.map(([label, value]) => (

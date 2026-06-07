@@ -8,6 +8,7 @@ export interface DataTrustInput {
   behaviorCoverage: number;
   contradictionInverse?: number;
   recencyCoverage?: number;
+  memoryQuality?: number;
 }
 
 export function calculateContradictionInverse(evidenceTypes: EvidenceType[]): number {
@@ -27,14 +28,16 @@ export function calculateDataTrust(input: DataTrustInput): DataTrustScore {
   const behaviorCoverage = clamp(input.behaviorCoverage);
   const contradictionInverse = clamp(input.contradictionInverse ?? 0.9);
   const recencyCoverage = clamp(input.recencyCoverage ?? validSessionDensity);
+  const memoryQuality = clamp(input.memoryQuality ?? ontologyStability);
 
   const score =
-    0.3 * profileCompleteness +
-    0.25 * validSessionDensity +
-    0.2 * ontologyStability +
-    0.15 * behaviorCoverage +
-    0.06 * contradictionInverse +
-    0.04 * recencyCoverage;
+    0.27 * profileCompleteness +
+    0.22 * validSessionDensity +
+    0.18 * ontologyStability +
+    0.14 * behaviorCoverage +
+    0.07 * contradictionInverse +
+    0.04 * recencyCoverage +
+    0.08 * memoryQuality;
 
   const label =
     score >= 0.78 ? "strong" : score >= 0.58 ? "clear" : score >= 0.34 ? "building" : "low";
@@ -48,6 +51,7 @@ export function calculateDataTrust(input: DataTrustInput): DataTrustScore {
     behaviorCoverage,
     contradictionInverse,
     recencyCoverage,
+    memoryQuality,
     explanation:
       label === "strong"
         ? "BELIFE가 유용한 확신으로 말할 만큼 반복 신호를 충분히 모았습니다."

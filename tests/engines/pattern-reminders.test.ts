@@ -31,6 +31,7 @@ const trust: DataTrustScore = {
   behaviorCoverage: 0.5,
   contradictionInverse: 0.9,
   recencyCoverage: 0.7,
+  memoryQuality: 0.72,
   explanation: "test",
   createdAt: now,
 };

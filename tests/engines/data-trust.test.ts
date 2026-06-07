@@ -10,10 +10,12 @@ describe("calculateDataTrust", () => {
       behaviorCoverage: 0.6,
       contradictionInverse: 0.9,
       recencyCoverage: 0.8,
+      memoryQuality: 0.82,
     });
 
     expect(trust.score).toBeGreaterThan(75);
     expect(trust.label).toMatch(/clear|strong/);
+    expect(trust.memoryQuality).toBeGreaterThan(0.8);
   });
 
   it("keeps low evidence honest", () => {
@@ -35,5 +37,29 @@ describe("calculateDataTrust", () => {
     expect(clear).toBeGreaterThan(0.9);
     expect(ambiguous).toBeLessThan(clear);
     expect(ambiguous).toBeGreaterThanOrEqual(0);
+  });
+
+  it("penalizes weak memory quality even when other setup signals exist", () => {
+    const clearMemory = calculateDataTrust({
+      profileCompleteness: 0.8,
+      validSessionDensity: 0.7,
+      ontologyStability: 0.7,
+      behaviorCoverage: 0.65,
+      contradictionInverse: 0.9,
+      recencyCoverage: 0.8,
+      memoryQuality: 0.9,
+    });
+    const weakMemory = calculateDataTrust({
+      profileCompleteness: 0.8,
+      validSessionDensity: 0.7,
+      ontologyStability: 0.7,
+      behaviorCoverage: 0.65,
+      contradictionInverse: 0.55,
+      recencyCoverage: 0.8,
+      memoryQuality: 0.22,
+    });
+
+    expect(weakMemory.score).toBeLessThan(clearMemory.score);
+    expect(weakMemory.memoryQuality).toBeLessThan(0.3);
   });
 });
