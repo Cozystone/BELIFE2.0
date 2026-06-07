@@ -324,6 +324,25 @@ export interface CompatibilityAxes {
   relationshipReport: ConnectionRelationshipReport;
 }
 
+export type TwinEvidenceSource = "profile" | "state" | "behavior" | "ontology";
+
+export interface TwinEvidenceItem {
+  source: TwinEvidenceSource;
+  label: string;
+  detail: string;
+  confidence: number;
+}
+
+export interface TwinReflection {
+  answer: string;
+  confidence: number;
+  confidenceLabel: "early" | "forming" | "grounded" | "strong";
+  evidence: TwinEvidenceItem[];
+  uncertainties: string[];
+  nextQuestion: string;
+  guardrail: string;
+}
+
 export type ProfileEnrichmentKind = "profile_field" | "ontology_promotion";
 export type ProfileEnrichmentField =
   | "mainWorry"

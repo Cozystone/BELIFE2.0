@@ -110,6 +110,31 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(timelineResult.itemCount).toBeGreaterThan(0);
   expect(timelineResult.kinds).toContain("memory");
 
+  await page.goto("/app/twin");
+  await expect(page.getByRole("heading", { name: "Digital Twin" })).toBeVisible();
+  const twinResult = await page.evaluate(async () => {
+    const response = await fetch("/api/twin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: "왜 같은 걱정이 반복되는지 알려줘" }),
+    });
+    const body = await response.json();
+    return {
+      status: response.status,
+      hasAnswer: Boolean(body.answer),
+      evidenceCount: body.reflection.evidence.length,
+      confidenceLabel: body.reflection.confidenceLabel,
+    };
+  });
+
+  expect(twinResult.status).toBe(200);
+  expect(twinResult.hasAnswer).toBe(true);
+  expect(twinResult.evidenceCount).toBeGreaterThan(0);
+  expect(twinResult.confidenceLabel).toMatch(/early|forming|grounded|strong/);
+  await page.getByRole("button", { name: "Ask Twin" }).click();
+  await expect(page.getByRole("heading", { name: "Evidence" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Uncertainty" })).toBeVisible();
+
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Data Controls" })).toBeVisible();

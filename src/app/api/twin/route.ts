@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getTwinAnswer, requireUserForApi } from "@/lib/server/belife-service";
+import { getTwinReflection, requireUserForApi } from "@/lib/server/belife-service";
 
 export const runtime = "nodejs";
 
@@ -13,8 +13,8 @@ export async function POST(request: Request) {
 
   try {
     const { question } = twinSchema.parse(await request.json());
-    const answer = await getTwinAnswer(user.id, question);
-    return Response.json({ answer });
+    const reflection = await getTwinReflection(user.id, question);
+    return Response.json({ answer: reflection.answer, reflection });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Invalid twin request" }, { status: 400 });
   }

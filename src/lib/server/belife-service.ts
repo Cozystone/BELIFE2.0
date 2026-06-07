@@ -4,6 +4,7 @@ import { ollamaGenerate } from "@/lib/ai/ollama";
 import { buildStructuredExtraction } from "@/lib/ai/structured-extraction";
 import { buildConnectionPreview } from "@/lib/engines/compatibility";
 import { calculateDataTrust } from "@/lib/engines/data-trust";
+import { buildTwinReflection } from "@/lib/engines/digital-twin";
 import { estimateMentalState } from "@/lib/engines/mental-state";
 import { buildOntologyGraph, filterOntologyView } from "@/lib/engines/ontology";
 import { buildProfileEnrichmentSuggestions, findProfileEnrichmentSuggestion } from "@/lib/engines/profile-enrichment";
@@ -321,6 +322,11 @@ export async function acceptProfileEnrichment(userId: string, suggestionId: stri
 }
 
 export async function getTwinAnswer(userId: string, question: string) {
+  const reflection = await getTwinReflection(userId, question);
+  return reflection.answer;
+}
+
+export async function getTwinReflection(userId: string, question: string) {
   const store = getStore();
   const [profile, state, behavior, nodes] = await Promise.all([
     store.getProfile(userId),
@@ -347,16 +353,19 @@ Return: 1) what your structure might be doing, 2) what is uncertain, 3) one ques
 
   try {
     const response = await ollamaGenerate({ prompt, temperature: 0.35 });
-    if (response) return response;
+    if (response) {
+      return buildTwinReflection({ answer: response, question, profile, state, behavior, nodes });
+    }
   } catch {
     // Keep production usable while an external Ollama endpoint is being connected.
   }
 
-  return `지금까지의 구조를 기준으로 보면, 이 질문은 단순히 “무엇을 해야 하지?”보다 “왜 같은 패턴이 반복되지?”를 확인하려는 쪽에 가깝습니다.
+  const fallbackAnswer = `지금까지의 구조를 기준으로 보면, 이 질문은 단순히 “무엇을 해야 하지?”보다 “왜 같은 패턴이 반복되지?”를 확인하려는 쪽에 가깝습니다.
 
 아직 확실하지 않은 부분은 이것이 일시적인 피로에서 나온 반복인지, 오래된 관계/결정 방식에서 나온 반복인지입니다. BELIFE는 증거가 부족한 부분을 사실처럼 말하지 않겠습니다.
 
 스스로에게 물어볼 질문은 이것입니다. 지금 내가 해결하려는 것은 실제 문제인가요, 아니면 그 문제를 둘러싼 불안과 압박인가요?`;
+  return buildTwinReflection({ answer: fallbackAnswer, question, profile, state, behavior, nodes });
 }
 
 export async function getConnectionPreview(userId: string) {
