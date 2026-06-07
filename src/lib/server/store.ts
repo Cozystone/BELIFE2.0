@@ -21,7 +21,7 @@ import {
 } from "@/lib/db/schema";
 import { calculateContradictionInverse } from "@/lib/engines/data-trust";
 import { completeMentalStateSignals } from "@/lib/engines/mental-state";
-import { buildOntologyGraph } from "@/lib/engines/ontology";
+import { applyOntologyMemoryPolicy, buildOntologyGraph, mergeOntologyEvidence } from "@/lib/engines/ontology";
 import {
   profileEnrichmentDismissalTag,
   profileEnrichmentIdFromTag,
@@ -435,17 +435,18 @@ class DbBelifeStore implements BelifeStore {
       });
 
       if (existing) {
+        const merged = mergeOntologyEvidence(mapNode(existing), node);
         const [updated] = await db
           .update(ontologyNodes)
           .set({
-            summary: node.summary,
-            layer: node.layer,
-            tier: node.tier,
-            certainty: node.certainty,
-            confidence: Math.max(existing.confidence, node.confidence),
-            evidenceCount: existing.evidenceCount + 1,
-            status: "active",
-            lastEvidenceAt: new Date(),
+            summary: merged.summary,
+            layer: merged.layer,
+            tier: merged.tier,
+            certainty: merged.certainty,
+            confidence: merged.confidence,
+            evidenceCount: merged.evidenceCount,
+            status: merged.status,
+            lastEvidenceAt: new Date(merged.lastEvidenceAt),
             updatedAt: new Date(),
           })
           .where(eq(ontologyNodes.id, existing.id))
@@ -477,6 +478,7 @@ class DbBelifeStore implements BelifeStore {
   }
 
   async getOntologyNodes(userId: string) {
+    await this.applyOntologyPolicy(userId);
     const rows = await getDb().select().from(ontologyNodes).where(eq(ontologyNodes.userId, userId));
     return rows.map(mapNode);
   }
@@ -503,6 +505,39 @@ class DbBelifeStore implements BelifeStore {
         confidence: edge.confidence,
       })),
     );
+  }
+
+  private async applyOntologyPolicy(userId: string) {
+    const db = getDb();
+    const rows = await db.select().from(ontologyNodes).where(eq(ontologyNodes.userId, userId));
+    const current = rows.map(mapNode);
+    const reconciled = applyOntologyMemoryPolicy(current);
+    const currentById = new Map(current.map((node) => [node.id, node]));
+
+    for (const node of reconciled) {
+      if (!node.id) continue;
+      const before = currentById.get(node.id);
+      if (
+        !before ||
+        (before.confidence === node.confidence &&
+          before.certainty === node.certainty &&
+          before.status === node.status &&
+          before.layer === node.layer)
+      ) {
+        continue;
+      }
+
+      await db
+        .update(ontologyNodes)
+        .set({
+          confidence: node.confidence,
+          certainty: node.certainty,
+          status: node.status,
+          layer: node.layer,
+          updatedAt: new Date(),
+        })
+        .where(eq(ontologyNodes.id, node.id));
+    }
   }
 
   async saveStateEstimate(userId: string, state: MentalStateEstimate) {
@@ -956,13 +991,7 @@ class MemoryBelifeStore implements BelifeStore {
       );
       if (index >= 0) {
         const existing = memoryState.nodes[index];
-        const updated = {
-          ...existing,
-          summary: node.summary,
-          confidence: Math.max(existing.confidence, node.confidence),
-          evidenceCount: existing.evidenceCount + 1,
-          lastEvidenceAt: isoNow(),
-        };
+        const updated = mergeOntologyEvidence(existing, node);
         memoryState.nodes[index] = updated;
         saved.push(updated);
       } else {
@@ -976,7 +1005,7 @@ class MemoryBelifeStore implements BelifeStore {
   }
 
   async getOntologyNodes(userId: string) {
-    return memoryState.nodes.filter((node) => node.userId === userId);
+    return this.applyOntologyPolicy(userId);
   }
 
   async getOntologyEdges(userId: string) {
@@ -984,7 +1013,7 @@ class MemoryBelifeStore implements BelifeStore {
   }
 
   private syncOntologyEdges(userId: string) {
-    const nodes = memoryState.nodes.filter((node) => node.userId === userId);
+    const nodes = this.applyOntologyPolicy(userId);
     const graphEdges = buildOntologyGraph(nodes).edges;
     memoryState.edges = [
       ...memoryState.edges.filter((edge) => edge.userId !== userId),
@@ -999,6 +1028,16 @@ class MemoryBelifeStore implements BelifeStore {
         createdAt: isoNow(),
       })),
     ];
+  }
+
+  private applyOntologyPolicy(userId: string) {
+    const reconciled = applyOntologyMemoryPolicy(memoryState.nodes.filter((node) => node.userId === userId));
+    const reconciledById = new Map(reconciled.map((node) => [node.id, node]));
+    memoryState.nodes = memoryState.nodes.map((node) => {
+      if (node.userId !== userId || !node.id) return node;
+      return reconciledById.get(node.id) ?? node;
+    });
+    return reconciled;
   }
 
   async saveStateEstimate(userId: string, state: MentalStateEstimate) {

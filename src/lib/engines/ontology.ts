@@ -11,6 +11,20 @@ import type {
   OntologyNodeType,
 } from "./types";
 
+const contradictionHints = [
+  "아니",
+  "더 이상",
+  "이제는",
+  "바뀌",
+  "반대",
+  "틀렸",
+  "예전",
+  "not anymore",
+  "changed",
+  "opposite",
+  "no longer",
+];
+
 interface CandidateSeed {
   type: OntologyNodeType;
   label: string;
@@ -32,6 +46,19 @@ const keywordGroups = {
 
 function includesAny(text: string, keywords: string[]) {
   return keywords.some((keyword) => text.includes(keyword.toLowerCase()));
+}
+
+function tierRank(tier: ImportanceTier) {
+  return tier === "L1" ? 3 : tier === "L2" ? 2 : 1;
+}
+
+function strongerTier(left: ImportanceTier, right: ImportanceTier): ImportanceTier {
+  return tierRank(right) > tierRank(left) ? right : left;
+}
+
+function strongerCertainty(left: EvidenceType, right: EvidenceType): EvidenceType {
+  const rank: Record<EvidenceType, number> = { AMBIGUOUS: 0, INFERRED: 1, EXTRACTED: 2 };
+  return rank[right] > rank[left] ? right : left;
 }
 
 function candidate(type: OntologyNodeType, label: string, summary: string, tier: ImportanceTier = "L2"): CandidateSeed {
@@ -106,6 +133,78 @@ export function filterOntologyView(nodes: OntologyNode[], view: "core" | "expand
   if (view === "core") return active.filter((node) => node.tier === "L1");
   if (view === "expanded") return active.filter((node) => node.tier === "L1" || node.tier === "L2");
   return active;
+}
+
+export function mergeOntologyEvidence(existing: OntologyNode, incoming: OntologyNode): OntologyNode {
+  const contradictionText = `${incoming.label} ${incoming.summary}`.toLowerCase();
+  const contradictsExisting =
+    incoming.certainty === "AMBIGUOUS" && contradictionHints.some((hint) => contradictionText.includes(hint));
+  const evidenceCount = existing.evidenceCount + Math.max(1, incoming.evidenceCount);
+
+  if (contradictsExisting) {
+    const confidence = Math.max(0.08, Math.min(1, existing.confidence * 0.68 + incoming.confidence * 0.18));
+    const shouldArchive = confidence < 0.3 && existing.tier === "L3";
+
+    return {
+      ...existing,
+      summary: incoming.summary,
+      certainty: "AMBIGUOUS",
+      confidence,
+      evidenceCount,
+      status: shouldArchive ? "archived" : "active",
+      layer: shouldArchive ? "archive" : existing.layer,
+      lastEvidenceAt: incoming.lastEvidenceAt,
+    };
+  }
+
+  const tier = strongerTier(existing.tier, incoming.tier);
+  const confidence = Math.min(0.96, Math.max(existing.confidence, incoming.confidence) + Math.min(0.08, evidenceCount * 0.004));
+
+  return {
+    ...existing,
+    summary: incoming.summary.length >= existing.summary.length ? incoming.summary : existing.summary,
+    layer: tier === "L1" ? "core" : incoming.layer === "archive" ? existing.layer : incoming.layer,
+    tier,
+    certainty: strongerCertainty(existing.certainty, incoming.certainty),
+    confidence,
+    evidenceCount,
+    status: "active",
+    lastEvidenceAt: incoming.lastEvidenceAt,
+  };
+}
+
+export function applyOntologyMemoryPolicy(nodes: OntologyNode[], now = isoNow()): OntologyNode[] {
+  const nowMs = new Date(now).getTime();
+
+  return nodes.map((node) => {
+    if (node.status === "archived" || node.layer === "archive") return node;
+
+    const lastEvidenceMs = new Date(node.lastEvidenceAt).getTime();
+    const ageDays = Number.isFinite(lastEvidenceMs) ? Math.max(0, (nowMs - lastEvidenceMs) / 86_400_000) : 0;
+    const isCore = node.tier === "L1" || node.layer === "core";
+    if (ageDays <= 30) return node;
+
+    const staleFactor = Math.min(1, Math.max(0, (ageDays - 30) / 150));
+    const ambiguityPenalty = node.certainty === "AMBIGUOUS" ? 0.06 : 0;
+    const lowEvidencePenalty = node.evidenceCount <= 1 ? 0.04 : 0;
+    const staleConfidenceCeiling = Math.max(
+      0.08,
+      Math.min(1, 0.62 - staleFactor * 0.26 - ambiguityPenalty - lowEvidencePenalty + Math.min(0.12, node.evidenceCount * 0.02)),
+    );
+    const confidence = isCore ? node.confidence : Math.min(node.confidence, staleConfidenceCeiling);
+    const shouldArchive =
+      !isCore &&
+      ((ageDays > 90 && node.tier === "L3" && confidence < 0.34) ||
+        (ageDays > 60 && node.certainty === "AMBIGUOUS" && node.evidenceCount <= 1));
+
+    return {
+      ...node,
+      certainty: confidence < 0.38 && node.certainty !== "EXTRACTED" ? "AMBIGUOUS" : node.certainty,
+      confidence,
+      status: shouldArchive ? "archived" : node.status,
+      layer: shouldArchive ? "archive" : node.layer,
+    };
+  });
 }
 
 export function buildOntologyGraph(nodes: OntologyNode[]): OntologyGraphModel {
