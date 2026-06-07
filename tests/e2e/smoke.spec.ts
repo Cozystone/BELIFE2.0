@@ -213,6 +213,10 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/today");
   await expect(page.getByRole("main").getByText("Today")).toBeVisible();
+  await page.getByRole("link", { name: /반복 생각 풀기/ }).click();
+  await expect(page).toHaveURL(/\/app\/talk\?conversation=new&draft=/);
+  await expect(page.locator("textarea")).toHaveValue(/반복해서 떠오르는 생각/);
+  await page.goto("/app/today");
   await expect(page.getByRole("heading", { name: "State History" })).toBeVisible();
   const stateHistoryResult = await page.evaluate(async () => {
     const response = await fetch("/api/state/history?limit=8");

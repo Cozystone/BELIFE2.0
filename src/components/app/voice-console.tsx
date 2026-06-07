@@ -35,12 +35,13 @@ function replaceTalkConversationUrl(conversationId: string | null) {
 type VoiceConsoleProps = {
   initialMessages: ConversationMessage[];
   initialConversationId: string | null;
+  initialDraft?: string;
 };
 
-export function VoiceConsole({ initialMessages, initialConversationId }: VoiceConsoleProps) {
+export function VoiceConsole({ initialMessages, initialConversationId, initialDraft = "" }: VoiceConsoleProps) {
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId);
   const [messages, setMessages] = useState(initialMessages);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initialDraft);
   const [isListening, setIsListening] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [status, setStatus] = useState(initialConversationId ? "최근 대화를 이어갑니다" : "준비됨");

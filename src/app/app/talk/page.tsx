@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 type TalkPageProps = {
   searchParams?: Promise<{
     conversation?: string | string[];
+    draft?: string | string[];
   }>;
 };
 
@@ -18,6 +19,11 @@ function requestedConversationId(params: { conversation?: string | string[] } | 
   const value = Array.isArray(params?.conversation) ? params?.conversation[0] : params?.conversation;
   if (!value || value === "new" || value.startsWith("/") || value.length > 80) return null;
   return value;
+}
+
+function requestedDraft(params: { draft?: string | string[] } | undefined) {
+  const value = Array.isArray(params?.draft) ? params?.draft[0] : params?.draft;
+  return value ? value.slice(0, 600) : "";
 }
 
 function formatConversationTime(value: string) {
@@ -96,6 +102,7 @@ export default async function TalkPage({ searchParams }: TalkPageProps) {
   const store = getStore();
   const params = searchParams ? await searchParams : undefined;
   const requestedId = requestedConversationId(params);
+  const initialDraft = requestedDraft(params);
   const wantsFreshConversation = params?.conversation === "new";
   const [conversations, latestConversationId] = await Promise.all([
     store.getConversationSummaries(user.id, 12),
@@ -120,6 +127,7 @@ export default async function TalkPage({ searchParams }: TalkPageProps) {
         key={selectedConversationId ?? "fresh"}
         initialMessages={messages}
         initialConversationId={selectedConversationId}
+        initialDraft={initialDraft}
       />
     </>
   );

@@ -1,4 +1,4 @@
-import { Activity, Brain, Database, ShieldCheck } from "lucide-react";
+import { Activity, Brain, Database, MessageCircle, PenLine, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { ScoreBar } from "@/components/app/score-bar";
 import { StateHistoryPanel } from "@/components/app/state-history-panel";
@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { getBriefing, getMentalStateHistory, requireUserForPage } from "@/lib/server/belife-service";
 
 export const dynamic = "force-dynamic";
+
+function talkDraftHref(draft: string) {
+  const params = new URLSearchParams({
+    conversation: "new",
+    draft,
+  });
+  return `/app/talk?${params.toString()}`;
+}
 
 export default async function TodayPage() {
   const user = await requireUserForPage();
@@ -27,6 +35,32 @@ export default async function TodayPage() {
           <Link href="/app/self-map">
             <Button variant="secondary" className="w-full sm:w-auto">View self map</Button>
           </Link>
+        </div>
+      </section>
+
+      <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+          <MessageCircle className="h-4 w-4 text-orange-300" />
+          Quick check-in
+        </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          {[
+            ["오늘 상태로 대화하기", briefing.recommendedPrompt],
+            ["반복 생각 풀기", `지금 반복해서 떠오르는 생각은 무엇이고, BELIFE는 이걸 어떤 패턴으로 보고 있나요?`],
+            ["관계 감각 점검", `오늘 내가 사람들과 연결되는 방식에서 조심해야 할 신호와 믿어도 되는 신호를 나눠서 봐줘.`],
+          ].map(([label, draft]) => (
+            <Link
+              key={label}
+              href={talkDraftHref(draft)}
+              className="rounded-md border border-white/[0.08] bg-black/40 p-3 text-left text-sm text-zinc-300 transition hover:border-orange-400/30 hover:bg-orange-500/10 hover:text-orange-100"
+            >
+              <div className="flex items-center gap-2 font-medium">
+                <PenLine className="h-3.5 w-3.5 text-orange-300" />
+                {label}
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500">{draft}</p>
+            </Link>
+          ))}
         </div>
       </section>
 
