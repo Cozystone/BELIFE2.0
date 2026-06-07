@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildConnectionPreview, simulateConnectionScenario } from "@/lib/engines/compatibility";
+import {
+  buildConnectionCandidateFilteringReport,
+  buildConnectionPreview,
+  simulateConnectionScenario,
+} from "@/lib/engines/compatibility";
 import type { BehaviorSnapshot, DataTrustScore, OntologyNode } from "@/lib/engines/types";
 
 const trust: DataTrustScore = {
@@ -158,6 +162,28 @@ describe("buildConnectionPreview", () => {
     expect(nextPreview.hiddenEdge.mechanisms.reciprocity).toBe(nextPreview.hiddenEdge.responsiveness);
     expect(nextPreview.hiddenEdge.mechanisms.drift).toBeGreaterThanOrEqual(0);
     expect(nextPreview.hiddenEdge.mechanisms.conflictToxicity).toBeGreaterThanOrEqual(0);
+  });
+
+  it("filters private relationship candidate archetypes without public matching", () => {
+    const preview = buildConnectionPreview([], warmBehavior, trust);
+    const report = buildConnectionCandidateFilteringReport(preview);
+
+    expect(report.guardrail).toContain("not public matching");
+    expect(report.candidates.length).toBeGreaterThanOrEqual(4);
+    expect(report.candidates.some((candidate) => candidate.status === "prioritize" || candidate.status === "watch")).toBe(true);
+    expect(report.candidates.map((candidate) => candidate.id)).toContain("grounded-reciprocity");
+    expect(report.candidates.map((candidate) => candidate.id)).toContain("structured-collaborator");
+    for (const candidate of report.candidates) {
+      expect(candidate.fit).toBeGreaterThanOrEqual(0);
+      expect(candidate.fit).toBeLessThanOrEqual(1);
+      expect(candidate.risk).toBeGreaterThanOrEqual(0);
+      expect(candidate.risk).toBeLessThanOrEqual(1);
+      expect(candidate.confidence).toBeGreaterThanOrEqual(0);
+      expect(candidate.confidence).toBeLessThanOrEqual(1);
+      expect(candidate.evidence.length).toBeGreaterThan(0);
+      expect(candidate.riskSignals.length).toBeGreaterThan(0);
+      expect(candidate.nextObservation.length).toBeGreaterThan(20);
+    }
   });
 
   it("runs custom relationship simulations without exposing public matching", () => {

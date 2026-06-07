@@ -335,7 +335,23 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await page.goto("/app/connection");
   await expect(page.getByRole("heading", { name: "Human Connection Preview" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Hidden Graph" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Candidate Filters" })).toBeVisible();
   await expect(page.getByText("Edge strength")).toBeVisible();
+  const candidateFilterResult = await page.evaluate(async () => {
+    const response = await fetch("/api/connection/candidates");
+    const body = await response.json();
+    return {
+      status: response.status,
+      candidateCount: body.report?.candidates?.length ?? 0,
+      guardrail: body.report?.guardrail ?? "",
+      statuses: body.report?.candidates?.map((candidate: { status: string }) => candidate.status) ?? [],
+    };
+  });
+
+  expect(candidateFilterResult.status).toBe(200);
+  expect(candidateFilterResult.candidateCount).toBeGreaterThan(0);
+  expect(candidateFilterResult.guardrail).toContain("not public matching");
+  expect(candidateFilterResult.statuses.some((status: string) => ["prioritize", "watch", "defer"].includes(status))).toBe(true);
   await expect(page.getByRole("heading", { name: "Custom Scenario Simulation" })).toBeVisible();
   await page.getByRole("button", { name: "Run simulation" }).click();
   await expect(page.getByRole("heading", { name: "Simulation result" })).toBeVisible();
@@ -415,6 +431,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const hiddenBriefingBody = await hiddenBriefing.json();
     const blockedConnection = await fetch("/api/connection/preview");
     const blockedConnectionBody = await blockedConnection.json();
+    const blockedCandidates = await fetch("/api/connection/candidates");
+    const blockedCandidatesBody = await blockedCandidates.json();
     const enabled = await fetch("/api/privacy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -438,6 +456,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       hiddenPrivacy: hiddenBriefingBody.briefing?.privacy,
       blockedConnectionStatus: blockedConnection.status,
       blockedConnectionCode: blockedConnectionBody.code,
+      blockedCandidatesStatus: blockedCandidates.status,
+      blockedCandidatesCode: blockedCandidatesBody.code,
       enabledStatus: enabled.status,
       enabledPreferences: enabledBody.preferences,
       visibleBriefingStatus: visibleBriefing.status,
@@ -464,6 +484,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   });
   expect(privacyResult.blockedConnectionStatus).toBe(403);
   expect(privacyResult.blockedConnectionCode).toBe("CONNECTION_PREVIEW_DISABLED");
+  expect(privacyResult.blockedCandidatesStatus).toBe(403);
+  expect(privacyResult.blockedCandidatesCode).toBe("CONNECTION_PREVIEW_DISABLED");
   expect(privacyResult.enabledStatus).toBe(200);
   expect(privacyResult.enabledPreferences).toMatchObject({
     showEvidenceLedger: true,

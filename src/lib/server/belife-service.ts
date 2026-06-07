@@ -2,7 +2,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ollamaGenerate } from "@/lib/ai/ollama";
 import { buildStructuredExtraction } from "@/lib/ai/structured-extraction";
-import { buildConnectionPreview, simulateConnectionScenario } from "@/lib/engines/compatibility";
+import {
+  buildConnectionCandidateFilteringReport,
+  buildConnectionPreview,
+  simulateConnectionScenario,
+} from "@/lib/engines/compatibility";
 import { buildDataTrustAudit, calculateDataTrust } from "@/lib/engines/data-trust";
 import { buildTwinReflection } from "@/lib/engines/digital-twin";
 import { rankMemoryEvidence } from "@/lib/engines/evidence-retrieval";
@@ -719,6 +723,11 @@ export async function simulateConnectionForUser(userId: string, input: Connectio
   ]);
   await refreshDataTrust(userId);
   return simulation;
+}
+
+export async function getConnectionCandidateFilters(userId: string) {
+  const preview = await getConnectionPreview(userId);
+  return buildConnectionCandidateFilteringReport(preview);
 }
 
 export async function getDataTrustCenter(userId: string) {

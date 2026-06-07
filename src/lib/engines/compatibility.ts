@@ -2,6 +2,9 @@ import { clamp } from "@/lib/utils";
 import type {
   BehaviorSnapshot,
   ConnectionAxisInsight,
+  ConnectionCandidateFilter,
+  ConnectionCandidateFilteringReport,
+  ConnectionCandidateStatus,
   ConnectionHiddenEdge,
   ConnectionRelationshipMode,
   ConnectionScenarioType,
@@ -190,6 +193,203 @@ export function simulateConnectionScenario(
     guardrail:
       "This is an internal BELIFE relationship rehearsal, not a prediction, diagnosis, or public matching decision.",
   };
+}
+
+export function buildConnectionCandidateFilteringReport(
+  preview: CompatibilityAxes,
+  limit = 5,
+): ConnectionCandidateFilteringReport {
+  const candidates = buildCandidateFilters(preview)
+    .sort((left, right) => right.fit - left.fit || left.risk - right.risk)
+    .slice(0, Math.max(1, Math.min(6, limit)));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    confidence: preview.relationshipReport.confidence,
+    guardrail:
+      "These are private BELIFE relationship candidate filters, not public matching suggestions, rankings of people, or deterministic predictions.",
+    candidates,
+    prioritized: candidates.filter((candidate) => candidate.status === "prioritize"),
+    deferred: candidates.filter((candidate) => candidate.status === "defer"),
+  };
+}
+
+function buildCandidateFilters(preview: CompatibilityAxes): ConnectionCandidateFilter[] {
+  const misunderstanding = scenarioByType(preview, "misunderstanding");
+  const vulnerability = scenarioByType(preview, "emotional_vulnerability");
+  const collaboration = scenarioByType(preview, "collaboration");
+  const repair = scenarioByType(preview, "repair_attempt");
+  const drift = scenarioByType(preview, "longitudinal_drift");
+  const reselection = scenarioByType(preview, "reselection");
+  const sharedSafety = clamp((preview.hiddenEdge.sharedReality + preview.emotionalSafety) / 2);
+  const repairCapacity = clamp((preview.repairPotential + preview.hiddenEdge.repair + repair.state.repairWillingness) / 3);
+
+  return [
+    candidateFilter({
+      id: "grounded-reciprocity",
+      label: "Grounded reciprocity",
+      relationshipMode: "friendship",
+      scenarioType: "first_contact",
+      fit: sharedSafety * 0.34 +
+        preview.hiddenEdge.responsiveness * 0.24 +
+        preview.hiddenEdge.modeScores.friendship * 0.22 +
+        vulnerability.state.emotionalSafety * 0.2,
+      risk: vulnerability.state.disengagementRisk * 0.46 + (1 - preview.emotionalSafety) * 0.34 + misunderstanding.state.irritation * 0.2,
+      confidence: preview.relationshipReport.confidence,
+      why: "Prioritize people and contexts where response quality, pacing, and emotional safety are visible before intensity rises.",
+      evidence: [
+        `Friendship mode ${Math.round(preview.hiddenEdge.modeScores.friendship * 100)}`,
+        `Shared reality ${Math.round(preview.hiddenEdge.sharedReality * 100)}`,
+        `Vulnerability safety ${Math.round(vulnerability.state.emotionalSafety * 100)}`,
+      ],
+      riskSignals: [
+        "Early over-disclosure without reciprocal checking",
+        "Warmth that disappears when a small need is named",
+      ],
+      nextObservation: "In the next close interaction, watch whether the other person reflects your meaning before offering a fix.",
+    }),
+    candidateFilter({
+      id: "repair-capable-challenger",
+      label: "Repair-capable challenger",
+      relationshipMode: "friendship",
+      scenarioType: "repair_attempt",
+      fit: repairCapacity * 0.42 +
+        preview.conflictCompatibility * 0.22 +
+        preview.hiddenEdge.modeScores.friendship * 0.18 +
+        repair.simulation.stability * 0.18,
+      risk: misunderstanding.state.irritation * 0.38 + (1 - repairCapacity) * 0.36 + misunderstanding.state.disengagementRisk * 0.26,
+      confidence: preview.relationshipReport.confidence,
+      why: "A useful challenging relationship is not low-friction; it is one where tension can be named and repaired.",
+      evidence: [
+        `Repair capacity ${Math.round(repairCapacity * 100)}`,
+        `Conflict fit ${Math.round(preview.conflictCompatibility * 100)}`,
+        `Repair stability ${Math.round(repair.simulation.stability * 100)}`,
+      ],
+      riskSignals: [
+        "Debate becomes a test of worth",
+        "The other side avoids impact repair after disagreement",
+      ],
+      nextObservation: "Notice whether disagreement ends with one concrete repair move or only with explanation.",
+    }),
+    candidateFilter({
+      id: "structured-collaborator",
+      label: "Structured collaborator",
+      relationshipMode: "collaboration",
+      scenarioType: "collaboration",
+      fit: preview.hiddenEdge.modeScores.collaboration * 0.32 +
+        preview.complementarity * 0.24 +
+        collaboration.state.reciprocity * 0.22 +
+        collaboration.simulation.stability * 0.22,
+      risk: collaboration.state.irritation * 0.34 + (1 - preview.dialogueCompatibility) * 0.3 + drift.state.disengagementRisk * 0.2 + (1 - preview.complementarity) * 0.16,
+      confidence: preview.relationshipReport.confidence,
+      why: "Collaboration should be filtered for pace, role clarity, and repair under pressure rather than surface enthusiasm.",
+      evidence: [
+        `Collaboration mode ${Math.round(preview.hiddenEdge.modeScores.collaboration * 100)}`,
+        `Complementarity ${Math.round(preview.complementarity * 100)}`,
+        `Scenario stability ${Math.round(collaboration.simulation.stability * 100)}`,
+      ],
+      riskSignals: [
+        "Ambiguous ownership of decisions",
+        "Fast agreement that avoids constraints",
+      ],
+      nextObservation: "Before committing to shared work, test one small decision with explicit roles and a clear pace.",
+    }),
+    candidateFilter({
+      id: "steady-mentor",
+      label: "Steady mentor / guide",
+      relationshipMode: "mentorship",
+      scenarioType: "emotional_vulnerability",
+      fit: preview.hiddenEdge.modeScores.mentorship * 0.32 +
+        preview.dialogueCompatibility * 0.2 +
+        preview.repairPotential * 0.2 +
+        vulnerability.state.openness * 0.14 +
+        preview.emotionalSafety * 0.14,
+      risk: (1 - vulnerability.state.emotionalSafety) * 0.36 + vulnerability.state.disengagementRisk * 0.28 + (1 - preview.hiddenEdge.responsiveness) * 0.2 + misunderstanding.state.irritation * 0.16,
+      confidence: preview.relationshipReport.confidence,
+      why: "Mentorship fit depends on calm truth-telling and pacing, not authority or intensity.",
+      evidence: [
+        `Mentorship mode ${Math.round(preview.hiddenEdge.modeScores.mentorship * 100)}`,
+        `Dialogue fit ${Math.round(preview.dialogueCompatibility * 100)}`,
+        `Openness under vulnerability ${Math.round(vulnerability.state.openness * 100)}`,
+      ],
+      riskSignals: [
+        "Advice arrives before understanding",
+        "Authority replaces mutual consent",
+      ],
+      nextObservation: "Ask for one bounded reflection and see whether it increases clarity without shrinking your agency.",
+    }),
+    candidateFilter({
+      id: "high-intensity-low-repair",
+      label: "High-intensity, low-repair dynamic",
+      relationshipMode: "friendship",
+      scenarioType: "longitudinal_drift",
+      fit: preview.structuralSimilarity * 0.24 + reselection.state.curiosity * 0.2 + preview.hiddenEdge.sharedReality * 0.18,
+      risk: (1 - repairCapacity) * 0.34 +
+        drift.state.disengagementRisk * 0.28 +
+        misunderstanding.state.irritation * 0.22 +
+        (1 - drift.simulation.stability) * 0.16,
+      confidence: preview.relationshipReport.confidence,
+      why: "Some relationships feel meaningful because of intensity, but BELIFE should defer them when repair and stability are not visible.",
+      evidence: [
+        `Repair capacity ${Math.round(repairCapacity * 100)}`,
+        `Drift risk ${Math.round(drift.state.disengagementRisk * 100)}`,
+        `Long-term stability ${Math.round(drift.simulation.stability * 100)}`,
+      ],
+      riskSignals: [
+        "Strong resonance followed by avoidant distance",
+        "Repeated tension without a reliable repair rhythm",
+      ],
+      nextObservation: "Do not increase investment until the relationship shows a repeatable repair pattern after a small rupture.",
+    }),
+    candidateFilter({
+      id: "novelty-without-safety",
+      label: "Novelty without safety",
+      relationshipMode: "collaboration",
+      scenarioType: "first_contact",
+      fit: preview.complementarity * 0.2 + preview.structuralSimilarity * 0.16 + preview.hiddenEdge.mechanisms.closure * 0.16,
+      risk: (1 - preview.emotionalSafety) * 0.38 +
+        (1 - preview.hiddenEdge.responsiveness) * 0.24 +
+        misunderstanding.state.disengagementRisk * 0.2 +
+        collaboration.state.irritation * 0.18,
+      confidence: preview.relationshipReport.confidence,
+      why: "Novelty can be useful, but BELIFE should filter it through observed safety, responsiveness, and disagreement handling.",
+      evidence: [
+        `Emotional safety ${Math.round(preview.emotionalSafety * 100)}`,
+        `Responsiveness ${Math.round(preview.hiddenEdge.responsiveness * 100)}`,
+        `Closure mechanism ${Math.round(preview.hiddenEdge.mechanisms.closure * 100)}`,
+      ],
+      riskSignals: [
+        "The connection feels energizing but not stabilizing",
+        "Curiosity substitutes for trust evidence",
+      ],
+      nextObservation: "Treat novelty as exploratory until it proves calmness under a boundary or disagreement.",
+    }),
+  ];
+}
+
+function scenarioByType(preview: CompatibilityAxes, type: ConnectionScenarioType) {
+  return preview.scenarioPreviews.find((scenario) => scenario.type === type) ?? buildFallbackScenario(preview);
+}
+
+function candidateFilter(input: Omit<ConnectionCandidateFilter, "fit" | "risk" | "status"> & {
+  fit: number;
+  risk: number;
+}): ConnectionCandidateFilter {
+  const fit = clamp(input.fit);
+  const risk = clamp(input.risk);
+  return {
+    ...input,
+    fit,
+    risk,
+    confidence: clamp(input.confidence),
+    status: candidateStatus(fit, risk, input.confidence),
+  };
+}
+
+function candidateStatus(fit: number, risk: number, confidence: number): ConnectionCandidateStatus {
+  if (risk >= 0.58 && fit < 0.62) return "defer";
+  if (fit >= 0.58 && risk <= 0.5 && confidence >= 0.35) return "prioritize";
+  return "watch";
 }
 
 function buildRelationshipReport(input: {

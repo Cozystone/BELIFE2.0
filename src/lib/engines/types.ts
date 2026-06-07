@@ -459,6 +459,32 @@ export interface ConnectionRelationshipReport {
   nextObservationPrompts: string[];
 }
 
+export type ConnectionCandidateStatus = "prioritize" | "watch" | "defer";
+
+export interface ConnectionCandidateFilter {
+  id: string;
+  label: string;
+  relationshipMode: ConnectionRelationshipMode;
+  scenarioType: ConnectionScenarioType;
+  status: ConnectionCandidateStatus;
+  fit: number;
+  risk: number;
+  confidence: number;
+  why: string;
+  evidence: string[];
+  riskSignals: string[];
+  nextObservation: string;
+}
+
+export interface ConnectionCandidateFilteringReport {
+  generatedAt: string;
+  confidence: number;
+  guardrail: string;
+  candidates: ConnectionCandidateFilter[];
+  prioritized: ConnectionCandidateFilter[];
+  deferred: ConnectionCandidateFilter[];
+}
+
 export interface CompatibilityAxes {
   structuralSimilarity: number;
   complementarity: number;

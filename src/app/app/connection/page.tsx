@@ -1,7 +1,8 @@
-import { FileText, MessageCircle, Network, Route, ShieldCheck, Users } from "lucide-react";
+import { FileText, ListFilter, MessageCircle, Network, Route, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import { ConnectionSimulator } from "@/components/app/connection-simulator";
 import { ScoreBar } from "@/components/app/score-bar";
+import { buildConnectionCandidateFilteringReport } from "@/lib/engines/compatibility";
 import { getConnectionPreview, getPrivacyPreferences, requireUserForPage } from "@/lib/server/belife-service";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,7 @@ export default async function ConnectionPage() {
   }
 
   const preview = await getConnectionPreview(user.id);
+  const candidateReport = buildConnectionCandidateFilteringReport(preview);
   const scenarioPreviews = preview.scenarioPreviews ?? [];
   const report = preview.relationshipReport;
   const hiddenEdge = preview.hiddenEdge;
@@ -179,6 +181,67 @@ export default async function ConnectionPage() {
           </div>
         </article>
       </div>
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-md border border-orange-300/20 bg-orange-500/10 text-orange-200">
+            <ListFilter className="h-4 w-4" />
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold">Candidate Filters</h2>
+            <p className="mt-1 text-sm text-zinc-500">Private relationship archetype filtering before any public matching exists.</p>
+          </div>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {candidateReport.candidates.map((candidate) => (
+            <article key={candidate.id} className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-medium text-zinc-100">{candidate.label}</h3>
+                    <span className="rounded-md bg-black/50 px-2 py-1 font-mono text-xs text-orange-200">
+                      {candidate.status}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">{candidate.why}</p>
+                </div>
+                <span className="rounded-md border border-white/[0.08] bg-black/40 px-2 py-1 font-mono text-xs text-zinc-300">
+                  {candidate.relationshipMode}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <ScoreBar label="Fit" value={candidate.fit} tone="teal" />
+                <ScoreBar label="Risk" value={candidate.risk} tone="zinc" />
+                <ScoreBar label="Confidence" value={candidate.confidence} />
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-md border border-teal-300/10 bg-teal-400/5 p-3">
+                  <p className="text-xs font-medium uppercase text-teal-200">Evidence</p>
+                  <ul className="mt-2 space-y-1 text-sm leading-6 text-zinc-300">
+                    {candidate.evidence.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-md border border-orange-300/10 bg-orange-500/5 p-3">
+                  <p className="text-xs font-medium uppercase text-orange-200">Risk signals</p>
+                  <ul className="mt-2 space-y-1 text-sm leading-6 text-zinc-300">
+                    {candidate.riskSignals.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <p className="mt-4 rounded-md border border-white/[0.08] bg-black/30 p-3 text-sm leading-6 text-zinc-400">
+                {candidate.nextObservation}
+              </p>
+            </article>
+          ))}
+        </div>
+        <p className="rounded-md border border-white/[0.08] bg-black/30 p-3 text-xs leading-5 text-zinc-500">
+          {candidateReport.guardrail}
+        </p>
+      </section>
 
       <ConnectionSimulator initialPreview={preview} />
 
