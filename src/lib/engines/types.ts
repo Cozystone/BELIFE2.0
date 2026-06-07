@@ -51,6 +51,16 @@ export interface ConversationMessage {
   createdAt: string;
 }
 
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  preview: string;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt?: string;
+}
+
 export interface MemoryChunk {
   id?: string;
   userId: string;

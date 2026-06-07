@@ -26,6 +26,12 @@ type SpeechWindow = Window & {
   webkitSpeechRecognition?: SpeechRecognitionConstructor;
 };
 
+function replaceTalkConversationUrl(conversationId: string | null) {
+  if (typeof window === "undefined") return;
+  const target = conversationId ? `/app/talk?conversation=${encodeURIComponent(conversationId)}` : "/app/talk?conversation=new";
+  window.history.replaceState(null, "", target);
+}
+
 type VoiceConsoleProps = {
   initialMessages: ConversationMessage[];
   initialConversationId: string | null;
@@ -52,6 +58,7 @@ export function VoiceConsole({ initialMessages, initialConversationId }: VoiceCo
     if (!response.ok) throw new Error("대화를 만들지 못했습니다.");
     const body = (await response.json()) as { conversationId: string };
     setConversationId(body.conversationId);
+    replaceTalkConversationUrl(body.conversationId);
     return body.conversationId;
   }
 
@@ -95,6 +102,7 @@ export function VoiceConsole({ initialMessages, initialConversationId }: VoiceCo
     setDraft("");
     setIsListening(false);
     setStatus("새 대화를 시작합니다");
+    replaceTalkConversationUrl(null);
   }
 
   function speak(text: string) {

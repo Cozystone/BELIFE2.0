@@ -1,6 +1,14 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test.setTimeout(60_000);
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function exactMessage(page: Page, content: string) {
+  return page.locator("p.whitespace-pre-wrap").filter({ hasText: new RegExp(`^${escapeRegExp(content)}$`) });
+}
 
 test("mobile BELIFE shell routes protected app to native sign-in", async ({ page }) => {
   await page.goto("/");
@@ -106,8 +114,24 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   });
 
   await page.goto("/app/talk");
-  await expect(page.getByText(continuitySeed, { exact: true })).toBeVisible();
-  await expect(page.getByText(staleContent, { exact: true })).toHaveCount(0);
+  await expect(exactMessage(page, continuitySeed)).toBeVisible();
+  await expect(exactMessage(page, staleContent)).toHaveCount(0);
+  const staleConversationLink = page.locator(`a[href="/app/talk?conversation=${staleConversationResult.conversationId}"]`);
+  const activeConversationLink = page.locator(`a[href="/app/talk?conversation=${ownerConversationId}"]`);
+  await expect(staleConversationLink).toBeVisible();
+  await expect(activeConversationLink).toBeVisible();
+  await Promise.all([
+    page.waitForURL(`**/app/talk?conversation=${staleConversationResult.conversationId}`),
+    staleConversationLink.click(),
+  ]);
+  await expect(exactMessage(page, staleContent)).toBeVisible();
+  await expect(exactMessage(page, continuitySeed)).toHaveCount(0);
+  await Promise.all([
+    page.waitForURL(`**/app/talk?conversation=${ownerConversationId}`),
+    page.locator(`a[href="/app/talk?conversation=${ownerConversationId}"]`).click(),
+  ]);
+  await expect(exactMessage(page, continuitySeed)).toBeVisible();
+  await expect(exactMessage(page, staleContent)).toHaveCount(0);
   await page.locator("textarea").fill(continuityFollowup);
   const followupResponse = page.waitForResponse(
     (response) =>
@@ -116,7 +140,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   );
   await page.getByRole("button", { name: "Send" }).click();
   expect((await followupResponse).status()).toBe(200);
-  await expect(page.getByText(continuityFollowup, { exact: true })).toBeVisible();
+  await expect(exactMessage(page, continuityFollowup)).toBeVisible();
   const continuityExportResult = await page.evaluate(
     async ({ seed, followup }) => {
       const response = await fetch("/api/memory/export");

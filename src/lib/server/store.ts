@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { getDb, hasDatabaseUrl } from "@/lib/db/client";
 import {
@@ -26,6 +26,7 @@ import type {
   BelifeMemoryTimelineItem,
   CompatibilityAxes,
   ConversationMessage,
+  ConversationSummary,
   DataTrustScore,
   EvidenceType,
   MemoryChunk,
@@ -54,6 +55,7 @@ export interface BelifeStore {
   updateOnboarding(userId: string, answers: OnboardingAnswers): Promise<UserProfile>;
   getProfile(userId: string): Promise<UserProfile | null>;
   createConversation(userId: string): Promise<string>;
+  getConversationSummaries(userId: string, limit?: number): Promise<ConversationSummary[]>;
   getLatestConversationId(userId: string): Promise<string | null>;
   conversationBelongsToUser(conversationId: string, userId: string): Promise<boolean>;
   appendMessage(input: {
@@ -217,6 +219,43 @@ class DbBelifeStore implements BelifeStore {
   async createConversation(userId: string) {
     const [created] = await getDb().insert(conversations).values({ userId }).returning({ id: conversations.id });
     return created.id;
+  }
+
+  async getConversationSummaries(userId: string, limit = 12) {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.userId, userId))
+      .orderBy(desc(conversations.updatedAt))
+      .limit(limit);
+
+    return Promise.all(
+      rows.map(async (conversation) => {
+        const recentMessages = await db
+          .select()
+          .from(messages)
+          .where(and(eq(messages.conversationId, conversation.id), eq(messages.userId, userId)))
+          .orderBy(desc(messages.createdAt))
+          .limit(6);
+        const [messageCount] = await db
+          .select({ value: count() })
+          .from(messages)
+          .where(and(eq(messages.conversationId, conversation.id), eq(messages.userId, userId)));
+        const lastMessage = recentMessages[0];
+        const titleMessage = recentMessages.find((message) => message.role === "user") ?? lastMessage;
+
+        return {
+          id: conversation.id,
+          title: compactText(titleMessage?.content || conversation.title, 42),
+          preview: lastMessage ? compactText(lastMessage.content, 80) : "아직 메시지가 없습니다.",
+          messageCount: messageCount?.value ?? 0,
+          createdAt: dateToIso(conversation.createdAt),
+          updatedAt: dateToIso(conversation.updatedAt),
+          lastMessageAt: lastMessage ? dateToIso(lastMessage.createdAt) : undefined,
+        };
+      }),
+    );
   }
 
   async getLatestConversationId(userId: string) {
@@ -673,6 +712,33 @@ class MemoryBelifeStore implements BelifeStore {
     const id = randomUUID();
     memoryState.conversations.set(id, { id, userId, updatedAt: isoNow() });
     return id;
+  }
+
+  async getConversationSummaries(userId: string, limit = 12) {
+    return Array.from(memoryState.conversations.values())
+      .filter((conversation) => conversation.userId === userId)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, limit)
+      .map((conversation) => {
+        const conversationMessages = memoryState.messages.filter(
+          (message) => message.conversationId === conversation.id && message.userId === userId,
+        );
+        const lastMessage = conversationMessages.at(-1);
+        const titleMessage = conversationMessages
+          .slice()
+          .reverse()
+          .find((message) => message.role === "user") ?? lastMessage;
+
+        return {
+          id: conversation.id,
+          title: compactText(titleMessage?.content ?? "BELIFE conversation", 42),
+          preview: lastMessage ? compactText(lastMessage.content, 80) : "아직 메시지가 없습니다.",
+          messageCount: conversationMessages.length,
+          createdAt: conversation.updatedAt,
+          updatedAt: conversation.updatedAt,
+          lastMessageAt: lastMessage?.createdAt,
+        };
+      });
   }
 
   async getLatestConversationId(userId: string) {
