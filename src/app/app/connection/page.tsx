@@ -2,7 +2,7 @@ import { FileText, MessageCircle, Network, Route, ShieldCheck, Users } from "luc
 import Link from "next/link";
 import { ConnectionSimulator } from "@/components/app/connection-simulator";
 import { ScoreBar } from "@/components/app/score-bar";
-import { getConnectionPreview, requireUserForPage } from "@/lib/server/belife-service";
+import { getConnectionPreview, getPrivacyPreferences, requireUserForPage } from "@/lib/server/belife-service";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +20,35 @@ function talkDraftHref(draft: string) {
 
 export default async function ConnectionPage() {
   const user = await requireUserForPage();
+  const privacy = await getPrivacyPreferences(user.id);
+
+  if (!privacy.connectionPreviewEnabled) {
+    return (
+      <div className="space-y-5">
+        <section className="rounded-md border border-white/[0.08] bg-[#090909] p-5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-orange-500/12 text-orange-200">
+              <Users className="h-5 w-5" />
+            </span>
+            <div>
+              <h1 className="text-2xl font-semibold">Human Connection Preview</h1>
+              <p className="mt-1 text-sm text-zinc-500">Paused by Privacy Preferences</p>
+            </div>
+          </div>
+          <p className="mt-5 text-sm leading-7 text-zinc-400">
+            BELIFE is not generating or storing hidden relationship-fit previews while this control is off.
+          </p>
+          <Link
+            href="/app/settings"
+            className="mt-5 inline-flex h-10 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] px-4 text-sm font-medium text-zinc-100 transition hover:bg-white/[0.1]"
+          >
+            Open Privacy Preferences
+          </Link>
+        </section>
+      </div>
+    );
+  }
+
   const preview = await getConnectionPreview(user.id);
   const scenarioPreviews = preview.scenarioPreviews ?? [];
   const report = preview.relationshipReport;

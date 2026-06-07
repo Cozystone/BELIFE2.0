@@ -4,7 +4,7 @@ import {
   connectionScenarioTypes,
   connectionSimulationHorizons,
 } from "@/lib/engines/compatibility";
-import { requireUserForApi, simulateConnectionForUser } from "@/lib/server/belife-service";
+import { isBelifeApiError, requireUserForApi, simulateConnectionForUser } from "@/lib/server/belife-service";
 
 export const runtime = "nodejs";
 
@@ -25,6 +25,9 @@ export async function POST(request: Request) {
     const simulation = await simulateConnectionForUser(user.id, simulationSchema.parse(await request.json()));
     return Response.json({ simulation });
   } catch (error) {
+    if (isBelifeApiError(error)) {
+      return Response.json({ error: error.message, code: error.code }, { status: error.status });
+    }
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid connection simulation request" },
       { status: 400 },

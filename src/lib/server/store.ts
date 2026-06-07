@@ -64,6 +64,7 @@ export interface BelifeStats {
 export interface BelifeStore {
   ensureProfile(user: BelifeUser): Promise<UserProfile>;
   updateOnboarding(userId: string, answers: OnboardingAnswers): Promise<UserProfile>;
+  updateProfileMetadata(userId: string, metadata: Record<string, string>): Promise<UserProfile>;
   getProfile(userId: string): Promise<UserProfile | null>;
   createConversation(userId: string): Promise<string>;
   getConversationSummaries(userId: string, limit?: number): Promise<ConversationSummary[]>;
@@ -98,6 +99,16 @@ export interface BelifeStore {
   exportUserData(userId: string): Promise<BelifeDataExport>;
   resetUserData(user: BelifeUser): Promise<UserProfile>;
   getStats(userId: string): Promise<BelifeStats>;
+}
+
+function mergeOnboardingMetadata(
+  previous: Record<string, string> | null | undefined,
+  next: Record<string, string>,
+) {
+  return {
+    ...(previous ?? {}),
+    ...next,
+  };
 }
 
 function dateToIso(value: Date | string | null | undefined) {
@@ -287,7 +298,8 @@ class DbBelifeStore implements BelifeStore {
 
   async updateOnboarding(userId: string, answers: OnboardingAnswers) {
     const db = getDb();
-    const onboardingAnswers = { ...answers } as Record<string, string>;
+    const previous = await db.query.profiles.findFirst({ where: eq(profiles.userId, userId) });
+    const onboardingAnswers = mergeOnboardingMetadata(previous?.onboardingAnswers, { ...answers });
     const [updated] = await db
       .update(profiles)
       .set({
@@ -301,6 +313,21 @@ class DbBelifeStore implements BelifeStore {
         emotionalClimate: answers.emotionalClimate,
         preferredTone: answers.preferredTone,
         onboardingAnswers,
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.userId, userId))
+      .returning();
+    return mapProfile(updated);
+  }
+
+  async updateProfileMetadata(userId: string, metadata: Record<string, string>) {
+    const db = getDb();
+    const previous = await db.query.profiles.findFirst({ where: eq(profiles.userId, userId) });
+    if (!previous) throw new Error("Profile is required before metadata can be updated.");
+    const [updated] = await db
+      .update(profiles)
+      .set({
+        onboardingAnswers: mergeOnboardingMetadata(previous.onboardingAnswers, metadata),
         updatedAt: new Date(),
       })
       .where(eq(profiles.userId, userId))
@@ -884,7 +911,7 @@ class MemoryBelifeStore implements BelifeStore {
   async updateOnboarding(userId: string, answers: OnboardingAnswers) {
     const previous = memoryState.profiles.get(userId);
     const now = isoNow();
-    const onboardingAnswers = { ...answers } as Record<string, string>;
+    const onboardingAnswers = mergeOnboardingMetadata(previous?.onboardingAnswers, { ...answers });
     const profile: UserProfile = {
       userId,
       displayName: answers.nickname,
@@ -899,6 +926,18 @@ class MemoryBelifeStore implements BelifeStore {
       onboardingAnswers,
       createdAt: previous?.createdAt ?? now,
       updatedAt: now,
+    };
+    memoryState.profiles.set(userId, profile);
+    return profile;
+  }
+
+  async updateProfileMetadata(userId: string, metadata: Record<string, string>) {
+    const previous = memoryState.profiles.get(userId);
+    if (!previous) throw new Error("Profile is required before metadata can be updated.");
+    const profile = {
+      ...previous,
+      onboardingAnswers: mergeOnboardingMetadata(previous.onboardingAnswers, metadata),
+      updatedAt: isoNow(),
     };
     memoryState.profiles.set(userId, profile);
     return profile;

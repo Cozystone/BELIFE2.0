@@ -281,6 +281,11 @@ export interface BelifeDataExport {
   connectionPreviews: Record<string, unknown>[];
 }
 
+export interface PrivacyPreferences {
+  showEvidenceLedger: boolean;
+  connectionPreviewEnabled: boolean;
+}
+
 export type BelifeMemoryTimelineKind =
   | "message"
   | "memory"
@@ -525,6 +530,7 @@ export interface Briefing {
   recommendedPrompt: string;
   patternReminders: PatternReminder[];
   evidenceLedger: MemoryEvidenceItem[];
+  privacy: PrivacyPreferences;
   dataTrust: DataTrustScore;
   state: MentalStateEstimate;
   ontologyHighlights: OntologyNode[];

@@ -136,7 +136,9 @@ export default async function TodayPage() {
             ))
           ) : (
             <div className="rounded-md border border-white/[0.08] bg-black/40 p-3 text-sm text-zinc-500">
-              Evidence is still thin. A few more conversations will make BELIFE interpretations easier to inspect.
+              {briefing.privacy.showEvidenceLedger
+                ? "Evidence is still thin. A few more conversations will make BELIFE interpretations easier to inspect."
+                : "Evidence details are hidden by Privacy Preferences."}
             </div>
           )}
         </div>

@@ -10,6 +10,11 @@ import { estimateMentalState } from "@/lib/engines/mental-state";
 import { buildOntologyGraph, filterOntologyView } from "@/lib/engines/ontology";
 import { buildPatternReminders } from "@/lib/engines/pattern-reminders";
 import {
+  privacyPreferencesStorageKey,
+  readPrivacyPreferences,
+  serializePrivacyPreferences,
+} from "@/lib/engines/privacy";
+import {
   buildProfileEnrichmentSuggestions,
   filterDismissedProfileEnrichmentSuggestions,
   findProfileEnrichmentSuggestion,
@@ -26,6 +31,7 @@ import type {
   OnboardingAnswers,
   OntologyNode,
   ConnectionSimulationInput,
+  PrivacyPreferences,
   ProfileEnrichmentSuggestion,
   UserProfile,
 } from "@/lib/engines/types";
@@ -69,6 +75,11 @@ export const memoryImportSchema = z.object({
   consent: z.literal(true),
 });
 
+export const privacyPreferencesSchema = z.object({
+  showEvidenceLedger: z.boolean().default(true),
+  connectionPreviewEnabled: z.boolean().default(true),
+});
+
 export class BelifeApiError extends Error {
   constructor(
     message: string,
@@ -109,6 +120,25 @@ export async function requireUserForApi() {
 
 export async function ensureUserProfile(user: BelifeUser) {
   return getStore().ensureProfile(user);
+}
+
+export async function getPrivacyPreferences(userId: string) {
+  const profile = await getStore().getProfile(userId);
+  return readPrivacyPreferences(profile);
+}
+
+export async function updatePrivacyPreferences(user: BelifeUser, input: PrivacyPreferences) {
+  const store = getStore();
+  await store.ensureProfile(user);
+  const preferences = privacyPreferencesSchema.parse(input);
+  const profile = await store.updateProfileMetadata(user.id, {
+    [privacyPreferencesStorageKey]: serializePrivacyPreferences(preferences),
+  });
+
+  return {
+    preferences: readPrivacyPreferences(profile),
+    profile,
+  };
 }
 
 export async function saveOnboarding(user: BelifeUser, answers: OnboardingAnswers) {
@@ -296,7 +326,8 @@ export async function refreshDataTrust(userId: string) {
 
 export async function getBriefing(userId: string): Promise<Briefing> {
   const store = getStore();
-  const [state, trust, nodes, chunks, recentMessages] = await Promise.all([
+  const [profile, state, trust, nodes, chunks, recentMessages] = await Promise.all([
+    store.getProfile(userId),
     store.getLatestState(userId),
     store.getLatestDataTrust(userId),
     store.getOntologyNodes(userId),
@@ -305,6 +336,7 @@ export async function getBriefing(userId: string): Promise<Briefing> {
   ]);
 
   const dataTrust = trust ?? (await refreshDataTrust(userId));
+  const privacy = readPrivacyPreferences(profile);
   const mentalState =
     state ??
     estimateMentalState("BELIFE has limited signal. Start with a short check-in about today.", null);
@@ -314,13 +346,15 @@ export async function getBriefing(userId: string): Promise<Briefing> {
     ...mentalState.drivers,
     ...highlights.map((node) => `${node.type} ${node.label} ${node.summary}`),
   ].join("\n");
-  const evidenceLedger = rankMemoryEvidence({
-    query: evidenceQuery || "current self understanding and state interpretation",
-    chunks,
-    nodes,
-    messages: recentMessages,
-    limit: 7,
-  });
+  const evidenceLedger = privacy.showEvidenceLedger
+    ? rankMemoryEvidence({
+        query: evidenceQuery || "current self understanding and state interpretation",
+        chunks,
+        nodes,
+        messages: recentMessages,
+        limit: 7,
+      })
+    : [];
 
   return {
     headline:
@@ -334,6 +368,7 @@ export async function getBriefing(userId: string): Promise<Briefing> {
     recommendedPrompt: "지금 내 안에서 가장 크게 반복되는 생각은 뭐야?",
     patternReminders: buildPatternReminders({ nodes, state: mentalState, dataTrust }),
     evidenceLedger,
+    privacy,
     dataTrust,
     state: mentalState,
     ontologyHighlights: highlights,
@@ -639,12 +674,21 @@ Return: 1) what your structure might be doing, 2) what is uncertain, 3) one ques
 
 export async function getConnectionPreview(userId: string) {
   const store = getStore();
-  const [nodes, behavior, trust, previousPreview] = await Promise.all([
+  const [profile, nodes, behavior, trust, previousPreview] = await Promise.all([
+    store.getProfile(userId),
     store.getOntologyNodes(userId),
     store.getLatestBehavior(userId),
     store.getLatestDataTrust(userId),
     store.getLatestConnectionPreview(userId),
   ]);
+  const privacy = readPrivacyPreferences(profile);
+  if (!privacy.connectionPreviewEnabled) {
+    throw new BelifeApiError(
+      "Human Connection preview is paused by Privacy Preferences.",
+      403,
+      "CONNECTION_PREVIEW_DISABLED",
+    );
+  }
   const dataTrust = trust ?? (await refreshDataTrust(userId));
   const preview = buildConnectionPreview(nodes, behavior, dataTrust, previousPreview);
   await store.saveConnectionPreview(userId, preview);

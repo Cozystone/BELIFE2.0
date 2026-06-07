@@ -357,6 +357,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Privacy Preferences" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Memory Import" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Memory Correction" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Data Controls" })).toBeVisible();
@@ -398,6 +399,79 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(dataTrustApiResult.score).toBeGreaterThanOrEqual(0);
   expect(dataTrustApiResult.weakestCount).toBe(3);
   expect(dataTrustApiResult.actionCount).toBe(3);
+  const privacyResult = await page.evaluate(async () => {
+    const initial = await fetch("/api/privacy");
+    const initialBody = await initial.json();
+    const disabled = await fetch("/api/privacy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        showEvidenceLedger: false,
+        connectionPreviewEnabled: false,
+      }),
+    });
+    const disabledBody = await disabled.json();
+    const hiddenBriefing = await fetch("/api/briefing");
+    const hiddenBriefingBody = await hiddenBriefing.json();
+    const blockedConnection = await fetch("/api/connection/preview");
+    const blockedConnectionBody = await blockedConnection.json();
+    const enabled = await fetch("/api/privacy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        showEvidenceLedger: true,
+        connectionPreviewEnabled: true,
+      }),
+    });
+    const enabledBody = await enabled.json();
+    const visibleBriefing = await fetch("/api/briefing");
+    const visibleBriefingBody = await visibleBriefing.json();
+    const allowedConnection = await fetch("/api/connection/preview");
+
+    return {
+      initialStatus: initial.status,
+      initialPreferences: initialBody.preferences,
+      disabledStatus: disabled.status,
+      disabledPreferences: disabledBody.preferences,
+      hiddenBriefingStatus: hiddenBriefing.status,
+      hiddenEvidenceCount: hiddenBriefingBody.briefing?.evidenceLedger?.length ?? -1,
+      hiddenPrivacy: hiddenBriefingBody.briefing?.privacy,
+      blockedConnectionStatus: blockedConnection.status,
+      blockedConnectionCode: blockedConnectionBody.code,
+      enabledStatus: enabled.status,
+      enabledPreferences: enabledBody.preferences,
+      visibleBriefingStatus: visibleBriefing.status,
+      visibleEvidenceCount: visibleBriefingBody.briefing?.evidenceLedger?.length ?? 0,
+      allowedConnectionStatus: allowedConnection.status,
+    };
+  });
+
+  expect(privacyResult.initialStatus).toBe(200);
+  expect(privacyResult.initialPreferences).toMatchObject({
+    showEvidenceLedger: true,
+    connectionPreviewEnabled: true,
+  });
+  expect(privacyResult.disabledStatus).toBe(200);
+  expect(privacyResult.disabledPreferences).toMatchObject({
+    showEvidenceLedger: false,
+    connectionPreviewEnabled: false,
+  });
+  expect(privacyResult.hiddenBriefingStatus).toBe(200);
+  expect(privacyResult.hiddenEvidenceCount).toBe(0);
+  expect(privacyResult.hiddenPrivacy).toMatchObject({
+    showEvidenceLedger: false,
+    connectionPreviewEnabled: false,
+  });
+  expect(privacyResult.blockedConnectionStatus).toBe(403);
+  expect(privacyResult.blockedConnectionCode).toBe("CONNECTION_PREVIEW_DISABLED");
+  expect(privacyResult.enabledStatus).toBe(200);
+  expect(privacyResult.enabledPreferences).toMatchObject({
+    showEvidenceLedger: true,
+    connectionPreviewEnabled: true,
+  });
+  expect(privacyResult.visibleBriefingStatus).toBe(200);
+  expect(privacyResult.visibleEvidenceCount).toBeGreaterThan(0);
+  expect(privacyResult.allowedConnectionStatus).toBe(200);
   const importResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/import", {
       method: "POST",

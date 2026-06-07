@@ -2,12 +2,18 @@ import { AlertTriangle, CheckCircle2, Database, KeyRound, Server, Terminal } fro
 import { DataControlsPanel } from "@/components/app/data-controls-panel";
 import { MemoryCorrectionPanel } from "@/components/app/memory-correction-panel";
 import { MemoryImportPanel } from "@/components/app/memory-import-panel";
+import { PrivacyPreferencesPanel } from "@/components/app/privacy-preferences-panel";
 import { ProfileEnrichmentPanel } from "@/components/app/profile-enrichment-panel";
 import { ScoreBar } from "@/components/app/score-bar";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { getOllamaBaseUrl, getOllamaHealth, getOllamaModel, getOllamaRuntimeDiagnostics } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
-import { getDataTrustCenter, getProfileEnrichmentSuggestions, requireUserForPage } from "@/lib/server/belife-service";
+import {
+  getDataTrustCenter,
+  getPrivacyPreferences,
+  getProfileEnrichmentSuggestions,
+  requireUserForPage,
+} from "@/lib/server/belife-service";
 import { getReadinessReport } from "@/lib/server/readiness";
 import { getStore } from "@/lib/server/store";
 import { isNativeAuthAvailable } from "@/lib/server/native-auth";
@@ -24,11 +30,12 @@ function formatOptionalDate(value?: string) {
 
 export default async function SettingsPage() {
   const user = await requireUserForPage();
-  const [profile, ollamaHealth, enrichmentSuggestions, dataTrustCenter] = await Promise.all([
+  const [profile, ollamaHealth, enrichmentSuggestions, dataTrustCenter, privacyPreferences] = await Promise.all([
     getStore().getProfile(user.id),
     getOllamaHealth(),
     getProfileEnrichmentSuggestions(user.id),
     getDataTrustCenter(user.id),
+    getPrivacyPreferences(user.id),
   ]);
   const readiness = getReadinessReport({ ollamaHealth });
   const aiRuntime = getOllamaRuntimeDiagnostics(ollamaHealth);
@@ -218,6 +225,7 @@ export default async function SettingsPage() {
           {dataTrust.explanation} 현재 세션 수는 {stats.sessionCount}개, 온톨로지 노드는 {stats.ontologyCount}개입니다.
         </p>
       </section>
+      <PrivacyPreferencesPanel initialPreferences={privacyPreferences} />
       <MemoryImportPanel />
       <MemoryCorrectionPanel />
       <DataControlsPanel />
