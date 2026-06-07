@@ -519,6 +519,50 @@ export interface ConnectionRerankingReport {
   nextStabilizers: string[];
 }
 
+export type RelationshipMemoryKind =
+  | "friendship"
+  | "collaboration"
+  | "mentorship"
+  | "family"
+  | "romantic"
+  | "other";
+
+export interface RelationshipMemoryInput {
+  personLabel: string;
+  relationshipType: RelationshipMemoryKind;
+  interactionNote: string;
+  interactionQuality: number;
+  emotionalSafety: number;
+  reciprocity: number;
+  repairAttempted: boolean;
+  consent: true;
+}
+
+export interface RelationshipPairMemorySummary {
+  pairKey: string;
+  personLabel: string;
+  relationshipType: RelationshipMemoryKind;
+  interactionCount: number;
+  averageQuality: number;
+  emotionalSafety: number;
+  reciprocity: number;
+  repairEvidence: number;
+  confidence: number;
+  riskLevel: "low" | "moderate" | "high";
+  summary: string;
+  signals: string[];
+  nextObservation: string;
+  latestAt: string;
+}
+
+export interface RelationshipMemoryReport {
+  generatedAt: string;
+  pairCount: number;
+  totalInteractions: number;
+  guardrail: string;
+  pairs: RelationshipPairMemorySummary[];
+}
+
 export interface CompatibilityAxes {
   structuralSimilarity: number;
   complementarity: number;

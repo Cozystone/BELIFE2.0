@@ -1,8 +1,14 @@
 import { FileText, ListFilter, MessageCircle, Network, Route, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { ConnectionSimulator } from "@/components/app/connection-simulator";
+import { RelationshipMemoryPanel } from "@/components/app/relationship-memory-panel";
 import { ScoreBar } from "@/components/app/score-bar";
-import { getConnectionIntelligence, getPrivacyPreferences, requireUserForPage } from "@/lib/server/belife-service";
+import {
+  getConnectionIntelligence,
+  getPrivacyPreferences,
+  getRelationshipMemory,
+  requireUserForPage,
+} from "@/lib/server/belife-service";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +60,10 @@ export default async function ConnectionPage() {
     );
   }
 
-  const { preview, candidateReport, rerankingReport } = await getConnectionIntelligence(user.id);
+  const [{ preview, candidateReport, rerankingReport }, relationshipMemory] = await Promise.all([
+    getConnectionIntelligence(user.id),
+    getRelationshipMemory(user.id),
+  ]);
   const scenarioPreviews = preview.scenarioPreviews ?? [];
   const report = preview.relationshipReport;
   const hiddenEdge = preview.hiddenEdge;
@@ -310,6 +319,8 @@ export default async function ConnectionPage() {
       </section>
 
       <ConnectionSimulator initialPreview={preview} />
+
+      <RelationshipMemoryPanel initialReport={relationshipMemory} />
 
       <section className="space-y-3">
         <div className="flex items-center gap-3">

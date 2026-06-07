@@ -108,7 +108,7 @@ export async function buildStructuredExtraction(input: {
   userId: string;
   text: string;
   messageId?: string;
-  source?: MessageSource | "onboarding" | "correction" | "import";
+  source?: MessageSource | "onboarding" | "correction" | "import" | "relationship";
   previousState?: MentalStateEstimate | null;
   previousBehavior?: BehaviorSnapshot | null;
 }): Promise<StructuredExtraction> {
@@ -160,7 +160,7 @@ export async function buildStructuredExtraction(input: {
 
 function buildExtractionPrompt(
   text: string,
-  source: MessageSource | "onboarding" | "correction" | "import",
+  source: MessageSource | "onboarding" | "correction" | "import" | "relationship",
   previousState?: MentalStateEstimate | null,
   previousBehavior?: BehaviorSnapshot | null,
 ) {

@@ -26,6 +26,12 @@ import {
   profileEnrichmentDismissalTag,
   profileEnrichmentIdTag,
 } from "@/lib/engines/profile-enrichment";
+import {
+  buildRelationshipMemoryReport,
+  relationshipMemoryChunk,
+  relationshipMemoryKinds,
+  relationshipPairTag,
+} from "@/lib/engines/relationship-memory";
 import { buildMentalStateHistoryReport } from "@/lib/engines/state-history";
 import type {
   BelifeUser,
@@ -38,6 +44,7 @@ import type {
   ConnectionSimulationInput,
   PrivacyPreferences,
   ProfileEnrichmentSuggestion,
+  RelationshipMemoryInput,
   UserProfile,
 } from "@/lib/engines/types";
 import { compactText, isoNow } from "@/lib/utils";
@@ -77,6 +84,17 @@ export const memoryImportSchema = z.object({
   title: z.string().trim().min(1).max(160),
   sourceType: z.enum(memoryImportSourceTypes).default("note"),
   content: z.string().trim().min(20).max(12000),
+  consent: z.literal(true),
+});
+
+export const relationshipMemorySchema = z.object({
+  personLabel: z.string().trim().min(1).max(80),
+  relationshipType: z.enum(relationshipMemoryKinds).default("other"),
+  interactionNote: z.string().trim().min(20).max(4000),
+  interactionQuality: z.number().min(0).max(1),
+  emotionalSafety: z.number().min(0).max(1),
+  reciprocity: z.number().min(0).max(1),
+  repairAttempted: z.boolean().default(false),
   consent: z.literal(true),
 });
 
@@ -745,6 +763,73 @@ export async function getConnectionReranking(userId: string) {
   const previousPreview = await getStore().getLatestConnectionPreview(userId);
   const preview = await getConnectionPreview(userId);
   return buildConnectionRerankingReport(preview, previousPreview);
+}
+
+export async function getRelationshipMemory(userId: string, personLabel?: string) {
+  const profile = await getStore().getProfile(userId);
+  const privacy = readPrivacyPreferences(profile);
+  if (!privacy.connectionPreviewEnabled) {
+    throw new BelifeApiError(
+      "Relationship memory is paused by Privacy Preferences.",
+      403,
+      "CONNECTION_PREVIEW_DISABLED",
+    );
+  }
+
+  const chunks = await getStore().getRecentMemoryChunks(userId, 120);
+  return buildRelationshipMemoryReport(chunks, { personLabel });
+}
+
+export async function saveRelationshipMemory(user: BelifeUser, input: RelationshipMemoryInput) {
+  const store = getStore();
+  await store.ensureProfile(user);
+  const privacy = await getPrivacyPreferences(user.id);
+  if (!privacy.connectionPreviewEnabled) {
+    throw new BelifeApiError(
+      "Relationship memory is paused by Privacy Preferences.",
+      403,
+      "CONNECTION_PREVIEW_DISABLED",
+    );
+  }
+
+  const chunk = relationshipMemoryChunk(user.id, input);
+  const extraction = await buildStructuredExtraction({
+    userId: user.id,
+    text: chunk.content,
+    source: "relationship",
+  });
+  const extractedChunks = extraction.chunks.map((candidate) => ({
+    ...candidate,
+    kind: "relationship" as const,
+    evidenceType: candidate.evidenceType === "AMBIGUOUS" ? ("INFERRED" as const) : candidate.evidenceType,
+    salience: Math.max(candidate.salience, 0.48),
+    tags: [
+      ...new Set([
+        "relationship-derived",
+        relationshipPairTag(input.personLabel),
+        ...candidate.tags,
+      ]),
+    ],
+  }));
+
+  await store.saveMemoryChunks([chunk, ...extractedChunks]);
+  await store.upsertOntologyNodes(user.id, extraction.nodes);
+  await store.saveBehavior(user.id, extraction.behavior);
+  await store.saveStateEstimate(user.id, extraction.state);
+  const dataTrust = await refreshDataTrust(user.id);
+  const report = await getRelationshipMemory(user.id, input.personLabel);
+
+  return {
+    ok: true,
+    memory: chunk,
+    extracted: {
+      memoryChunks: 1 + extractedChunks.length,
+      ontologyUpdates: extraction.nodes.length,
+      usedAi: extraction.usedAi,
+    },
+    report,
+    dataTrust,
+  };
 }
 
 export async function getDataTrustCenter(userId: string) {
