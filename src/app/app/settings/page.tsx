@@ -40,6 +40,7 @@ export default async function SettingsPage() {
     ["Messages", inventory.counts.messages],
     ["Memory chunks", inventory.counts.memoryChunks],
     ["Ontology nodes", inventory.counts.ontologyNodes],
+    ["Ontology edges", inventory.counts.ontologyEdges],
     ["State estimates", inventory.counts.stateEstimates],
     ["Behavior snapshots", inventory.counts.behaviorSnapshots],
     ["Data trust snapshots", inventory.counts.dataTrustSnapshots],

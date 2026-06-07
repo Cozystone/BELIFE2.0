@@ -280,7 +280,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(ontologyResult.edgeCount).toBeGreaterThan(0);
   expect(ontologyResult.graphEdgeCount).toBe(ontologyResult.edgeCount);
   const timelineResult = await page.evaluate(async () => {
-    const response = await fetch("/api/memory/timeline?limit=12");
+    const response = await fetch("/api/memory/timeline?limit=24");
     const body = await response.json();
     return {
       status: response.status,
@@ -292,6 +292,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(timelineResult.status).toBe(200);
   expect(timelineResult.itemCount).toBeGreaterThan(0);
   expect(timelineResult.kinds).toContain("memory");
+  expect(timelineResult.kinds).toContain("ontology_edge");
 
   await page.goto("/app/twin");
   await expect(page.getByRole("heading", { name: "Digital Twin" })).toBeVisible();
@@ -322,6 +323,17 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await expect(page.getByRole("heading", { name: "Human Connection Preview" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Hidden Graph" })).toBeVisible();
   await expect(page.getByText("Edge strength")).toBeVisible();
+  const connectionTimelineResult = await page.evaluate(async () => {
+    const response = await fetch("/api/memory/timeline?limit=24");
+    const body = await response.json();
+    return {
+      status: response.status,
+      kinds: body.timeline.items.map((item: { kind: string }) => item.kind),
+    };
+  });
+
+  expect(connectionTimelineResult.status).toBe(200);
+  expect(connectionTimelineResult.kinds).toContain("connection");
   await page.getByRole("link", { name: "Rehearse in Talk" }).first().click();
   await expect(page).toHaveURL(/\/app\/talk\?conversation=new&draft=/);
   await expect(page.locator("textarea")).toHaveValue(/관계 장면을 연습하고 싶어/);
@@ -330,6 +342,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Data Controls" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Profile Enrichment" })).toBeVisible();
+  await expect(page.getByText("Ontology edges")).toBeVisible();
   const skipSuggestion = page.getByRole("button", { name: "Skip for now" }).first();
   await expect(skipSuggestion).toBeVisible();
   await skipSuggestion.click();

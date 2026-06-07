@@ -238,7 +238,14 @@ export interface BelifeDataExport {
   connectionPreviews: Record<string, unknown>[];
 }
 
-export type BelifeMemoryTimelineKind = "message" | "memory" | "ontology" | "state" | "behavior";
+export type BelifeMemoryTimelineKind =
+  | "message"
+  | "memory"
+  | "ontology"
+  | "ontology_edge"
+  | "state"
+  | "behavior"
+  | "connection";
 
 export interface BelifeMemoryTimelineItem {
   id: string;

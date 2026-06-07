@@ -192,6 +192,48 @@ function mapState(row: StateEstimateRow): MentalStateEstimate {
   };
 }
 
+function shortNodeId(id: string) {
+  return id.length > 8 ? id.slice(0, 8) : id;
+}
+
+function ontologyEdgeTimelineItem(
+  edge: OntologyEdge,
+  nodeLabelById: Map<string, string>,
+): BelifeMemoryTimelineItem {
+  const sourceLabel = nodeLabelById.get(edge.sourceNodeId) ?? shortNodeId(edge.sourceNodeId);
+  const targetLabel = nodeLabelById.get(edge.targetNodeId) ?? shortNodeId(edge.targetNodeId);
+
+  return {
+    id: edge.id ?? `${edge.sourceNodeId}-${edge.relation}-${edge.targetNodeId}`,
+    kind: "ontology_edge",
+    title: `Ontology edge - ${edge.relation}`,
+    body: compactText(`${sourceLabel} -> ${targetLabel}`, 240),
+    createdAt: edge.createdAt ?? isoNow(),
+    evidenceType: edge.certainty,
+    confidence: edge.confidence,
+    tags: ["ontology-edge", edge.relation],
+  };
+}
+
+function connectionPreviewTimelineItem(input: {
+  id: string;
+  preview: CompatibilityAxes;
+  status?: string;
+  createdAt?: Date | string;
+}): BelifeMemoryTimelineItem {
+  const hiddenEdge = input.preview.hiddenEdge;
+
+  return {
+    id: input.id,
+    kind: "connection",
+    title: "Connection preview",
+    body: compactText(input.preview.relationshipReport?.thesis ?? input.preview.summary, 240),
+    createdAt: dateToIso(input.createdAt ?? hiddenEdge?.lastSimulatedAt),
+    confidence: hiddenEdge?.confidence ?? input.preview.confidence,
+    tags: ["connection-preview", input.status ?? hiddenEdge?.status ?? "latent"],
+  };
+}
+
 class DbBelifeStore implements BelifeStore {
   async ensureProfile(user: BelifeUser) {
     const db = getDb();
@@ -564,13 +606,16 @@ class DbBelifeStore implements BelifeStore {
   async getMemoryTimeline(userId: string, limit = 24): Promise<BelifeMemoryTimeline> {
     const safeLimit = Math.max(1, Math.min(60, limit));
     const db = getDb();
-    const [messageRows, chunkRows, nodeRows, stateRows, behaviorRows] = await Promise.all([
+    const [messageRows, chunkRows, nodeRows, edgeRows, stateRows, behaviorRows, previewRows] = await Promise.all([
       db.select().from(messages).where(eq(messages.userId, userId)).orderBy(desc(messages.createdAt)).limit(safeLimit),
       db.select().from(memoryChunks).where(eq(memoryChunks.userId, userId)).orderBy(desc(memoryChunks.createdAt)).limit(safeLimit),
       db.select().from(ontologyNodes).where(eq(ontologyNodes.userId, userId)).orderBy(desc(ontologyNodes.lastEvidenceAt)).limit(safeLimit),
+      db.select().from(ontologyEdges).where(eq(ontologyEdges.userId, userId)).orderBy(desc(ontologyEdges.createdAt)).limit(safeLimit),
       db.select().from(stateEstimates).where(eq(stateEstimates.userId, userId)).orderBy(desc(stateEstimates.createdAt)).limit(safeLimit),
       db.select().from(behaviorFeatures).where(eq(behaviorFeatures.userId, userId)).orderBy(desc(behaviorFeatures.createdAt)).limit(safeLimit),
+      db.select().from(hiddenConnectionEdges).where(eq(hiddenConnectionEdges.userId, userId)).orderBy(desc(hiddenConnectionEdges.createdAt)).limit(safeLimit),
     ]);
+    const nodeLabelById = new Map(nodeRows.map((row) => [row.id, row.label]));
 
     const items: BelifeMemoryTimelineItem[] = [
       ...messageRows.map((row) => ({
@@ -602,6 +647,7 @@ class DbBelifeStore implements BelifeStore {
         confidence: row.confidence,
         tags: [row.layer, row.tier],
       })),
+      ...edgeRows.map((row) => ontologyEdgeTimelineItem(mapEdge(row), nodeLabelById)),
       ...stateRows.map((row) => {
         const state = mapState(row);
         return {
@@ -623,6 +669,14 @@ class DbBelifeStore implements BelifeStore {
         confidence: row.snapshot.confidence,
         tags: ["communication", "behavior"],
       })),
+      ...previewRows.map((row) =>
+        connectionPreviewTimelineItem({
+          id: row.id,
+          preview: row.preview,
+          status: row.status,
+          createdAt: row.createdAt,
+        }),
+      ),
     ]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, safeLimit);
@@ -990,8 +1044,11 @@ class MemoryBelifeStore implements BelifeStore {
     const messageRows = memoryState.messages.filter((message) => message.userId === userId).slice(-safeLimit);
     const chunkRows = memoryState.chunks.filter((chunk) => chunk.userId === userId).slice(-safeLimit);
     const nodeRows = memoryState.nodes.filter((node) => node.userId === userId).slice(-safeLimit);
+    const edgeRows = memoryState.edges.filter((edge) => edge.userId === userId).slice(-safeLimit);
     const stateRows = (memoryState.states.get(userId) ?? []).slice(-safeLimit);
     const behaviorRows = (memoryState.behaviors.get(userId) ?? []).slice(-safeLimit);
+    const previewRows = (memoryState.previews.get(userId) ?? []).slice(-safeLimit);
+    const nodeLabelById = new Map(nodeRows.flatMap((node) => (node.id ? [[node.id, node.label] as const] : [])));
     const items: BelifeMemoryTimelineItem[] = [
       ...messageRows.map((message) => ({
         id: message.id,
@@ -1022,6 +1079,7 @@ class MemoryBelifeStore implements BelifeStore {
         confidence: node.confidence,
         tags: [node.layer, node.tier],
       })),
+      ...edgeRows.map((edge) => ontologyEdgeTimelineItem(edge, nodeLabelById)),
       ...stateRows.map((state) => ({
         id: `state-${state.createdAt}`,
         kind: "state" as const,
@@ -1040,6 +1098,14 @@ class MemoryBelifeStore implements BelifeStore {
         confidence: behavior.confidence,
         tags: ["communication", "behavior"],
       })),
+      ...previewRows.map((preview, index) =>
+        connectionPreviewTimelineItem({
+          id: `connection-${preview.hiddenEdge?.lastSimulatedAt ?? index}`,
+          preview,
+          status: preview.hiddenEdge?.status,
+          createdAt: preview.hiddenEdge?.lastSimulatedAt,
+        }),
+      ),
     ]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, safeLimit);
