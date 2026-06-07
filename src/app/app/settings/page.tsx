@@ -31,7 +31,7 @@ export default async function SettingsPage() {
   const readiness = getReadinessReport({ ollamaHealth });
   const aiRuntime = getOllamaRuntimeDiagnostics(ollamaHealth);
   const RuntimeIcon = aiRuntime.mode === "live" ? CheckCircle2 : AlertTriangle;
-  const { dataTrust, stats, inventory } = dataTrustCenter;
+  const { dataTrust, audit, stats, inventory } = dataTrustCenter;
   const rows = [
     ["Auth", user.authProvider === "clerk" ? "Clerk session" : user.authProvider === "native" ? "BELIFE native auth" : "Demo mode", KeyRound],
     ["Storage", hasDatabaseUrl() ? "Neon Postgres" : "In-memory demo", Database],
@@ -167,6 +167,32 @@ export default async function SettingsPage() {
               </div>
             ))}
           </div>
+        </div>
+        <div className="mt-5 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+          <article className="rounded-md border border-teal-300/10 bg-teal-400/[0.04] p-4">
+            <p className="text-xs font-medium uppercase text-teal-200">Interpretation guardrail</p>
+            <p className="mt-3 text-sm leading-6 text-zinc-300">{audit.summary}</p>
+            <p className="mt-3 text-sm leading-6 text-zinc-500">{audit.interpretationGuardrail}</p>
+          </article>
+          <article className="rounded-md border border-orange-300/10 bg-orange-500/[0.04] p-4">
+            <p className="text-xs font-medium uppercase text-orange-200">Next trust gains</p>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-300">
+              {audit.nextActions.map((action) => (
+                <li key={action}>{action}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          {audit.weakestSignals.map((signal) => (
+            <article key={signal.key} className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-zinc-500">{signal.label}</p>
+                <span className="font-mono text-xs text-orange-200">{Math.round(signal.value * 100)}</span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-300">{signal.why}</p>
+            </article>
+          ))}
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           <div className="rounded-md border border-white/[0.08] bg-black/40 p-3">

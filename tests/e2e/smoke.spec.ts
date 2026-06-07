@@ -345,6 +345,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await expect(page.getByRole("heading", { name: "Data Controls" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Profile Enrichment" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "AI Runtime" })).toBeVisible();
+  await expect(page.getByText("Interpretation guardrail")).toBeVisible();
+  await expect(page.getByText("Next trust gains")).toBeVisible();
   await expect(page.getByText(/Live Ollama|Deterministic fallback/)).toBeVisible();
   await expect(page.getByText("Ontology edges")).toBeVisible();
   const aiHealthResult = await page.evaluate(async () => {
@@ -364,6 +366,21 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(aiHealthResult.requiredEnv).toContain("OLLAMA_BASE_URL");
   expect(aiHealthResult.chatModel).toBeTruthy();
   expect(aiHealthResult.healthPath).toBe("/api/health/ai");
+  const dataTrustApiResult = await page.evaluate(async () => {
+    const response = await fetch("/api/data-trust");
+    const body = await response.json();
+    return {
+      status: response.status,
+      score: body.dataTrust?.score,
+      weakestCount: body.audit?.weakestSignals?.length,
+      actionCount: body.audit?.nextActions?.length,
+    };
+  });
+
+  expect(dataTrustApiResult.status).toBe(200);
+  expect(dataTrustApiResult.score).toBeGreaterThanOrEqual(0);
+  expect(dataTrustApiResult.weakestCount).toBe(3);
+  expect(dataTrustApiResult.actionCount).toBe(3);
   const skipSuggestion = page.getByRole("button", { name: "Skip for now" }).first();
   await expect(skipSuggestion).toBeVisible();
   await skipSuggestion.click();

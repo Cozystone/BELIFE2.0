@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ollamaGenerate } from "@/lib/ai/ollama";
 import { buildStructuredExtraction } from "@/lib/ai/structured-extraction";
 import { buildConnectionPreview } from "@/lib/engines/compatibility";
-import { calculateDataTrust } from "@/lib/engines/data-trust";
+import { buildDataTrustAudit, calculateDataTrust } from "@/lib/engines/data-trust";
 import { buildTwinReflection } from "@/lib/engines/digital-twin";
 import { rankMemoryEvidence } from "@/lib/engines/evidence-retrieval";
 import { estimateMentalState } from "@/lib/engines/mental-state";
@@ -471,7 +471,7 @@ export async function getDataTrustCenter(userId: string) {
   const store = getStore();
   const dataTrust = await refreshDataTrust(userId);
   const [stats, inventory] = await Promise.all([store.getStats(userId), store.getMemoryInventory(userId)]);
-  return { dataTrust, stats, inventory };
+  return { dataTrust, audit: buildDataTrustAudit(dataTrust), stats, inventory };
 }
 
 export async function getMemoryTimeline(userId: string, limit?: number) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateContradictionInverse, calculateDataTrust } from "@/lib/engines/data-trust";
+import { buildDataTrustAudit, calculateContradictionInverse, calculateDataTrust } from "@/lib/engines/data-trust";
 
 describe("calculateDataTrust", () => {
   it("weights profile, sessions, ontology, behavior, contradiction, and recency", () => {
@@ -61,5 +61,22 @@ describe("calculateDataTrust", () => {
 
     expect(weakMemory.score).toBeLessThan(clearMemory.score);
     expect(weakMemory.memoryQuality).toBeLessThan(0.3);
+  });
+
+  it("explains weak signals and keeps low-trust interpretation cautious", () => {
+    const trust = calculateDataTrust({
+      profileCompleteness: 0.9,
+      validSessionDensity: 0.05,
+      ontologyStability: 0.12,
+      behaviorCoverage: 0.1,
+      contradictionInverse: 0.8,
+      recencyCoverage: 0.2,
+      memoryQuality: 0.18,
+    });
+    const audit = buildDataTrustAudit(trust);
+
+    expect(audit.weakestSignals[0].key).toBe("validSessionDensity");
+    expect(audit.nextActions.length).toBe(3);
+    expect(audit.interpretationGuardrail).toContain("가설");
   });
 });

@@ -206,6 +206,31 @@ export interface DataTrustScore {
   createdAt: string;
 }
 
+export type DataTrustSignalKey =
+  | "profileCompleteness"
+  | "validSessionDensity"
+  | "ontologyStability"
+  | "behaviorCoverage"
+  | "contradictionInverse"
+  | "recencyCoverage"
+  | "memoryQuality";
+
+export interface DataTrustAuditSignal {
+  key: DataTrustSignalKey;
+  label: string;
+  value: number;
+  impact: number;
+  why: string;
+}
+
+export interface DataTrustAudit {
+  generatedAt: string;
+  summary: string;
+  interpretationGuardrail: string;
+  weakestSignals: DataTrustAuditSignal[];
+  nextActions: string[];
+}
+
 export interface BelifeMemoryInventory {
   counts: {
     conversations: number;
