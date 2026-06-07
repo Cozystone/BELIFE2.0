@@ -130,6 +130,37 @@ export interface DataTrustScore {
   createdAt: string;
 }
 
+export type ConnectionScenarioType =
+  | "first_contact"
+  | "light_disagreement"
+  | "emotional_vulnerability"
+  | "pressure"
+  | "misunderstanding"
+  | "repair_attempt"
+  | "collaboration";
+
+export interface ConnectionScenarioState {
+  trust: number;
+  emotionalSafety: number;
+  irritation: number;
+  curiosity: number;
+  reciprocity: number;
+  openness: number;
+  repairWillingness: number;
+  disengagementRisk: number;
+  commitmentTendency: number;
+}
+
+export interface ConnectionScenarioPreview {
+  type: ConnectionScenarioType;
+  title: string;
+  likelyDynamic: string;
+  supportMove: string;
+  riskSignal: string;
+  state: ConnectionScenarioState;
+  confidence: number;
+}
+
 export interface CompatibilityAxes {
   structuralSimilarity: number;
   complementarity: number;
@@ -143,6 +174,7 @@ export interface CompatibilityAxes {
   tensionSignals: string[];
   idealConnectionPattern: string;
   riskyConnectionPattern: string;
+  scenarioPreviews: ConnectionScenarioPreview[];
 }
 
 export type ProfileEnrichmentKind = "profile_field" | "ontology_promotion";
