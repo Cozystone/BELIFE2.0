@@ -1,0 +1,168 @@
+export type EvidenceType = "EXTRACTED" | "INFERRED" | "AMBIGUOUS";
+export type OntologyLayer = "core" | "active" | "archive";
+export type ImportanceTier = "L1" | "L2" | "L3";
+export type OntologyNodeType =
+  | "Value"
+  | "Belief"
+  | "Goal"
+  | "EmotionPattern"
+  | "DecisionPattern"
+  | "FrictionPattern"
+  | "EnergyPattern"
+  | "GrowthTrajectory"
+  | "RiskSignal"
+  | "RecoveryHint"
+  | "CognitiveBiasCandidate";
+
+export type MessageRole = "user" | "assistant" | "system";
+export type MessageSource = "text" | "voice" | "system";
+
+export interface BelifeUser {
+  id: string;
+  name: string;
+  email?: string;
+  isDemo: boolean;
+}
+
+export interface UserProfile {
+  userId: string;
+  displayName: string;
+  nickname: string;
+  role: string;
+  mainWorry: string;
+  currentGoal: string;
+  importantValue: string;
+  stressReaction: string;
+  emotionalClimate: string;
+  preferredTone: string;
+  onboardingAnswers: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationMessage {
+  id: string;
+  conversationId: string;
+  userId: string;
+  role: MessageRole;
+  content: string;
+  source: MessageSource;
+  createdAt: string;
+}
+
+export interface MemoryChunk {
+  id?: string;
+  userId: string;
+  messageId?: string;
+  content: string;
+  kind: "raw" | "semantic" | "behavior" | "state" | "relationship";
+  salience: number;
+  evidenceType: EvidenceType;
+  tags: string[];
+  createdAt?: string;
+}
+
+export interface OntologyNode {
+  id?: string;
+  userId: string;
+  type: OntologyNodeType;
+  label: string;
+  summary: string;
+  layer: OntologyLayer;
+  tier: ImportanceTier;
+  certainty: EvidenceType;
+  confidence: number;
+  evidenceCount: number;
+  status: "active" | "archived";
+  lastEvidenceAt: string;
+}
+
+export interface OntologyEdge {
+  id?: string;
+  userId: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  relation: string;
+  certainty: EvidenceType;
+  confidence: number;
+}
+
+export interface MentalStateEstimate {
+  stressLoad: number;
+  burnoutRisk: number;
+  rumination: number;
+  emotionalVolatility: number;
+  motivation: number;
+  socialWithdrawal: number;
+  supportNeed: number;
+  confidence: number;
+  summary: string;
+  drivers: string[];
+  createdAt: string;
+}
+
+export interface BehaviorSnapshot {
+  questionFrequency: number;
+  directness: number;
+  disclosureSpeed: number;
+  empathyOrientation: number;
+  solutionOrientation: number;
+  abstraction: number;
+  conflictSensitivity: number;
+  pacing: number;
+  warmth: number;
+  confidence: number;
+  summary: string;
+  createdAt: string;
+}
+
+export interface DataTrustScore {
+  score: number;
+  label: "low" | "building" | "clear" | "strong";
+  profileCompleteness: number;
+  validSessionDensity: number;
+  ontologyStability: number;
+  behaviorCoverage: number;
+  contradictionInverse: number;
+  recencyCoverage: number;
+  explanation: string;
+  createdAt: string;
+}
+
+export interface CompatibilityAxes {
+  structuralSimilarity: number;
+  complementarity: number;
+  dialogueCompatibility: number;
+  conflictCompatibility: number;
+  repairPotential: number;
+  emotionalSafety: number;
+  confidence: number;
+  summary: string;
+  comfortSignals: string[];
+  tensionSignals: string[];
+  idealConnectionPattern: string;
+  riskyConnectionPattern: string;
+}
+
+export interface Briefing {
+  headline: string;
+  stateSummary: string;
+  patternSummary: string;
+  recommendedPrompt: string;
+  dataTrust: DataTrustScore;
+  state: MentalStateEstimate;
+  ontologyHighlights: OntologyNode[];
+  safetyNote: string;
+}
+
+export interface OnboardingAnswers {
+  nickname: string;
+  role: string;
+  mainWorry: string;
+  currentGoal: string;
+  importantValue: string;
+  stressReaction: string;
+  emotionalClimate: string;
+  preferredTone: string;
+  relationshipHope: string;
+}

@@ -1,0 +1,288 @@
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { ollamaGenerate } from "@/lib/ai/ollama";
+import { buildConnectionPreview } from "@/lib/engines/compatibility";
+import { calculateDataTrust } from "@/lib/engines/data-trust";
+import { estimateBehavior } from "@/lib/engines/behavior";
+import { estimateMentalState } from "@/lib/engines/mental-state";
+import { createMemoryChunks, extractOntologyCandidates, filterOntologyView } from "@/lib/engines/ontology";
+import type {
+  BelifeUser,
+  Briefing,
+  ConversationMessage,
+  MessageSource,
+  OnboardingAnswers,
+  OntologyNode,
+} from "@/lib/engines/types";
+import { compactText } from "@/lib/utils";
+import { getBelifeUser } from "./auth";
+import { getStore } from "./store";
+
+export const onboardingSchema = z.object({
+  nickname: z.string().min(1).max(40),
+  role: z.string().max(80).default(""),
+  mainWorry: z.string().min(1).max(280),
+  currentGoal: z.string().min(1).max(280),
+  importantValue: z.string().min(1).max(160),
+  stressReaction: z.string().min(1).max(220),
+  emotionalClimate: z.string().min(1).max(220),
+  preferredTone: z.string().min(1).max(80),
+  relationshipHope: z.string().min(1).max(220),
+});
+
+export const messageSchema = z.object({
+  content: z.string().min(1).max(4000),
+  source: z.enum(["text", "voice"]).default("text"),
+});
+
+export async function requireUserForPage(): Promise<BelifeUser> {
+  const user = await getBelifeUser();
+  if (!user) redirect("/sign-in");
+  return user;
+}
+
+export async function requireUserForApi() {
+  const user = await getBelifeUser();
+  if (!user) {
+    return { user: null, response: Response.json({ error: "Unauthorized" }, { status: 401 }) };
+  }
+  return { user, response: null };
+}
+
+export async function ensureUserProfile(user: BelifeUser) {
+  return getStore().ensureProfile(user);
+}
+
+export async function saveOnboarding(user: BelifeUser, answers: OnboardingAnswers) {
+  const store = getStore();
+  await store.ensureProfile(user);
+  const profile = await store.updateOnboarding(user.id, answers);
+  const initialText = [
+    answers.mainWorry,
+    answers.currentGoal,
+    answers.importantValue,
+    answers.stressReaction,
+    answers.emotionalClimate,
+    answers.relationshipHope,
+  ].join("\n");
+  const nodes = extractOntologyCandidates(user.id, initialText);
+  await store.upsertOntologyNodes(user.id, nodes);
+  const behavior = estimateBehavior(initialText, null);
+  const state = estimateMentalState(initialText, null);
+  await store.saveBehavior(user.id, behavior);
+  await store.saveStateEstimate(user.id, state);
+  await refreshDataTrust(user.id);
+  return profile;
+}
+
+export async function createConversation(userId: string) {
+  return getStore().createConversation(userId);
+}
+
+export async function handleConversationMessage(input: {
+  user: BelifeUser;
+  conversationId: string;
+  content: string;
+  source: MessageSource;
+}) {
+  const store = getStore();
+  await store.ensureProfile(input.user);
+  const userMessage = await store.appendMessage({
+    conversationId: input.conversationId,
+    userId: input.user.id,
+    role: "user",
+    content: input.content,
+    source: input.source,
+  });
+
+  const [profile, previousState, previousBehavior, recentMessages, currentNodes] = await Promise.all([
+    store.getProfile(input.user.id),
+    store.getLatestState(input.user.id),
+    store.getLatestBehavior(input.user.id),
+    store.getRecentMessages(input.user.id, 12),
+    store.getOntologyNodes(input.user.id),
+  ]);
+
+  const chunks = createMemoryChunks(input.user.id, input.content, userMessage.id);
+  const candidateNodes = extractOntologyCandidates(input.user.id, input.content);
+  const state = estimateMentalState(input.content, previousState);
+  const behavior = estimateBehavior(input.content, previousBehavior);
+
+  await store.saveMemoryChunks(chunks);
+  const savedNodes = await store.upsertOntologyNodes(input.user.id, candidateNodes);
+  await store.saveStateEstimate(input.user.id, state);
+  await store.saveBehavior(input.user.id, behavior);
+  const dataTrust = await refreshDataTrust(input.user.id);
+  const allNodes = mergeNodes(currentNodes, savedNodes);
+  const assistantText = await buildAssistantReply({
+    displayName: profile?.nickname ?? input.user.name,
+    content: input.content,
+    recentMessages,
+    nodes: allNodes,
+    stateSummary: state.summary,
+    tone: profile?.preferredTone ?? "calm",
+  });
+
+  const assistantMessage = await store.appendMessage({
+    conversationId: input.conversationId,
+    userId: input.user.id,
+    role: "assistant",
+    content: assistantText,
+    source: "system",
+  });
+
+  return {
+    userMessage,
+    assistantMessage,
+    state,
+    behavior,
+    dataTrust,
+    ontologyUpdates: savedNodes,
+  };
+}
+
+function mergeNodes(existing: OntologyNode[], updates: OntologyNode[]) {
+  const keyed = new Map<string, OntologyNode>();
+  for (const node of [...existing, ...updates]) keyed.set(`${node.type}:${node.label}`, node);
+  return [...keyed.values()];
+}
+
+async function buildAssistantReply(input: {
+  displayName: string;
+  content: string;
+  recentMessages: ConversationMessage[];
+  nodes: OntologyNode[];
+  stateSummary: string;
+  tone: string;
+}) {
+  const context = input.nodes
+    .slice(0, 8)
+    .map((node) => `- ${node.type}/${node.tier}: ${node.label} (${node.certainty}, ${Math.round(node.confidence * 100)}%)`)
+    .join("\n");
+  const recent = input.recentMessages
+    .slice(-6)
+    .map((message) => `${message.role}: ${compactText(message.content, 120)}`)
+    .join("\n");
+
+  const prompt = `You are BELIFE, a Korean-first personal AI intelligence service.
+You are not a therapist and must not diagnose. Use warm, calm Korean by default.
+User nickname: ${input.displayName}
+Preferred tone: ${input.tone}
+Current state interpretation: ${input.stateSummary}
+Known self-structure:
+${context || "- Not enough structure yet"}
+Recent conversation:
+${recent || "- First conversation"}
+
+User just said:
+${input.content}
+
+Answer in Korean. Structure before advice. Keep it concise: 3 short paragraphs max, then one reflective question.`;
+
+  try {
+    const response = await ollamaGenerate({
+      prompt,
+      temperature: 0.48,
+    });
+    if (response) return response;
+  } catch {
+    // The deterministic fallback keeps local and preview deployments usable before external Ollama is connected.
+  }
+
+  return `지금 말에서 가장 먼저 보이는 건, 단순한 기분 문제가 아니라 "${compactText(
+    input.content,
+    64,
+  )}" 주변에 생각과 에너지가 같이 묶여 있다는 점이에요.\n\nBELIFE가 보기엔 지금은 바로 결론을 내리기보다, 감정 신호와 실제 문제를 분리해서 보는 게 좋아요. 이 해석은 진단이 아니라 현재 대화 기반의 가설입니다.\n\n지금 이 문제에서 제일 줄이고 싶은 것은 불안인가요, 피로인가요, 아니면 선택의 막막함인가요?`;
+}
+
+export async function refreshDataTrust(userId: string) {
+  const store = getStore();
+  const stats = await store.getStats(userId);
+  const trust = calculateDataTrust(stats);
+  await store.saveDataTrust(userId, trust);
+  return trust;
+}
+
+export async function getBriefing(userId: string): Promise<Briefing> {
+  const store = getStore();
+  const [state, trust, nodes] = await Promise.all([
+    store.getLatestState(userId),
+    store.getLatestDataTrust(userId),
+    store.getOntologyNodes(userId),
+  ]);
+
+  const dataTrust = trust ?? (await refreshDataTrust(userId));
+  const mentalState =
+    state ??
+    estimateMentalState("BELIFE has limited signal. Start with a short check-in about today.", null);
+  const highlights = filterOntologyView(nodes, "expanded").slice(0, 5);
+
+  return {
+    headline:
+      dataTrust.score >= 50
+        ? "오늘의 구조가 조금씩 선명해지고 있어요."
+        : "BELIFE가 당신의 구조를 만들기 시작했어요.",
+    stateSummary: mentalState.summary,
+    patternSummary: highlights.length
+      ? `${highlights[0].label} 신호가 현재 자기 이해의 중심에 있습니다.`
+      : "아직 충분한 반복 패턴은 없습니다. 짧은 대화 몇 번이면 첫 구조가 생깁니다.",
+    recommendedPrompt: "지금 내 안에서 가장 크게 반복되는 생각은 뭐야?",
+    dataTrust,
+    state: mentalState,
+    ontologyHighlights: highlights,
+    safetyNote: "BELIFE는 비임상적 자기 이해 도구이며, 진단이나 치료를 대체하지 않습니다.",
+  };
+}
+
+export async function getOntologyForView(userId: string, view: "core" | "expanded" | "full") {
+  const nodes = await getStore().getOntologyNodes(userId);
+  return filterOntologyView(nodes, view);
+}
+
+export async function getTwinAnswer(userId: string, question: string) {
+  const store = getStore();
+  const [profile, state, behavior, nodes] = await Promise.all([
+    store.getProfile(userId),
+    store.getLatestState(userId),
+    store.getLatestBehavior(userId),
+    store.getOntologyNodes(userId),
+  ]);
+  const constraints = nodes
+    .slice(0, 10)
+    .map((node) => `${node.type}: ${node.label} - ${node.summary}`)
+    .join("\n");
+  const prompt = `You are BELIFE Digital Twin, constrained by evidence only.
+Do not invent unsupported life facts. Say when confidence is low.
+Answer in Korean as a reflective mirror of the user, not as a roleplay character.
+Nickname: ${profile?.nickname ?? "user"}
+Current state: ${state?.summary ?? "limited state evidence"}
+Behavior style: ${behavior?.summary ?? "limited behavior evidence"}
+Ontology constraints:
+${constraints || "No strong ontology yet"}
+
+Question: ${question}
+
+Return: 1) what your structure might be doing, 2) what is uncertain, 3) one question to ask yourself.`;
+
+  try {
+    const response = await ollamaGenerate({ prompt, temperature: 0.35 });
+    if (response) return response;
+  } catch {
+    // See comment above: keep the product usable while Ollama endpoint setup is pending.
+  }
+
+  return `내 구조를 기준으로 보면, 지금 질문은 단순한 답보다 "왜 이 패턴이 반복되는지"를 확인하고 싶어 하는 쪽에 가까워요.\n\n아직 확실하지 않은 부분은 이 패턴이 일시적인 피로에서 온 것인지, 더 오래된 관계/결정 방식에서 온 것인지예요.\n\n내가 지금 피하고 있는 감정과 실제로 해결해야 하는 문제는 각각 무엇일까요?`;
+}
+
+export async function getConnectionPreview(userId: string) {
+  const store = getStore();
+  const [nodes, behavior, trust] = await Promise.all([
+    store.getOntologyNodes(userId),
+    store.getLatestBehavior(userId),
+    store.getLatestDataTrust(userId),
+  ]);
+  const dataTrust = trust ?? (await refreshDataTrust(userId));
+  const preview = buildConnectionPreview(nodes, behavior, dataTrust);
+  await store.saveConnectionPreview(userId, preview);
+  return preview;
+}
