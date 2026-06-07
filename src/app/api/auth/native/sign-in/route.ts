@@ -8,20 +8,23 @@ const signInSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
-function publicSignInError(error: unknown) {
+function handledSignInError(error: unknown) {
   if (error instanceof z.ZodError) return "Please check your email and password.";
   if (error instanceof Error && error.message === "Invalid email or password.") return error.message;
-  return "Unable to sign in.";
+  return null;
 }
 
 export async function POST(request: Request) {
   try {
     const account = await signInNative(signInSchema.parse(await request.json()));
-    return Response.json({ account });
+    return Response.json({ ok: true, account });
   } catch (error) {
-    return Response.json(
-      { error: publicSignInError(error) },
-      { status: 401 },
-    );
+    const handledError = handledSignInError(error);
+    if (handledError) {
+      return Response.json({ ok: false, error: handledError });
+    }
+
+    console.error("Native sign-in failed", error);
+    return Response.json({ ok: false, error: "Unable to sign in." }, { status: 500 });
   }
 }

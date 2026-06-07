@@ -190,6 +190,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const body = await attack.json();
     return {
       signUpStatus: signUp.status,
+      intruderEmail: email,
       attackStatus: attack.status,
       code: body.code,
     };
@@ -199,6 +200,26 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     signUpStatus: 200,
     attackStatus: 404,
     code: "CONVERSATION_NOT_FOUND",
+  });
+
+  const wrongSignInResult = await page.evaluate(async (email) => {
+    const response = await fetch("/api/auth/native/sign-in", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: "wrongpass123" }),
+    });
+    const body = await response.json();
+    return {
+      status: response.status,
+      ok: body.ok,
+      error: body.error,
+    };
+  }, crossUserResult.intruderEmail);
+
+  expect(wrongSignInResult).toMatchObject({
+    status: 200,
+    ok: false,
+    error: "Invalid email or password.",
   });
   expect(unauthorizedUrls).toEqual([]);
 });

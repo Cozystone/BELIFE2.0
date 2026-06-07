@@ -16,6 +16,12 @@ function nextPathFromLocation() {
   return safeNextPath(new URLSearchParams(window.location.search).get("next"));
 }
 
+type NativeAuthResponse = {
+  ok?: boolean;
+  account?: unknown;
+  error?: string;
+};
+
 export function NativeAuthForm({
   mode,
   nativeAvailable,
@@ -50,11 +56,11 @@ export function NativeAuthForm({
         }),
       });
 
-      if (response.ok) {
+      const body = (await response.json().catch(() => ({}))) as NativeAuthResponse;
+      if (response.ok && body.ok !== false && body.account) {
         router.push(isSignUp ? "/onboarding" : (nextPathFromLocation() ?? "/app/today"));
         router.refresh();
       } else {
-        const body = (await response.json()) as { error?: string };
         setError(body.error || "인증에 실패했습니다.");
       }
     } catch {

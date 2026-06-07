@@ -9,21 +9,24 @@ const signUpSchema = z.object({
   displayName: z.string().min(1).max(60),
 });
 
-function publicSignUpError(error: unknown) {
+function handledSignUpError(error: unknown) {
   if (error instanceof z.ZodError) return "Please check your sign-up fields.";
   if (error instanceof Error && error.message === "This email is already registered.") return error.message;
-  return "Unable to sign up.";
+  return null;
 }
 
 export async function POST(request: Request) {
   try {
     const input = signUpSchema.parse(await request.json());
     const account = await signUpNative(input);
-    return Response.json({ account });
+    return Response.json({ ok: true, account });
   } catch (error) {
-    return Response.json(
-      { error: publicSignUpError(error) },
-      { status: 400 },
-    );
+    const handledError = handledSignUpError(error);
+    if (handledError) {
+      return Response.json({ ok: false, error: handledError });
+    }
+
+    console.error("Native sign-up failed", error);
+    return Response.json({ ok: false, error: "Unable to sign up." }, { status: 500 });
   }
 }
