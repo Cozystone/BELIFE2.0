@@ -26,6 +26,12 @@ export function TwinConsole() {
           answer: body.answer || body.error || "답변을 만들지 못했습니다.",
           confidence: 0,
           confidenceLabel: "early",
+          trustGate: {
+            score: 0,
+            label: "low",
+            ceiling: 0.34,
+            note: "Data trust가 없어 Twin confidence를 early 수준으로 제한합니다.",
+          },
           evidence: [],
           uncertainties: ["응답을 구조화하지 못했습니다."],
           nextQuestion: "다시 묻고 싶은 핵심 질문은 무엇인가요?",
@@ -70,6 +76,15 @@ export function TwinConsole() {
               </span>
             </div>
             <p className="whitespace-pre-wrap">{reflection.answer}</p>
+            <div className="mt-4 rounded-md border border-teal-300/10 bg-teal-400/5 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-medium uppercase text-teal-200">Data trust gate</p>
+                <span className="font-mono text-xs text-zinc-400">
+                  {reflection.trustGate.score} / ceiling {Math.round(reflection.trustGate.ceiling * 100)}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-zinc-500">{reflection.trustGate.note}</p>
+            </div>
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">

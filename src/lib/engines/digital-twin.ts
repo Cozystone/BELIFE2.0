@@ -1,6 +1,7 @@
 import { clamp, compactText } from "@/lib/utils";
 import type {
   BehaviorSnapshot,
+  DataTrustScore,
   MemoryEvidenceItem,
   MentalStateEstimate,
   OntologyNode,
@@ -17,21 +18,25 @@ export interface BuildTwinReflectionInput {
   behavior: BehaviorSnapshot | null;
   nodes: OntologyNode[];
   retrievedEvidence?: MemoryEvidenceItem[];
+  dataTrust?: DataTrustScore | null;
 }
 
 export function buildTwinReflection(input: BuildTwinReflectionInput): TwinReflection {
   const evidence = buildTwinEvidence(input);
-  const confidence = calculateTwinConfidence(evidence, input.state, input.behavior, input.nodes);
+  const rawConfidence = calculateTwinConfidence(evidence, input.state, input.behavior, input.nodes);
+  const trustGate = buildTrustGate(input.dataTrust);
+  const confidence = clamp(Math.min(rawConfidence, trustGate.ceiling));
   const uncertainties = buildUncertainties(input, evidence);
 
   return {
     answer: input.answer,
     confidence,
     confidenceLabel: twinConfidenceLabel(confidence),
+    trustGate,
     evidence,
     uncertainties,
     nextQuestion: buildNextQuestion(input.question, input.state),
-    guardrail: "BELIFE Twin은 증거가 있는 자기 구조만 반사하며, 진단이나 확정적 예측을 하지 않습니다.",
+    guardrail: `${trustGate.note} BELIFE Twin은 증거가 있는 자기 구조만 반사하며, 진단이나 확정적 예측을 하지 않습니다.`,
   };
 }
 
@@ -55,6 +60,35 @@ export function calculateTwinConfidence(
       ontologyConfidence * 0.22 +
       Math.min(0.08, nodes.length * 0.01),
   );
+}
+
+function buildTrustGate(dataTrust?: DataTrustScore | null): TwinReflection["trustGate"] {
+  if (!dataTrust) {
+    return {
+      score: 0,
+      label: "low",
+      ceiling: 0.34,
+      note: "Data trust가 아직 없어 Twin confidence를 early 수준으로 제한합니다.",
+    };
+  }
+
+  const score = dataTrust.score / 100;
+  const ceiling = clamp(0.24 + score * 0.76);
+  const note =
+    dataTrust.label === "strong"
+      ? "Data trust가 높아도 Twin은 근거와 불확실성을 함께 표시합니다."
+      : dataTrust.label === "clear"
+        ? "Data trust가 쌓이고 있어 Twin은 근거 있는 가설로 답합니다."
+        : dataTrust.label === "building"
+          ? "Data trust가 형성 중이라 Twin은 답변을 가설 수준으로 제한합니다."
+          : "Data trust가 낮아 Twin은 해석보다 확인 질문을 우선합니다.";
+
+  return {
+    score: dataTrust.score,
+    label: dataTrust.label,
+    ceiling,
+    note,
+  };
 }
 
 function buildTwinEvidence(input: BuildTwinReflectionInput): TwinEvidenceItem[] {
@@ -122,6 +156,9 @@ function buildTwinEvidence(input: BuildTwinReflectionInput): TwinEvidenceItem[] 
 
 function buildUncertainties(input: BuildTwinReflectionInput, evidence: TwinEvidenceItem[]) {
   const uncertainties = [];
+  if (!input.dataTrust || input.dataTrust.score < 58) {
+    uncertainties.push("Data trust가 아직 충분히 높지 않아 Twin 답변은 확정이 아니라 확인해야 할 가설입니다.");
+  }
   if (!input.state) uncertainties.push("최근 상태 추정이 부족해 지금의 컨디션 변화는 조심스럽게 봅니다.");
   if (!input.behavior) uncertainties.push("대화 행동 관측이 부족해 말의 속도와 반응 패턴은 아직 초기 가설입니다.");
   if (input.nodes.length < 4) uncertainties.push("온톨로지 노드가 더 쌓이면 반복 패턴과 핵심 가치의 구분이 선명해집니다.");

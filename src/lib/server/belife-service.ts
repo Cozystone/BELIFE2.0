@@ -396,14 +396,16 @@ export async function getTwinAnswer(userId: string, question: string) {
 
 export async function getTwinReflection(userId: string, question: string) {
   const store = getStore();
-  const [profile, state, behavior, nodes, chunks, recentMessages] = await Promise.all([
+  const [profile, state, behavior, nodes, chunks, recentMessages, latestTrust] = await Promise.all([
     store.getProfile(userId),
     store.getLatestState(userId),
     store.getLatestBehavior(userId),
     store.getOntologyNodes(userId),
     store.getRecentMemoryChunks(userId, 60),
     store.getRecentMessages(userId, 20),
+    store.getLatestDataTrust(userId),
   ]);
+  const dataTrust = latestTrust ?? (await refreshDataTrust(userId));
   const memoryEvidence = rankMemoryEvidence({
     query: question,
     chunks,
@@ -439,7 +441,16 @@ Return: 1) what your structure might be doing, 2) what is uncertain, 3) one ques
   try {
     const response = await ollamaGenerate({ prompt, temperature: 0.35 });
     if (response) {
-      return buildTwinReflection({ answer: response, question, profile, state, behavior, nodes, retrievedEvidence: memoryEvidence });
+      return buildTwinReflection({
+        answer: response,
+        question,
+        profile,
+        state,
+        behavior,
+        nodes,
+        retrievedEvidence: memoryEvidence,
+        dataTrust,
+      });
     }
   } catch {
     // Keep production usable while an external Ollama endpoint is being connected.
@@ -450,7 +461,16 @@ Return: 1) what your structure might be doing, 2) what is uncertain, 3) one ques
 아직 확실하지 않은 부분은 이것이 일시적인 피로에서 나온 반복인지, 오래된 관계/결정 방식에서 나온 반복인지입니다. BELIFE는 증거가 부족한 부분을 사실처럼 말하지 않겠습니다.
 
 스스로에게 물어볼 질문은 이것입니다. 지금 내가 해결하려는 것은 실제 문제인가요, 아니면 그 문제를 둘러싼 불안과 압박인가요?`;
-  return buildTwinReflection({ answer: fallbackAnswer, question, profile, state, behavior, nodes, retrievedEvidence: memoryEvidence });
+  return buildTwinReflection({
+    answer: fallbackAnswer,
+    question,
+    profile,
+    state,
+    behavior,
+    nodes,
+    retrievedEvidence: memoryEvidence,
+    dataTrust,
+  });
 }
 
 export async function getConnectionPreview(userId: string) {

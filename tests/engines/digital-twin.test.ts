@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildTwinReflection, calculateTwinConfidence } from "@/lib/engines/digital-twin";
-import type { BehaviorSnapshot, MentalStateEstimate, OntologyNode, UserProfile } from "@/lib/engines/types";
+import type { BehaviorSnapshot, DataTrustScore, MentalStateEstimate, OntologyNode, UserProfile } from "@/lib/engines/types";
 
 const now = new Date().toISOString();
 
@@ -53,6 +53,20 @@ const behavior: BehaviorSnapshot = {
   createdAt: now,
 };
 
+const trust: DataTrustScore = {
+  score: 72,
+  label: "clear",
+  profileCompleteness: 1,
+  validSessionDensity: 0.7,
+  ontologyStability: 0.68,
+  behaviorCoverage: 0.66,
+  contradictionInverse: 0.92,
+  recencyCoverage: 0.8,
+  memoryQuality: 0.74,
+  explanation: "신뢰도 형성 중",
+  createdAt: now,
+};
+
 function node(overrides: Partial<OntologyNode>): OntologyNode {
   return {
     userId: "u1",
@@ -71,20 +85,23 @@ function node(overrides: Partial<OntologyNode>): OntologyNode {
 }
 
 describe("digital twin reflection", () => {
-  it("wraps a twin answer with evidence, uncertainty, and a next question", () => {
+  it("wraps a twin answer with evidence, uncertainty, trust gate, and a next question", () => {
     const reflection = buildTwinReflection({
-      answer: "답변",
+      answer: "응답",
       question: "왜 같은 생각이 반복돼?",
       profile,
       state,
       behavior,
       nodes: [node({}), node({ type: "Goal", label: "완성", summary: "완성을 원합니다." })],
+      dataTrust: trust,
     });
 
-    expect(reflection.answer).toBe("답변");
+    expect(reflection.answer).toBe("응답");
     expect(reflection.evidence.length).toBeGreaterThanOrEqual(4);
     expect(reflection.confidence).toBeGreaterThan(0.4);
+    expect(reflection.trustGate.score).toBe(72);
     expect(reflection.nextQuestion).toContain("반복 생각");
+    expect(reflection.guardrail).toContain("Data trust");
     expect(reflection.guardrail).toContain("진단");
   });
 
@@ -92,5 +109,26 @@ describe("digital twin reflection", () => {
     const confidence = calculateTwinConfidence([], null, null, []);
 
     expect(confidence).toBe(0);
+  });
+
+  it("caps twin confidence by data trust", () => {
+    const reflection = buildTwinReflection({
+      answer: "응답",
+      question: "내 구조를 말해줘",
+      profile,
+      state: { ...state, confidence: 0.95 },
+      behavior: { ...behavior, confidence: 0.95 },
+      nodes: [
+        node({ confidence: 0.95 }),
+        node({ type: "Goal", label: "완성", summary: "완성을 원합니다.", confidence: 0.95 }),
+        node({ type: "EmotionPattern", label: "긴장", summary: "긴장이 올라옵니다.", confidence: 0.95 }),
+        node({ type: "RecoveryHint", label: "회복", summary: "회복 단서가 있습니다.", confidence: 0.95 }),
+      ],
+      dataTrust: { ...trust, score: 24, label: "low" },
+    });
+
+    expect(reflection.trustGate.ceiling).toBeCloseTo(0.4224);
+    expect(reflection.confidence).toBeLessThanOrEqual(reflection.trustGate.ceiling);
+    expect(reflection.uncertainties.some((item) => item.includes("Data trust"))).toBe(true);
   });
 });

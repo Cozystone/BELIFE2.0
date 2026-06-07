@@ -309,6 +309,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       evidenceCount: body.reflection.evidence.length,
       evidenceSources: body.reflection.evidence.map((item: { source: string }) => item.source),
       confidenceLabel: body.reflection.confidenceLabel,
+      trustGateScore: body.reflection.trustGate?.score,
+      trustGateCeiling: body.reflection.trustGate?.ceiling,
     };
   }, `Why did I say ${continuityFollowup}, and what memory evidence supports it?`);
 
@@ -317,7 +319,10 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(twinResult.evidenceCount).toBeGreaterThan(0);
   expect(twinResult.evidenceSources.some((source: string) => source === "memory" || source === "message")).toBe(true);
   expect(twinResult.confidenceLabel).toMatch(/early|forming|grounded|strong/);
+  expect(twinResult.trustGateScore).toBeGreaterThanOrEqual(0);
+  expect(twinResult.trustGateCeiling).toBeGreaterThan(0);
   await page.getByRole("button", { name: "Ask Twin" }).click();
+  await expect(page.getByText("Data trust gate")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Evidence" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Uncertainty" })).toBeVisible();
 

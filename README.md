@@ -11,6 +11,7 @@ BELIFE is a Korean-first, voice-first personal AI intelligence service. It turns
 - Structured Ollama JSON extraction for memory chunks, ontology candidates, behavior signals, and mental-state estimates, with deterministic fallback when Ollama is unavailable
 - Profile enrichment approval flow through `GET/POST /api/profile/enrichment`
 - Data Trust Center with score breakdown, interpretation guardrails, weakest signals, and next trust-gain actions
+- Digital Twin responses are evidence-based and capped by a Data Trust gate
 - Mobile-centered UI with voice input through browser speech APIs
 
 ## Local Development

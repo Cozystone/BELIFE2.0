@@ -456,6 +456,12 @@ export interface TwinReflection {
   answer: string;
   confidence: number;
   confidenceLabel: "early" | "forming" | "grounded" | "strong";
+  trustGate: {
+    score: number;
+    label: DataTrustScore["label"];
+    ceiling: number;
+    note: string;
+  };
   evidence: TwinEvidenceItem[];
   uncertainties: string[];
   nextQuestion: string;
