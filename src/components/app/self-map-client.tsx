@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { OntologyGraph } from "@/components/app/ontology-graph";
 import { Button } from "@/components/ui/button";
 import { belifeFetch } from "@/lib/client/auth-fetch";
@@ -12,8 +12,14 @@ const views = ["core", "expanded", "full"] as const;
 export function SelfMapClient({ initialGraph }: { initialGraph: OntologyGraphModel }) {
   const [view, setView] = useState<(typeof views)[number]>("expanded");
   const [graph, setGraph] = useState(initialGraph);
+  const hasMountedRef = useRef(false);
 
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
     let alive = true;
     belifeFetch(`/api/ontology?view=${view}`)
       .then((response) => {

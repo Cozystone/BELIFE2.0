@@ -11,10 +11,16 @@ function exactMessage(page: Page, content: string) {
 }
 
 test("mobile BELIFE shell routes protected app to native sign-in", async ({ page }) => {
+  const unauthorizedUrls: string[] = [];
+  page.on("response", (response) => {
+    if (response.status() === 401) unauthorizedUrls.push(response.url());
+  });
+
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "BELIFE" })).toBeVisible();
   await page.getByRole("link", { name: "Talk now" }).click();
   await expect(page.getByRole("heading", { name: "Sign in to BELIFE" })).toBeVisible();
+  expect(unauthorizedUrls).toEqual([]);
 });
 
 test("public start flow goes through sign-up before onboarding", async ({ page }) => {
@@ -25,8 +31,16 @@ test("public start flow goes through sign-up before onboarding", async ({ page }
 
 test("native sign-up keeps a session for protected app APIs", async ({ page }, testInfo) => {
   const unauthorizedUrls: string[] = [];
+  const hydrationErrors: string[] = [];
+  const ontologyApiUrls: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && message.text().includes("A tree hydrated")) {
+      hydrationErrors.push(message.text());
+    }
+  });
   page.on("response", (response) => {
     if (response.status() === 401) unauthorizedUrls.push(response.url());
+    if (response.url().includes("/api/ontology")) ontologyApiUrls.push(response.url());
   });
   await page.addInitScript(() => {
     class MockSpeechRecognition {
@@ -245,9 +259,11 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   });
   expect(stateHistoryResult.itemCount).toBeGreaterThan(0);
 
+  const ontologyCallsBeforeSelfMap = ontologyApiUrls.length;
   await page.goto("/app/self-map");
   await expect(page.getByRole("heading", { name: "Memory Timeline" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ontology Edges" })).toBeVisible();
+  expect(ontologyApiUrls.length).toBe(ontologyCallsBeforeSelfMap);
   const ontologyResult = await page.evaluate(async () => {
     const response = await fetch("/api/ontology?view=expanded");
     const body = await response.json();
@@ -408,4 +424,5 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     error: "Invalid email or password.",
   });
   expect(unauthorizedUrls).toEqual([]);
+  expect(hydrationErrors).toEqual([]);
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { Mic, Plus, Send, Square, Volume2 } from "lucide-react";
-import { useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { belifeFetch } from "@/lib/client/auth-fetch";
 import type { ConversationMessage } from "@/lib/engines/types";
@@ -48,11 +48,14 @@ export function VoiceConsole({ initialMessages, initialConversationId, initialDr
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const holdPointerIdRef = useRef<number | null>(null);
   const suppressNextVoiceClickRef = useRef(false);
+  const [supportsSpeech, setSupportsSpeech] = useState(false);
 
-  const supportsSpeech = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    const speechWindow = window as SpeechWindow;
-    return Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const speechWindow = window as SpeechWindow;
+      setSupportsSpeech(Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition));
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   async function ensureConversation() {

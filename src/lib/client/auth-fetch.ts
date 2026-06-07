@@ -1,5 +1,7 @@
 "use client";
 
+let isRedirectingToSignIn = false;
+
 function currentReturnPath() {
   if (typeof window === "undefined") return "/app/today";
   return `${window.location.pathname}${window.location.search}`;
@@ -16,7 +18,10 @@ export async function belifeFetch(input: RequestInfo | URL, init?: RequestInit) 
   });
 
   if (response.status === 401 && typeof window !== "undefined") {
-    window.location.assign(signInUrl());
+    if (!isRedirectingToSignIn) {
+      isRedirectingToSignIn = true;
+      window.location.assign(signInUrl());
+    }
     throw new Error("로그인이 필요합니다.");
   }
 
