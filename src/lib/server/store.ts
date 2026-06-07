@@ -21,6 +21,8 @@ import type {
   BelifeUser,
   BelifeDataExport,
   BelifeMemoryInventory,
+  BelifeMemoryTimeline,
+  BelifeMemoryTimelineItem,
   CompatibilityAxes,
   ConversationMessage,
   DataTrustScore,
@@ -33,7 +35,7 @@ import type {
   OntologyNode,
   UserProfile,
 } from "@/lib/engines/types";
-import { isoNow } from "@/lib/utils";
+import { compactText, isoNow } from "@/lib/utils";
 
 export interface BelifeStats {
   profileCompleteness: number;
@@ -71,6 +73,7 @@ export interface BelifeStore {
   saveConnectionPreview(userId: string, preview: CompatibilityAxes): Promise<void>;
   getLatestConnectionPreview(userId: string): Promise<CompatibilityAxes | null>;
   getMemoryInventory(userId: string): Promise<BelifeMemoryInventory>;
+  getMemoryTimeline(userId: string, limit?: number): Promise<BelifeMemoryTimeline>;
   exportUserData(userId: string): Promise<BelifeDataExport>;
   resetUserData(user: BelifeUser): Promise<UserProfile>;
   getStats(userId: string): Promise<BelifeStats>;
@@ -418,6 +421,75 @@ class DbBelifeStore implements BelifeStore {
     });
   }
 
+  async getMemoryTimeline(userId: string, limit = 24): Promise<BelifeMemoryTimeline> {
+    const safeLimit = Math.max(1, Math.min(60, limit));
+    const db = getDb();
+    const [messageRows, chunkRows, nodeRows, stateRows, behaviorRows] = await Promise.all([
+      db.select().from(messages).where(eq(messages.userId, userId)).orderBy(desc(messages.createdAt)).limit(safeLimit),
+      db.select().from(memoryChunks).where(eq(memoryChunks.userId, userId)).orderBy(desc(memoryChunks.createdAt)).limit(safeLimit),
+      db.select().from(ontologyNodes).where(eq(ontologyNodes.userId, userId)).orderBy(desc(ontologyNodes.lastEvidenceAt)).limit(safeLimit),
+      db.select().from(stateEstimates).where(eq(stateEstimates.userId, userId)).orderBy(desc(stateEstimates.createdAt)).limit(safeLimit),
+      db.select().from(behaviorFeatures).where(eq(behaviorFeatures.userId, userId)).orderBy(desc(behaviorFeatures.createdAt)).limit(safeLimit),
+    ]);
+
+    const items: BelifeMemoryTimelineItem[] = [
+      ...messageRows.map((row) => ({
+        id: row.id,
+        kind: "message" as const,
+        title: row.role === "user" ? "User message" : "BELIFE response",
+        body: compactText(row.content, 240),
+        createdAt: dateToIso(row.createdAt),
+        source: row.source,
+        tags: [row.role, row.source],
+      })),
+      ...chunkRows.map((row) => ({
+        id: row.id,
+        kind: "memory" as const,
+        title: `${row.kind} memory`,
+        body: compactText(row.content, 240),
+        createdAt: dateToIso(row.createdAt),
+        evidenceType: row.evidenceType,
+        salience: row.salience,
+        tags: row.tags ?? [],
+      })),
+      ...nodeRows.map((row) => ({
+        id: row.id,
+        kind: "ontology" as const,
+        title: `${row.type} · ${row.label}`,
+        body: compactText(row.summary, 240),
+        createdAt: dateToIso(row.lastEvidenceAt),
+        evidenceType: row.certainty,
+        confidence: row.confidence,
+        tags: [row.layer, row.tier],
+      })),
+      ...stateRows.map((row) => {
+        const state = mapState(row);
+        return {
+          id: row.id,
+          kind: "state" as const,
+          title: "Mental state estimate",
+          body: compactText(state.summary, 240),
+          createdAt: state.createdAt,
+          confidence: state.confidence,
+          tags: state.drivers,
+        };
+      }),
+      ...behaviorRows.map((row) => ({
+        id: row.id,
+        kind: "behavior" as const,
+        title: "Behavior snapshot",
+        body: compactText(row.snapshot.summary, 240),
+        createdAt: dateToIso(row.createdAt),
+        confidence: row.snapshot.confidence,
+        tags: ["communication", "behavior"],
+      })),
+    ]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, safeLimit);
+
+    return { generatedAt: isoNow(), items };
+  }
+
   async exportUserData(userId: string): Promise<BelifeDataExport> {
     const db = getDb();
     const [profile, inventory, conversationRows, messageRows, chunkRows, nodeRows, stateRows, behaviorRows, trustRows, previewRows] =
@@ -665,6 +737,68 @@ class MemoryBelifeStore implements BelifeStore {
         dataTrustAt: latestDateToIso(trustRows.map((trust) => trust.createdAt)),
       },
     });
+  }
+
+  async getMemoryTimeline(userId: string, limit = 24): Promise<BelifeMemoryTimeline> {
+    const safeLimit = Math.max(1, Math.min(60, limit));
+    const messageRows = memoryState.messages.filter((message) => message.userId === userId).slice(-safeLimit);
+    const chunkRows = memoryState.chunks.filter((chunk) => chunk.userId === userId).slice(-safeLimit);
+    const nodeRows = memoryState.nodes.filter((node) => node.userId === userId).slice(-safeLimit);
+    const stateRows = (memoryState.states.get(userId) ?? []).slice(-safeLimit);
+    const behaviorRows = (memoryState.behaviors.get(userId) ?? []).slice(-safeLimit);
+    const items: BelifeMemoryTimelineItem[] = [
+      ...messageRows.map((message) => ({
+        id: message.id,
+        kind: "message" as const,
+        title: message.role === "user" ? "User message" : "BELIFE response",
+        body: compactText(message.content, 240),
+        createdAt: message.createdAt,
+        source: message.source,
+        tags: [message.role, message.source],
+      })),
+      ...chunkRows.map((chunk) => ({
+        id: chunk.id ?? randomUUID(),
+        kind: "memory" as const,
+        title: `${chunk.kind} memory`,
+        body: compactText(chunk.content, 240),
+        createdAt: chunk.createdAt ?? isoNow(),
+        evidenceType: chunk.evidenceType,
+        salience: chunk.salience,
+        tags: chunk.tags,
+      })),
+      ...nodeRows.map((node) => ({
+        id: node.id ?? `${node.type}-${node.label}`,
+        kind: "ontology" as const,
+        title: `${node.type} · ${node.label}`,
+        body: compactText(node.summary, 240),
+        createdAt: node.lastEvidenceAt,
+        evidenceType: node.certainty,
+        confidence: node.confidence,
+        tags: [node.layer, node.tier],
+      })),
+      ...stateRows.map((state) => ({
+        id: `state-${state.createdAt}`,
+        kind: "state" as const,
+        title: "Mental state estimate",
+        body: compactText(state.summary, 240),
+        createdAt: state.createdAt,
+        confidence: state.confidence,
+        tags: state.drivers,
+      })),
+      ...behaviorRows.map((behavior) => ({
+        id: `behavior-${behavior.createdAt}`,
+        kind: "behavior" as const,
+        title: "Behavior snapshot",
+        body: compactText(behavior.summary, 240),
+        createdAt: behavior.createdAt,
+        confidence: behavior.confidence,
+        tags: ["communication", "behavior"],
+      })),
+    ]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, safeLimit);
+
+    return { generatedAt: isoNow(), items };
   }
 
   async exportUserData(userId: string): Promise<BelifeDataExport> {

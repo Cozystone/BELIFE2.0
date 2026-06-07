@@ -178,6 +178,26 @@ export interface BelifeDataExport {
   connectionPreviews: Record<string, unknown>[];
 }
 
+export type BelifeMemoryTimelineKind = "message" | "memory" | "ontology" | "state" | "behavior";
+
+export interface BelifeMemoryTimelineItem {
+  id: string;
+  kind: BelifeMemoryTimelineKind;
+  title: string;
+  body: string;
+  createdAt: string;
+  evidenceType?: EvidenceType;
+  confidence?: number;
+  salience?: number;
+  source?: string;
+  tags: string[];
+}
+
+export interface BelifeMemoryTimeline {
+  generatedAt: string;
+  items: BelifeMemoryTimelineItem[];
+}
+
 export type ConnectionScenarioType =
   | "first_contact"
   | "light_disagreement"

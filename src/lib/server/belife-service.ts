@@ -368,6 +368,10 @@ export async function getDataTrustCenter(userId: string) {
   return { dataTrust, stats, inventory };
 }
 
+export async function getMemoryTimeline(userId: string, limit?: number) {
+  return getStore().getMemoryTimeline(userId, limit);
+}
+
 export async function exportBelifeData(userId: string) {
   return getStore().exportUserData(userId);
 }
