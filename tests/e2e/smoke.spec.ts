@@ -59,6 +59,13 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   });
 
   expect(briefingStatus).toBe(200);
+  const ownerConversationId = await page.evaluate(async () => {
+    const response = await fetch("/api/conversations", { method: "POST" });
+    const body = await response.json();
+    return body.conversationId as string;
+  });
+  expect(ownerConversationId).toBeTruthy();
+
   await page.goto("/app/today");
   await expect(page.getByRole("main").getByText("Today")).toBeVisible();
   await expect(page.getByRole("heading", { name: "State History" })).toBeVisible();
@@ -162,5 +169,36 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   });
   expect(exportResult.messageCount).toBeGreaterThanOrEqual(0);
   expect(exportResult.ontologyNodeCount).toBeGreaterThanOrEqual(0);
+
+  const crossUserResult = await page.evaluate(async (conversationId) => {
+    await fetch("/api/auth/native/sign-out", { method: "POST" });
+    const email = `e2e-intruder-${Date.now()}-${Math.random().toString(36).slice(2)}@belife.test`;
+    const signUp = await fetch("/api/auth/native/sign-up", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password: "debugpass123",
+        displayName: "E2E Intruder",
+      }),
+    });
+    const attack = await fetch(`/api/conversations/${conversationId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "남의 대화에 쓰면 안 됩니다.", source: "text" }),
+    });
+    const body = await attack.json();
+    return {
+      signUpStatus: signUp.status,
+      attackStatus: attack.status,
+      code: body.code,
+    };
+  }, ownerConversationId);
+
+  expect(crossUserResult).toMatchObject({
+    signUpStatus: 200,
+    attackStatus: 404,
+    code: "CONVERSATION_NOT_FOUND",
+  });
   expect(unauthorizedUrls).toEqual([]);
 });

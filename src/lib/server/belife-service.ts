@@ -44,6 +44,20 @@ export const profileEnrichmentSchema = z.object({
   id: z.string().min(1).max(220),
 });
 
+export class BelifeApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code: string,
+  ) {
+    super(message);
+  }
+}
+
+export function isBelifeApiError(error: unknown): error is BelifeApiError {
+  return error instanceof BelifeApiError;
+}
+
 export async function requireUserForPage(): Promise<BelifeUser> {
   const user = await getBelifeUser();
   if (!user) redirect("/sign-in");
@@ -109,6 +123,11 @@ export async function handleConversationMessage(input: {
 }) {
   const store = getStore();
   await store.ensureProfile(input.user);
+  const ownsConversation = await store.conversationBelongsToUser(input.conversationId, input.user.id);
+  if (!ownsConversation) {
+    throw new BelifeApiError("Conversation not found.", 404, "CONVERSATION_NOT_FOUND");
+  }
+
   const userMessage = await store.appendMessage({
     conversationId: input.conversationId,
     userId: input.user.id,

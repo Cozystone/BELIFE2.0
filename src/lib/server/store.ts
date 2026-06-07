@@ -54,6 +54,7 @@ export interface BelifeStore {
   updateOnboarding(userId: string, answers: OnboardingAnswers): Promise<UserProfile>;
   getProfile(userId: string): Promise<UserProfile | null>;
   createConversation(userId: string): Promise<string>;
+  conversationBelongsToUser(conversationId: string, userId: string): Promise<boolean>;
   appendMessage(input: {
     conversationId: string;
     userId: string;
@@ -214,6 +215,13 @@ class DbBelifeStore implements BelifeStore {
   async createConversation(userId: string) {
     const [created] = await getDb().insert(conversations).values({ userId }).returning({ id: conversations.id });
     return created.id;
+  }
+
+  async conversationBelongsToUser(conversationId: string, userId: string) {
+    const row = await getDb().query.conversations.findFirst({
+      where: and(eq(conversations.id, conversationId), eq(conversations.userId, userId)),
+    });
+    return Boolean(row);
   }
 
   async appendMessage(input: {
@@ -642,6 +650,10 @@ class MemoryBelifeStore implements BelifeStore {
     const id = randomUUID();
     memoryState.conversations.set(id, { id, userId });
     return id;
+  }
+
+  async conversationBelongsToUser(conversationId: string, userId: string) {
+    return memoryState.conversations.get(conversationId)?.userId === userId;
   }
 
   async appendMessage(input: {
