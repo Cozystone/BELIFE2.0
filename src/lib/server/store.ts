@@ -16,6 +16,7 @@ import {
   type ProfileRow,
   type StateEstimateRow,
 } from "@/lib/db/schema";
+import { calculateContradictionInverse } from "@/lib/engines/data-trust";
 import type {
   BehaviorSnapshot,
   BelifeUser,
@@ -541,14 +542,24 @@ class DbBelifeStore implements BelifeStore {
   }
 
   async getStats(userId: string): Promise<BelifeStats> {
-    const [profile, userMessages, nodes, behavior] = await Promise.all([
+    const [profile, userMessages, nodes, behavior, chunkEvidenceRows] = await Promise.all([
       this.getProfile(userId),
       this.getRecentMessages(userId, 100),
       this.getOntologyNodes(userId),
       this.getLatestBehavior(userId),
+      getDb()
+        .select({ evidenceType: memoryChunks.evidenceType })
+        .from(memoryChunks)
+        .where(eq(memoryChunks.userId, userId)),
     ]);
 
-    return buildStats(profile, userMessages, nodes, behavior);
+    return buildStats(
+      profile,
+      userMessages,
+      nodes,
+      behavior,
+      [...chunkEvidenceRows.map((row) => row.evidenceType), ...nodes.map((node) => node.certainty)],
+    );
   }
 }
 
@@ -858,11 +869,14 @@ class MemoryBelifeStore implements BelifeStore {
   }
 
   async getStats(userId: string): Promise<BelifeStats> {
+    const chunks = memoryState.chunks.filter((chunk) => chunk.userId === userId);
+    const nodes = memoryState.nodes.filter((node) => node.userId === userId);
     return buildStats(
       memoryState.profiles.get(userId) ?? null,
       memoryState.messages.filter((message) => message.userId === userId),
-      memoryState.nodes.filter((node) => node.userId === userId),
+      nodes,
       memoryState.behaviors.get(userId)?.at(-1) ?? null,
+      [...chunks.map((chunk) => chunk.evidenceType), ...nodes.map((node) => node.certainty)],
     );
   }
 }
@@ -910,6 +924,7 @@ function buildStats(
   userMessages: ConversationMessage[],
   nodes: OntologyNode[],
   behavior: BehaviorSnapshot | null,
+  evidenceTypes: EvidenceType[] = [],
 ): BelifeStats {
   const fields = profile
     ? [
@@ -930,7 +945,7 @@ function buildStats(
     validSessionDensity: Math.min(1, userMessages.filter((message) => message.role === "user").length / 8),
     ontologyStability: Math.min(1, nodes.reduce((sum, node) => sum + node.evidenceCount, 0) / 18),
     behaviorCoverage: behavior ? behavior.confidence : 0,
-    contradictionInverse: 0.92,
+    contradictionInverse: calculateContradictionInverse(evidenceTypes),
     recencyCoverage: userMessages.length ? 0.8 : 0.1,
     sessionCount,
     ontologyCount: nodes.length,

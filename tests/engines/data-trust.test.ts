@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateDataTrust } from "@/lib/engines/data-trust";
+import { calculateContradictionInverse, calculateDataTrust } from "@/lib/engines/data-trust";
 
 describe("calculateDataTrust", () => {
   it("weights profile, sessions, ontology, behavior, contradiction, and recency", () => {
@@ -26,5 +26,14 @@ describe("calculateDataTrust", () => {
 
     expect(trust.score).toBeLessThan(20);
     expect(trust.label).toBe("low");
+  });
+
+  it("lowers contradiction inverse when evidence is ambiguous", () => {
+    const clear = calculateContradictionInverse(["EXTRACTED", "EXTRACTED", "INFERRED", "EXTRACTED"]);
+    const ambiguous = calculateContradictionInverse(["AMBIGUOUS", "AMBIGUOUS", "INFERRED", "EXTRACTED"]);
+
+    expect(clear).toBeGreaterThan(0.9);
+    expect(ambiguous).toBeLessThan(clear);
+    expect(ambiguous).toBeGreaterThanOrEqual(0);
   });
 });

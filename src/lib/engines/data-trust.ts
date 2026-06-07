@@ -1,5 +1,5 @@
 import { clamp, isoNow, toPercent } from "@/lib/utils";
-import type { DataTrustScore } from "./types";
+import type { DataTrustScore, EvidenceType } from "./types";
 
 export interface DataTrustInput {
   profileCompleteness: number;
@@ -8,6 +8,16 @@ export interface DataTrustInput {
   behaviorCoverage: number;
   contradictionInverse?: number;
   recencyCoverage?: number;
+}
+
+export function calculateContradictionInverse(evidenceTypes: EvidenceType[]): number {
+  if (!evidenceTypes.length) return 0.9;
+  const ambiguous = evidenceTypes.filter((type) => type === "AMBIGUOUS").length;
+  const inferred = evidenceTypes.filter((type) => type === "INFERRED").length;
+  const ambiguousRatio = ambiguous / evidenceTypes.length;
+  const inferredRatio = inferred / evidenceTypes.length;
+  const uncertaintyPenalty = ambiguousRatio * 0.85 + Math.max(0, inferredRatio - 0.65) * 0.2;
+  return clamp(1 - uncertaintyPenalty);
 }
 
 export function calculateDataTrust(input: DataTrustInput): DataTrustScore {
