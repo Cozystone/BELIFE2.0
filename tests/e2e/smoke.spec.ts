@@ -113,10 +113,15 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   const briefingStatus = await page.evaluate(async () => {
     const response = await fetch("/api/briefing");
-    return response.status;
+    const body = await response.json();
+    return {
+      status: response.status,
+      evidenceLedgerCount: body.briefing?.evidenceLedger?.length ?? 0,
+    };
   });
 
-  expect(briefingStatus).toBe(200);
+  expect(briefingStatus.status).toBe(200);
+  expect(briefingStatus.evidenceLedgerCount).toBeGreaterThan(0);
   const staleContent = `stale-conversation-${Date.now()}`;
   const staleConversationResult = await page.evaluate(async (content) => {
     const created = await fetch("/api/conversations", { method: "POST" });
@@ -232,6 +237,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/today");
   await expect(page.getByRole("main").getByText("Today")).toBeVisible();
+  await expect(page.getByText("Evidence Ledger")).toBeVisible();
   const remindersSection = page.locator("section", { hasText: "Pattern reminders" });
   await expect(remindersSection).toBeVisible();
   await remindersSection.getByRole("link").first().click();

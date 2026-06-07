@@ -296,10 +296,12 @@ export async function refreshDataTrust(userId: string) {
 
 export async function getBriefing(userId: string): Promise<Briefing> {
   const store = getStore();
-  const [state, trust, nodes] = await Promise.all([
+  const [state, trust, nodes, chunks, recentMessages] = await Promise.all([
     store.getLatestState(userId),
     store.getLatestDataTrust(userId),
     store.getOntologyNodes(userId),
+    store.getRecentMemoryChunks(userId, 80),
+    store.getRecentMessages(userId, 24),
   ]);
 
   const dataTrust = trust ?? (await refreshDataTrust(userId));
@@ -307,6 +309,18 @@ export async function getBriefing(userId: string): Promise<Briefing> {
     state ??
     estimateMentalState("BELIFE has limited signal. Start with a short check-in about today.", null);
   const highlights = filterOntologyView(nodes, "expanded").slice(0, 5);
+  const evidenceQuery = [
+    mentalState.summary,
+    ...mentalState.drivers,
+    ...highlights.map((node) => `${node.type} ${node.label} ${node.summary}`),
+  ].join("\n");
+  const evidenceLedger = rankMemoryEvidence({
+    query: evidenceQuery || "current self understanding and state interpretation",
+    chunks,
+    nodes,
+    messages: recentMessages,
+    limit: 7,
+  });
 
   return {
     headline:
@@ -319,6 +333,7 @@ export async function getBriefing(userId: string): Promise<Briefing> {
       : "아직 충분한 반복 패턴은 없습니다. 짧은 대화 몇 번이면 첫 구조가 생깁니다.",
     recommendedPrompt: "지금 내 안에서 가장 크게 반복되는 생각은 뭐야?",
     patternReminders: buildPatternReminders({ nodes, state: mentalState, dataTrust }),
+    evidenceLedger,
     dataTrust,
     state: mentalState,
     ontologyHighlights: highlights,

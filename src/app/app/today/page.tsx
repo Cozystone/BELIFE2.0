@@ -1,4 +1,4 @@
-import { Activity, Brain, Database, MessageCircle, PenLine, Repeat2, ShieldCheck } from "lucide-react";
+import { Activity, Brain, Database, MessageCircle, PenLine, Repeat2, SearchCheck, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { ScoreBar } from "@/components/app/score-bar";
 import { StateHistoryPanel } from "@/components/app/state-history-panel";
@@ -112,6 +112,35 @@ export default async function TodayPage() {
       </div>
 
       <StateHistoryPanel history={stateHistory} />
+
+      <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+          <SearchCheck className="h-4 w-4 text-orange-300" />
+          Evidence Ledger
+        </div>
+        <p className="mt-2 text-xs leading-5 text-zinc-500">
+          BELIFE keeps this interpretation tied to retrievable memory, message, and ontology evidence.
+        </p>
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          {briefing.evidenceLedger.length ? (
+            briefing.evidenceLedger.map((item) => (
+              <article key={`${item.source}-${item.id}`} className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-sm bg-orange-400/10 px-2 py-1 font-mono text-orange-200">{item.source}</span>
+                  <span className="font-mono text-zinc-500">{Math.round(item.confidence * 100)} confidence</span>
+                  {item.evidenceType ? <span className="font-mono text-zinc-500">{item.evidenceType}</span> : null}
+                </div>
+                <h2 className="mt-3 text-sm font-medium text-zinc-200">{item.label}</h2>
+                <p className="mt-2 line-clamp-3 text-xs leading-5 text-zinc-500">{item.detail}</p>
+              </article>
+            ))
+          ) : (
+            <div className="rounded-md border border-white/[0.08] bg-black/40 p-3 text-sm text-zinc-500">
+              Evidence is still thin. A few more conversations will make BELIFE interpretations easier to inspect.
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
         <div className="flex items-center gap-2 text-sm text-zinc-400">

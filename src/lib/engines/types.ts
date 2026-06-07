@@ -524,6 +524,7 @@ export interface Briefing {
   patternSummary: string;
   recommendedPrompt: string;
   patternReminders: PatternReminder[];
+  evidenceLedger: MemoryEvidenceItem[];
   dataTrust: DataTrustScore;
   state: MentalStateEstimate;
   ontologyHighlights: OntologyNode[];
