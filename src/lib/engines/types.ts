@@ -519,6 +519,41 @@ export interface ConnectionRerankingReport {
   nextStabilizers: string[];
 }
 
+export type ConnectionQualityAxisKey =
+  | "sharedReality"
+  | "partnerResponsiveness"
+  | "participantInterest"
+  | "affectiveExperience";
+
+export interface ConnectionQualityAxis {
+  key: ConnectionQualityAxisKey;
+  label: string;
+  score: number;
+  level: ConnectionAxisInsight["level"];
+  interpretation: string;
+  evidence: string[];
+  nextObservation: string;
+}
+
+export interface ConnectionQualityLensReport {
+  generatedAt: string;
+  confidence: number;
+  summary: string;
+  guardrail: string;
+  memoryCoverage: {
+    pairCount: number;
+    totalInteractions: number;
+    strongestPair?: string;
+    riskiestPair?: string;
+  };
+  axes: ConnectionQualityAxis[];
+  comfortSources: string[];
+  tensionSources: string[];
+  healthyPattern: string;
+  riskyPattern: string;
+  nextMicroExperiments: string[];
+}
+
 export type RelationshipMemoryKind =
   | "friendship"
   | "collaboration"

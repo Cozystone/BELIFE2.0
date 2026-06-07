@@ -8,6 +8,7 @@ import {
   buildConnectionRerankingReport,
   simulateConnectionScenario,
 } from "@/lib/engines/compatibility";
+import { buildConnectionQualityLens } from "@/lib/engines/connection-quality";
 import { buildDataTrustAudit, calculateDataTrust } from "@/lib/engines/data-trust";
 import { buildTwinReflection } from "@/lib/engines/digital-twin";
 import { rankMemoryEvidence } from "@/lib/engines/evidence-retrieval";
@@ -763,6 +764,14 @@ export async function getConnectionReranking(userId: string) {
   const previousPreview = await getStore().getLatestConnectionPreview(userId);
   const preview = await getConnectionPreview(userId);
   return buildConnectionRerankingReport(preview, previousPreview);
+}
+
+export async function getConnectionQuality(userId: string, personLabel?: string) {
+  const [preview, relationshipMemory] = await Promise.all([
+    getConnectionPreview(userId),
+    getRelationshipMemory(userId, personLabel),
+  ]);
+  return buildConnectionQualityLens({ preview, relationshipMemory });
 }
 
 export async function getRelationshipMemory(userId: string, personLabel?: string) {

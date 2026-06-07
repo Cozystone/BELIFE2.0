@@ -327,8 +327,13 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(twinResult.confidenceLabel).toMatch(/early|forming|grounded|strong/);
   expect(twinResult.trustGateScore).toBeGreaterThanOrEqual(0);
   expect(twinResult.trustGateCeiling).toBeGreaterThan(0);
+  const twinUiResponse = page.waitForResponse(
+    (response) => response.request().method() === "POST" && response.url().includes("/api/twin"),
+    { timeout: 45_000 },
+  );
   await page.getByRole("button", { name: "Ask Twin" }).click();
-  await expect(page.getByText("Data trust gate")).toBeVisible();
+  expect((await twinUiResponse).status()).toBe(200);
+  await expect(page.getByText("Data trust gate")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("heading", { name: "Evidence" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Uncertainty" })).toBeVisible();
 
@@ -338,6 +343,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await expect(page.getByRole("heading", { name: "Incremental Reranking" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Candidate Filters" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Relationship Memory" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Connection Quality Lens" })).toBeVisible();
   await expect(page.getByText("Edge strength", { exact: true })).toBeVisible();
   const rerankingResult = await page.evaluate(async () => {
     const response = await fetch("/api/connection/reranking");
@@ -411,6 +417,30 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(relationshipMemoryResult.guardrail).toContain("not public matching");
   expect(relationshipMemoryResult.firstPair.personLabel).toBe("E2E relationship context");
   expect(relationshipMemoryResult.firstPair.interactionCount).toBeGreaterThan(0);
+  const connectionQualityResult = await page.evaluate(async () => {
+    const response = await fetch("/api/connection/quality?personLabel=E2E%20relationship%20context");
+    const body = await response.json();
+    return {
+      status: response.status,
+      axisCount: body.report?.axes?.length ?? 0,
+      guardrail: body.report?.guardrail ?? "",
+      axisKeys: body.report?.axes?.map((axis: { key: string }) => axis.key) ?? [],
+      pairCount: body.report?.memoryCoverage?.pairCount,
+      totalInteractions: body.report?.memoryCoverage?.totalInteractions,
+    };
+  });
+
+  expect(connectionQualityResult.status).toBe(200);
+  expect(connectionQualityResult.axisCount).toBe(4);
+  expect(connectionQualityResult.guardrail).toContain("not public matching");
+  expect(connectionQualityResult.axisKeys).toEqual([
+    "sharedReality",
+    "partnerResponsiveness",
+    "participantInterest",
+    "affectiveExperience",
+  ]);
+  expect(connectionQualityResult.pairCount).toBe(1);
+  expect(connectionQualityResult.totalInteractions).toBeGreaterThan(0);
   await expect(page.getByRole("heading", { name: "Custom Scenario Simulation" })).toBeVisible();
   await page.getByRole("button", { name: "Run simulation" }).click();
   await expect(page.getByRole("heading", { name: "Simulation result" })).toBeVisible();
@@ -496,6 +526,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const blockedRerankingBody = await blockedReranking.json();
     const blockedRelationshipMemory = await fetch("/api/connection/relationship-memory");
     const blockedRelationshipMemoryBody = await blockedRelationshipMemory.json();
+    const blockedConnectionQuality = await fetch("/api/connection/quality");
+    const blockedConnectionQualityBody = await blockedConnectionQuality.json();
     const enabled = await fetch("/api/privacy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -510,6 +542,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const allowedConnection = await fetch("/api/connection/preview");
     const allowedReranking = await fetch("/api/connection/reranking");
     const allowedRelationshipMemory = await fetch("/api/connection/relationship-memory");
+    const allowedConnectionQuality = await fetch("/api/connection/quality");
 
     return {
       initialStatus: initial.status,
@@ -527,6 +560,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       blockedRerankingCode: blockedRerankingBody.code,
       blockedRelationshipMemoryStatus: blockedRelationshipMemory.status,
       blockedRelationshipMemoryCode: blockedRelationshipMemoryBody.code,
+      blockedConnectionQualityStatus: blockedConnectionQuality.status,
+      blockedConnectionQualityCode: blockedConnectionQualityBody.code,
       enabledStatus: enabled.status,
       enabledPreferences: enabledBody.preferences,
       visibleBriefingStatus: visibleBriefing.status,
@@ -534,6 +569,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       allowedConnectionStatus: allowedConnection.status,
       allowedRerankingStatus: allowedReranking.status,
       allowedRelationshipMemoryStatus: allowedRelationshipMemory.status,
+      allowedConnectionQualityStatus: allowedConnectionQuality.status,
     };
   });
 
@@ -561,6 +597,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(privacyResult.blockedRerankingCode).toBe("CONNECTION_PREVIEW_DISABLED");
   expect(privacyResult.blockedRelationshipMemoryStatus).toBe(403);
   expect(privacyResult.blockedRelationshipMemoryCode).toBe("CONNECTION_PREVIEW_DISABLED");
+  expect(privacyResult.blockedConnectionQualityStatus).toBe(403);
+  expect(privacyResult.blockedConnectionQualityCode).toBe("CONNECTION_PREVIEW_DISABLED");
   expect(privacyResult.enabledStatus).toBe(200);
   expect(privacyResult.enabledPreferences).toMatchObject({
     showEvidenceLedger: true,
@@ -571,6 +609,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(privacyResult.allowedConnectionStatus).toBe(200);
   expect(privacyResult.allowedRerankingStatus).toBe(200);
   expect(privacyResult.allowedRelationshipMemoryStatus).toBe(200);
+  expect(privacyResult.allowedConnectionQualityStatus).toBe(200);
   const importResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/import", {
       method: "POST",

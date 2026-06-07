@@ -1,8 +1,19 @@
-import { FileText, ListFilter, MessageCircle, Network, Route, ShieldCheck, TrendingUp, Users } from "lucide-react";
+import {
+  FileText,
+  HeartHandshake,
+  ListFilter,
+  MessageCircle,
+  Network,
+  Route,
+  ShieldCheck,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { ConnectionSimulator } from "@/components/app/connection-simulator";
 import { RelationshipMemoryPanel } from "@/components/app/relationship-memory-panel";
 import { ScoreBar } from "@/components/app/score-bar";
+import { buildConnectionQualityLens } from "@/lib/engines/connection-quality";
 import {
   getConnectionIntelligence,
   getPrivacyPreferences,
@@ -64,6 +75,7 @@ export default async function ConnectionPage() {
     getConnectionIntelligence(user.id),
     getRelationshipMemory(user.id),
   ]);
+  const qualityReport = buildConnectionQualityLens({ preview, relationshipMemory });
   const scenarioPreviews = preview.scenarioPreviews ?? [];
   const report = preview.relationshipReport;
   const hiddenEdge = preview.hiddenEdge;
@@ -116,6 +128,81 @@ export default async function ConnectionPage() {
             <p className="mt-2 font-mono text-2xl text-teal-200">{percent(report.confidence)}</p>
           </article>
         </div>
+      </section>
+
+      <section className="rounded-md border border-teal-300/10 bg-teal-400/[0.04] p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-teal-400/10 text-teal-200">
+            <HeartHandshake className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold">Connection Quality Lens</h2>
+              <span className="rounded-md border border-white/[0.08] bg-black/40 px-2 py-1 font-mono text-xs text-teal-200">
+                {percent(qualityReport.confidence)}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-7 text-zinc-400">{qualityReport.summary}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-4">
+          {qualityReport.axes.map((axis) => (
+            <article key={axis.key} className="rounded-md border border-white/[0.08] bg-black/35 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-sm font-medium text-zinc-100">{axis.label}</h3>
+                <span className="rounded-md bg-white/[0.06] px-2 py-1 font-mono text-xs text-zinc-300">
+                  {axis.level}
+                </span>
+              </div>
+              <div className="mt-3">
+                <ScoreBar label="Quality" value={axis.score} tone={axis.score >= 0.56 ? "teal" : "zinc"} />
+              </div>
+              <p className="mt-3 text-sm leading-6 text-zinc-400">{axis.interpretation}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <h3 className="text-sm font-medium text-zinc-100">Comfort sources</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+              {qualityReport.comfortSources.map((source) => (
+                <li key={source}>{source}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <h3 className="text-sm font-medium text-zinc-100">Tension sources</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+              {qualityReport.tensionSources.map((source) => (
+                <li key={source}>{source}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <h3 className="text-sm font-medium text-zinc-100">Next micro-experiments</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+              {qualityReport.nextMicroExperiments.map((experiment) => (
+                <li key={experiment}>{experiment}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+          <article className="rounded-md border border-teal-300/10 bg-teal-400/5 p-4">
+            <p className="text-xs font-medium uppercase text-teal-200">Healthy pattern</p>
+            <p className="mt-3 text-sm leading-6 text-zinc-300">{qualityReport.healthyPattern}</p>
+          </article>
+          <article className="rounded-md border border-orange-300/10 bg-orange-500/5 p-4">
+            <p className="text-xs font-medium uppercase text-orange-200">Risky pattern</p>
+            <p className="mt-3 text-sm leading-6 text-zinc-300">{qualityReport.riskyPattern}</p>
+          </article>
+        </div>
+        <p className="mt-4 rounded-md border border-white/[0.08] bg-black/30 p-3 text-xs leading-5 text-zinc-500">
+          {qualityReport.guardrail}
+        </p>
       </section>
 
       <section className="rounded-md border border-teal-300/10 bg-teal-400/[0.04] p-5">
