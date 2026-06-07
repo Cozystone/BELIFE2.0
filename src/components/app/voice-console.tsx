@@ -43,6 +43,10 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
   async function ensureConversation() {
     if (conversationId) return conversationId;
     const response = await fetch("/api/conversations", { method: "POST" });
+    if (response.status === 401) {
+      window.location.assign("/sign-in");
+      throw new Error("Sign in required");
+    }
     if (!response.ok) throw new Error("Unable to create conversation");
     const body = (await response.json()) as { conversationId: string };
     setConversationId(body.conversationId);
@@ -105,6 +109,10 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, source }),
       });
+      if (response.status === 401) {
+        window.location.assign("/sign-in");
+        throw new Error("Sign in required");
+      }
       if (!response.ok) throw new Error("Message failed");
       const body = (await response.json()) as {
         userMessage: ConversationMessage;

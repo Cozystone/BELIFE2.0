@@ -1,6 +1,11 @@
 import { OnboardingForm } from "@/components/app/onboarding-form";
+import { requireUserForPage } from "@/lib/server/belife-service";
 
-export default function OnboardingPage() {
+export const dynamic = "force-dynamic";
+
+export default async function OnboardingPage() {
+  await requireUserForPage();
+
   return (
     <main className="min-h-dvh bg-[#050505] px-5 py-8 text-zinc-100">
       <div className="mx-auto max-w-2xl">

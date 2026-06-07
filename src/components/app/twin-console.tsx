@@ -18,6 +18,10 @@ export function TwinConsole() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
       });
+      if (response.status === 401) {
+        window.location.assign("/sign-in");
+        return;
+      }
       const body = (await response.json()) as { answer?: string; error?: string };
       setAnswer(body.answer || body.error || "No answer");
     } finally {

@@ -36,7 +36,7 @@ export default function Home() {
               나를 오래 이해하고, 현재 마음의 구조를 해석하며, 더 건강한 관계 선택으로 이어지는 개인 AI 인텔리전스.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/onboarding">
+              <Link href="/sign-up">
                 <Button size="lg" className="w-full sm:w-auto">
                   Start
                   <ArrowRight className="h-4 w-4" />

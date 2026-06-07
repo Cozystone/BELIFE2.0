@@ -15,9 +15,16 @@ export function SelfMapClient({ initialNodes }: { initialNodes: OntologyNode[] }
   useEffect(() => {
     let alive = true;
     fetch(`/api/ontology?view=${view}`)
-      .then((response) => response.json())
-      .then((body: { nodes: OntologyNode[] }) => {
-        if (alive) setNodes(body.nodes);
+      .then((response) => {
+        if (response.status === 401) {
+          window.location.assign("/sign-in");
+          return null;
+        }
+        if (!response.ok) return null;
+        return response.json() as Promise<{ nodes: OntologyNode[] }>;
+      })
+      .then((body: { nodes: OntologyNode[] } | null) => {
+        if (alive && body) setNodes(body.nodes);
       })
       .catch(() => undefined);
     return () => {

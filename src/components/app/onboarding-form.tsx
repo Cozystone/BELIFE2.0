@@ -41,6 +41,11 @@ export function OnboardingForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
     });
+    if (response.status === 401) {
+      setSaving(false);
+      router.push("/sign-in");
+      return;
+    }
     if (response.ok) {
       router.push("/app/talk");
       router.refresh();
