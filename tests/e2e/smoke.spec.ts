@@ -351,6 +351,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Memory Import" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Memory Correction" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Data Controls" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Profile Enrichment" })).toBeVisible();
@@ -391,6 +392,33 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(dataTrustApiResult.score).toBeGreaterThanOrEqual(0);
   expect(dataTrustApiResult.weakestCount).toBe(3);
   expect(dataTrustApiResult.actionCount).toBe(3);
+  const importResult = await page.evaluate(async () => {
+    const response = await fetch("/api/memory/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "E2E imported journal",
+        sourceType: "journal",
+        content:
+          "Imported journal note: I often make better decisions when BELIFE slows down and asks for evidence before offering an interpretation.",
+        consent: true,
+      }),
+    });
+    const body = await response.json();
+    return {
+      status: response.status,
+      ok: body.ok,
+      memoryChunks: body.imported?.memoryChunks,
+      ontologyUpdates: body.imported?.ontologyUpdates,
+      dataTrustScore: body.dataTrust?.score,
+    };
+  });
+
+  expect(importResult.status).toBe(200);
+  expect(importResult.ok).toBe(true);
+  expect(importResult.memoryChunks).toBeGreaterThan(0);
+  expect(importResult.ontologyUpdates).toBeGreaterThanOrEqual(0);
+  expect(importResult.dataTrustScore).toBeGreaterThanOrEqual(0);
   const correctionResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/corrections", {
       method: "POST",
@@ -427,6 +455,9 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const hasCorrectionMemory = body.memoryChunks.some((chunk: { tags?: string[] }) =>
       chunk.tags?.includes("user-correction"),
     );
+    const hasImportedMemory = body.memoryChunks.some((chunk: { tags?: string[] }) =>
+      chunk.tags?.includes("user-import") && chunk.tags?.includes("explicit-consent"),
+    );
     const previewPayloads = body.connectionPreviews.map((item: { preview?: unknown }) => item.preview ?? item);
     const hasHiddenEdge = previewPayloads.some(
       (preview: { hiddenEdge?: { status?: string; edgeStrength?: number } }) =>
@@ -443,6 +474,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       connectionPreviewCount: body.inventory.counts.connectionPreviews,
       hasSkippedEnrichmentMemory,
       hasCorrectionMemory,
+      hasImportedMemory,
       hasHiddenEdge,
     };
   });
@@ -453,6 +485,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     hasProfile: true,
     hasSkippedEnrichmentMemory: true,
     hasCorrectionMemory: true,
+    hasImportedMemory: true,
     hasHiddenEdge: true,
   });
   expect(exportResult.messageCount).toBeGreaterThanOrEqual(0);

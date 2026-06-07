@@ -60,6 +60,15 @@ export const memoryCorrectionSchema = z.object({
   consent: z.literal(true),
 });
 
+export const memoryImportSourceTypes = ["note", "journal", "chat", "document", "relationship", "other"] as const;
+
+export const memoryImportSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  sourceType: z.enum(memoryImportSourceTypes).default("note"),
+  content: z.string().trim().min(20).max(12000),
+  consent: z.literal(true),
+});
+
 export class BelifeApiError extends Error {
   constructor(
     message: string,
@@ -456,6 +465,74 @@ export async function saveMemoryCorrection(
   return {
     ok: true,
     correction: correctionChunk,
+    ontologyUpdates: savedNodes,
+    dataTrust,
+  };
+}
+
+export async function importBelifeMemory(
+  user: BelifeUser,
+  input: z.infer<typeof memoryImportSchema>,
+) {
+  const store = getStore();
+  await store.ensureProfile(user);
+
+  const importText = [
+    "User-consented BELIFE memory import.",
+    `Source type: ${input.sourceType}`,
+    `Title: ${input.title}`,
+    "Imported content:",
+    input.content,
+  ].join("\n");
+  const [previousState, previousBehavior] = await Promise.all([
+    store.getLatestState(user.id),
+    store.getLatestBehavior(user.id),
+  ]);
+  const extraction = await buildStructuredExtraction({
+    userId: user.id,
+    text: importText,
+    source: "import",
+    previousState,
+    previousBehavior,
+  });
+  const importTags = ["user-import", "explicit-consent", `import-source:${input.sourceType}`];
+  const rawImportChunk = {
+    userId: user.id,
+    content: importText,
+    kind: "raw" as const,
+    salience: 0.76,
+    evidenceType: "EXTRACTED" as const,
+    tags: [...importTags, "import-raw"],
+  };
+  const extractedChunks = extraction.chunks.map((chunk) => ({
+    ...chunk,
+    kind: chunk.kind === "raw" ? ("semantic" as const) : chunk.kind,
+    salience: Math.max(chunk.salience, 0.56),
+    tags: [...new Set([...importTags, "extracted-from-import", ...chunk.tags])],
+  }));
+
+  await store.saveMemoryChunks([rawImportChunk, ...extractedChunks]);
+  const savedNodes = await store.upsertOntologyNodes(
+    user.id,
+    extraction.nodes.map((node) => ({
+      ...node,
+      confidence: Math.max(node.confidence, 0.58),
+      evidenceCount: Math.max(node.evidenceCount, 1),
+      status: "active",
+      lastEvidenceAt: isoNow(),
+    })),
+  );
+  const dataTrust = await refreshDataTrust(user.id);
+
+  return {
+    ok: true,
+    imported: {
+      title: input.title,
+      sourceType: input.sourceType,
+      memoryChunks: 1 + extractedChunks.length,
+      ontologyUpdates: savedNodes.length,
+      usedAi: extraction.usedAi,
+    },
     ontologyUpdates: savedNodes,
     dataTrust,
   };

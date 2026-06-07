@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle2, Database, KeyRound, Server, Terminal } from "lucide-react";
 import { DataControlsPanel } from "@/components/app/data-controls-panel";
 import { MemoryCorrectionPanel } from "@/components/app/memory-correction-panel";
+import { MemoryImportPanel } from "@/components/app/memory-import-panel";
 import { ProfileEnrichmentPanel } from "@/components/app/profile-enrichment-panel";
 import { ScoreBar } from "@/components/app/score-bar";
 import { SignOutButton } from "@/components/auth/sign-out-button";
@@ -217,6 +218,7 @@ export default async function SettingsPage() {
           {dataTrust.explanation} 현재 세션 수는 {stats.sessionCount}개, 온톨로지 노드는 {stats.ontologyCount}개입니다.
         </p>
       </section>
+      <MemoryImportPanel />
       <MemoryCorrectionPanel />
       <DataControlsPanel />
       <ProfileEnrichmentPanel initialSuggestions={enrichmentSuggestions} />
