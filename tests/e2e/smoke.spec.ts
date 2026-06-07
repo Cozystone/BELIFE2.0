@@ -59,6 +59,24 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   });
 
   expect(briefingStatus).toBe(200);
+  const staleContent = `stale-conversation-${Date.now()}`;
+  const staleConversationResult = await page.evaluate(async (content) => {
+    const created = await fetch("/api/conversations", { method: "POST" });
+    const createdBody = await created.json();
+    const message = await fetch(`/api/conversations/${createdBody.conversationId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content, source: "text" }),
+    });
+    return {
+      createStatus: created.status,
+      messageStatus: message.status,
+      conversationId: createdBody.conversationId as string,
+    };
+  }, staleContent);
+  expect(staleConversationResult.createStatus).toBe(200);
+  expect(staleConversationResult.messageStatus).toBe(200);
+
   const ownerConversationId = await page.evaluate(async () => {
     const response = await fetch("/api/conversations", { method: "POST" });
     const body = await response.json();
@@ -89,6 +107,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/talk");
   await expect(page.getByText(continuitySeed, { exact: true })).toBeVisible();
+  await expect(page.getByText(staleContent, { exact: true })).toHaveCount(0);
   await page.locator("textarea").fill(continuityFollowup);
   const followupResponse = page.waitForResponse(
     (response) =>

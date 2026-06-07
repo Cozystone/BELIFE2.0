@@ -63,6 +63,7 @@ export interface BelifeStore {
     content: string;
     source: MessageSource;
   }): Promise<ConversationMessage>;
+  getConversationMessages(conversationId: string, userId: string, limit?: number): Promise<ConversationMessage[]>;
   getRecentMessages(userId: string, limit?: number): Promise<ConversationMessage[]>;
   saveMemoryChunks(chunks: MemoryChunk[]): Promise<void>;
   upsertOntologyNodes(userId: string, nodes: OntologyNode[]): Promise<OntologyNode[]>;
@@ -245,6 +246,16 @@ class DbBelifeStore implements BelifeStore {
     const [created] = await db.insert(messages).values(input).returning();
     await db.update(conversations).set({ updatedAt: now }).where(eq(conversations.id, input.conversationId));
     return mapMessage(created);
+  }
+
+  async getConversationMessages(conversationId: string, userId: string, limit = 20) {
+    const rows = await getDb()
+      .select()
+      .from(messages)
+      .where(and(eq(messages.conversationId, conversationId), eq(messages.userId, userId)))
+      .orderBy(desc(messages.createdAt))
+      .limit(limit);
+    return rows.map(mapMessage).reverse();
   }
 
   async getRecentMessages(userId: string, limit = 20) {
@@ -694,6 +705,12 @@ class MemoryBelifeStore implements BelifeStore {
       memoryState.conversations.set(input.conversationId, { ...conversation, updatedAt: now });
     }
     return message;
+  }
+
+  async getConversationMessages(conversationId: string, userId: string, limit = 20) {
+    return memoryState.messages
+      .filter((message) => message.conversationId === conversationId && message.userId === userId)
+      .slice(-limit);
   }
 
   async getRecentMessages(userId: string, limit = 20) {
