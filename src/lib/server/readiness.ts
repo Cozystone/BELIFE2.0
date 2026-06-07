@@ -25,14 +25,14 @@ export function getReadinessReport(options: { ollamaHealth?: OllamaHealth } = {}
   const nativeAuthOk = isNativeAuthAvailable();
   const authOk = clerkOk || nativeAuthOk;
   const ollamaConfigured = Boolean(process.env.OLLAMA_BASE_URL);
-  const ollamaOk = options.ollamaHealth ? options.ollamaHealth.ok : ollamaConfigured;
-  const ollamaDetail = options.ollamaHealth
-    ? options.ollamaHealth.ok
-      ? `${options.ollamaHealth.baseUrl} is reachable using ${getOllamaModel("chat")}.`
-      : `${options.ollamaHealth.baseUrl} is not ready: ${options.ollamaHealth.error || "health check failed"}.`
-    : ollamaConfigured
-      ? `${getOllamaBaseUrl()} is configured using ${getOllamaModel("chat")}.`
-      : "OLLAMA_BASE_URL is missing; Vercel AI calls use deterministic fallback.";
+  const ollamaOk = ollamaConfigured && (options.ollamaHealth ? options.ollamaHealth.ok : true);
+  const ollamaDetail = !ollamaConfigured
+    ? "OLLAMA_BASE_URL is missing; Vercel AI calls use deterministic fallback."
+    : options.ollamaHealth
+      ? options.ollamaHealth.ok
+        ? `${options.ollamaHealth.baseUrl} is reachable using ${getOllamaModel("chat")}.`
+        : `${options.ollamaHealth.baseUrl} is not ready: ${options.ollamaHealth.error || "health check failed"}.`
+      : `${getOllamaBaseUrl()} is configured using ${getOllamaModel("chat")}.`;
 
   const checks: ReadinessCheck[] = [
     {
