@@ -249,6 +249,37 @@ export interface ConnectionScenarioPreview {
   confidence: number;
 }
 
+export type ConnectionAxisKey =
+  | "structuralSimilarity"
+  | "complementarity"
+  | "dialogueCompatibility"
+  | "conflictCompatibility"
+  | "repairPotential"
+  | "emotionalSafety";
+
+export interface ConnectionAxisInsight {
+  key: ConnectionAxisKey;
+  label: string;
+  score: number;
+  level: "low" | "building" | "clear" | "strong";
+  interpretation: string;
+  evidence: string;
+  nextObservation: string;
+}
+
+export interface ConnectionRelationshipReport {
+  compatibilityScore: number;
+  finalScore: number;
+  confidence: number;
+  confidenceLabel: "early" | "building" | "usable" | "strong";
+  hiddenEdgeStatus: "latent";
+  thesis: string;
+  axisInsights: ConnectionAxisInsight[];
+  evidenceSignals: string[];
+  blindSpots: string[];
+  nextObservationPrompts: string[];
+}
+
 export interface CompatibilityAxes {
   structuralSimilarity: number;
   complementarity: number;
@@ -263,6 +294,7 @@ export interface CompatibilityAxes {
   idealConnectionPattern: string;
   riskyConnectionPattern: string;
   scenarioPreviews: ConnectionScenarioPreview[];
+  relationshipReport: ConnectionRelationshipReport;
 }
 
 export type ProfileEnrichmentKind = "profile_field" | "ontology_promotion";

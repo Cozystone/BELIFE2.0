@@ -1,7 +1,9 @@
 import { clamp } from "@/lib/utils";
 import type {
   BehaviorSnapshot,
+  ConnectionAxisInsight,
   CompatibilityAxes,
+  ConnectionRelationshipReport,
   ConnectionScenarioPreview,
   ConnectionScenarioState,
   DataTrustScore,
@@ -24,17 +26,27 @@ export function buildConnectionPreview(
   const repairPotential = clamp(0.34 + (behavior?.empathyOrientation ?? 0.35) * 0.28 + (behavior?.directness ?? 0.35) * 0.15);
   const emotionalSafety = clamp(0.36 + (behavior?.warmth ?? 0.35) * 0.32 + structuralSimilarity * 0.18);
   const confidence = clamp(trust.score / 100);
+  const axes = {
+    structuralSimilarity,
+    complementarity,
+    dialogueCompatibility,
+    conflictCompatibility,
+    repairPotential,
+    emotionalSafety,
+    confidence,
+  };
   const scenarioPreviews = buildScenarioPreviews({
-    axes: {
-      structuralSimilarity,
-      complementarity,
-      dialogueCompatibility,
-      conflictCompatibility,
-      repairPotential,
-      emotionalSafety,
-      confidence,
-    },
+    axes,
     behavior,
+    hasValue,
+    hasGoal,
+    hasFriction,
+  });
+  const relationshipReport = buildRelationshipReport({
+    axes,
+    scenarioPreviews,
+    behavior,
+    trust,
     hasValue,
     hasGoal,
     hasFriction,
@@ -67,7 +79,162 @@ export function buildConnectionPreview(
     riskyConnectionPattern:
       "즉각적인 확신을 요구하거나, 내면의 복잡성을 가볍게 여기거나, 당신의 스트레스 신호를 더 큰 압박으로 바꾸는 사람.",
     scenarioPreviews,
+    relationshipReport,
   };
+}
+
+function buildRelationshipReport(input: {
+  axes: Pick<
+    CompatibilityAxes,
+    | "structuralSimilarity"
+    | "complementarity"
+    | "dialogueCompatibility"
+    | "conflictCompatibility"
+    | "repairPotential"
+    | "emotionalSafety"
+    | "confidence"
+  >;
+  scenarioPreviews: ConnectionScenarioPreview[];
+  behavior: BehaviorSnapshot | null;
+  trust: DataTrustScore;
+  hasValue: boolean;
+  hasGoal: boolean;
+  hasFriction: boolean;
+}): ConnectionRelationshipReport {
+  const { axes, behavior, trust, hasValue, hasGoal, hasFriction, scenarioPreviews } = input;
+  const compatibilityScore = clamp(
+    axes.structuralSimilarity * 0.22 +
+      axes.complementarity * 0.14 +
+      axes.dialogueCompatibility * 0.18 +
+      axes.conflictCompatibility * 0.14 +
+      axes.repairPotential * 0.14 +
+      axes.emotionalSafety * 0.18,
+  );
+  const scenarioConfidence = scenarioPreviews.length
+    ? scenarioPreviews.reduce((sum, scenario) => sum + scenario.confidence, 0) / scenarioPreviews.length
+    : 0;
+  const confidence = clamp((trust.score / 100) * 0.68 + scenarioConfidence * 0.22 + (behavior?.confidence ?? 0.15) * 0.1);
+  const finalScore = clamp(compatibilityScore * confidence);
+  const axisInsights = buildAxisInsights(axes, behavior);
+  const evidenceSignals = [
+    hasValue ? "가치/믿음 축에서 관계 해석에 쓸 수 있는 자기 구조가 있습니다." : "가치 축은 아직 더 많은 자연 대화가 필요합니다.",
+    hasGoal ? "목표와 성장 방향 신호가 연결 가능성 해석에 반영되었습니다." : "장기 목표 신호가 더 쌓이면 지속 가능성 해석이 선명해집니다.",
+    hasFriction ? "스트레스/마찰 패턴이 관계 리스크 시뮬레이션에 반영되었습니다." : "마찰 패턴은 아직 조심스럽게만 해석합니다.",
+    behavior
+      ? `대화 행동 신뢰도 ${Math.round(behavior.confidence * 100)}%가 축별 리포트에 반영되었습니다.`
+      : "대화 행동 관측이 부족해 온보딩 기반 프리뷰로 시작합니다.",
+  ];
+  const blindSpots = [
+    trust.score < 55 ? "현재 리포트는 초기 프리뷰입니다. 사람을 단정하거나 추천하지 않습니다." : "",
+    behavior ? "" : "실제 대화 리듬, 질문 빈도, 갈등 반응은 아직 관측이 부족합니다.",
+    hasValue && hasGoal ? "" : "핵심 가치와 목표가 더 구체화되면 구조적 유사성의 오차가 줄어듭니다.",
+    hasFriction ? "" : "압박 상황에서의 회복 루틴은 아직 별도 확인이 필요합니다.",
+  ].filter(Boolean);
+  const nextObservationPrompts = [
+    "가까운 사람이 나를 편하게 만드는 순간과 부담스럽게 만드는 순간은 각각 무엇이었나?",
+    "갈등이 생겼을 때 나는 설명, 침묵, 회피, 해결 중 어디로 먼저 움직이나?",
+    "나와 오래 맞는 사람은 내 속도를 늦춰주는가, 방향을 잡아주는가, 감정을 받아주는가?",
+  ];
+
+  return {
+    compatibilityScore,
+    finalScore,
+    confidence,
+    confidenceLabel: confidenceLabel(confidence),
+    hiddenEdgeStatus: "latent",
+    thesis:
+      finalScore >= 0.5
+        ? "현재 구조만으로도 관계에서 편안함과 회복 가능성을 해석할 초기 근거가 있습니다."
+        : "아직은 관계를 판단하기보다 어떤 신호를 더 봐야 하는지 알려주는 탐색 리포트에 가깝습니다.",
+    axisInsights,
+    evidenceSignals,
+    blindSpots,
+    nextObservationPrompts,
+  };
+}
+
+function buildAxisInsights(
+  axes: Pick<
+    CompatibilityAxes,
+    | "structuralSimilarity"
+    | "complementarity"
+    | "dialogueCompatibility"
+    | "conflictCompatibility"
+    | "repairPotential"
+    | "emotionalSafety"
+  >,
+  behavior: BehaviorSnapshot | null,
+): ConnectionAxisInsight[] {
+  return [
+    {
+      key: "structuralSimilarity",
+      label: "구조적 유사성",
+      score: axes.structuralSimilarity,
+      level: scoreLevel(axes.structuralSimilarity),
+      interpretation: "가치, 믿음, 목표의 결이 비슷할 때 대화의 기본 전제가 덜 흔들립니다.",
+      evidence: "온보딩과 온톨로지의 Value, Belief, Goal 노드 기반",
+      nextObservation: "상대가 중요한 선택을 설명할 때 어떤 기준을 반복하는지 봅니다.",
+    },
+    {
+      key: "complementarity",
+      label: "상호 보완성",
+      score: axes.complementarity,
+      level: scoreLevel(axes.complementarity),
+      interpretation: "서로의 약한 지점을 압박하지 않고 보완할 가능성을 봅니다.",
+      evidence: `해결 지향 ${Math.round((behavior?.solutionOrientation ?? 0.35) * 100)}%와 에너지/마찰 신호 기반`,
+      nextObservation: "같이 무언가를 만들 때 결정권과 속도를 어떻게 나누는지 봅니다.",
+    },
+    {
+      key: "dialogueCompatibility",
+      label: "대화 적합성",
+      score: axes.dialogueCompatibility,
+      level: scoreLevel(axes.dialogueCompatibility),
+      interpretation: "말의 속도, 직접성, 따뜻함이 가까운 관계의 피로도를 낮출 수 있는지 봅니다.",
+      evidence: `따뜻함 ${Math.round((behavior?.warmth ?? 0.35) * 100)}%, 직접성 ${Math.round((behavior?.directness ?? 0.35) * 100)}% 기반`,
+      nextObservation: "상대가 질문과 반응의 균형을 어떻게 잡는지 봅니다.",
+    },
+    {
+      key: "conflictCompatibility",
+      label: "갈등 적합성",
+      score: axes.conflictCompatibility,
+      level: scoreLevel(axes.conflictCompatibility),
+      interpretation: "차이가 생겼을 때 방어, 회피, 비난으로 빨리 악화되는지를 조심스럽게 봅니다.",
+      evidence: `갈등 민감도 ${Math.round((behavior?.conflictSensitivity ?? 0.25) * 100)}%와 공감 지향 기반`,
+      nextObservation: "작은 이견에서 상대가 의미를 확인하는지, 승패를 정하려 하는지 봅니다.",
+    },
+    {
+      key: "repairPotential",
+      label: "회복 가능성",
+      score: axes.repairPotential,
+      level: scoreLevel(axes.repairPotential),
+      interpretation: "오해가 생긴 뒤 다시 안전하게 돌아올 수 있는지를 봅니다.",
+      evidence: `공감 지향 ${Math.round((behavior?.empathyOrientation ?? 0.35) * 100)}%와 직접성 기반`,
+      nextObservation: "사과 이후 행동이 실제로 달라지는지, 같은 상처가 반복되는지 봅니다.",
+    },
+    {
+      key: "emotionalSafety",
+      label: "정서적 안전감",
+      score: axes.emotionalSafety,
+      level: scoreLevel(axes.emotionalSafety),
+      interpretation: "취약한 이야기를 꺼냈을 때 평가보다 이해가 먼저 올 가능성을 봅니다.",
+      evidence: "따뜻함, 구조적 유사성, 정서 반응 신호 기반",
+      nextObservation: "상대가 조언하기 전에 감정과 맥락을 반사해주는지 봅니다.",
+    },
+  ];
+}
+
+function scoreLevel(score: number): ConnectionAxisInsight["level"] {
+  if (score >= 0.72) return "strong";
+  if (score >= 0.56) return "clear";
+  if (score >= 0.38) return "building";
+  return "low";
+}
+
+function confidenceLabel(confidence: number): ConnectionRelationshipReport["confidenceLabel"] {
+  if (confidence >= 0.78) return "strong";
+  if (confidence >= 0.58) return "usable";
+  if (confidence >= 0.36) return "building";
+  return "early";
 }
 
 function buildScenarioPreviews(input: {

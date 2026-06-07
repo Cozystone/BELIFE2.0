@@ -1,13 +1,18 @@
-import { Route, Users } from "lucide-react";
+import { FileText, Route, ShieldCheck, Users } from "lucide-react";
 import { ScoreBar } from "@/components/app/score-bar";
 import { getConnectionPreview, requireUserForPage } from "@/lib/server/belife-service";
 
 export const dynamic = "force-dynamic";
 
+function percent(value: number) {
+  return Math.round(value * 100);
+}
+
 export default async function ConnectionPage() {
   const user = await requireUserForPage();
   const preview = await getConnectionPreview(user.id);
   const scenarioPreviews = preview.scenarioPreviews ?? [];
+  const report = preview.relationshipReport;
 
   return (
     <div className="space-y-5">
@@ -22,6 +27,41 @@ export default async function ConnectionPage() {
           </div>
         </div>
         <p className="mt-5 text-sm leading-7 text-zinc-400">{preview.summary}</p>
+      </section>
+
+      <section className="rounded-md border border-orange-300/10 bg-orange-500/[0.04] p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-orange-500/12 text-orange-200">
+            <FileText className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold">Relationship Report</h2>
+              <span className="rounded-md border border-white/[0.08] bg-black/40 px-2 py-1 font-mono text-xs text-orange-200">
+                {report.confidenceLabel}
+              </span>
+              <span className="rounded-md border border-white/[0.08] bg-black/40 px-2 py-1 font-mono text-xs text-zinc-300">
+                {report.hiddenEdgeStatus}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-7 text-zinc-300">{report.thesis}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <article className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+            <p className="text-xs text-zinc-500">Compatibility</p>
+            <p className="mt-2 font-mono text-2xl text-zinc-100">{percent(report.compatibilityScore)}</p>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+            <p className="text-xs text-zinc-500">Final score</p>
+            <p className="mt-2 font-mono text-2xl text-orange-200">{percent(report.finalScore)}</p>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+            <p className="text-xs text-zinc-500">Confidence</p>
+            <p className="mt-2 font-mono text-2xl text-teal-200">{percent(report.confidence)}</p>
+          </article>
+        </div>
       </section>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -50,6 +90,72 @@ export default async function ConnectionPage() {
           </div>
         </article>
       </div>
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-md border border-orange-300/20 bg-orange-500/10 text-orange-200">
+            <ShieldCheck className="h-4 w-4" />
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold">Evidence Lens</h2>
+            <p className="mt-1 text-sm text-zinc-500">축별 근거와 아직 비워둬야 할 부분을 함께 봅니다.</p>
+          </div>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {report.axisInsights.map((axis) => (
+            <article key={axis.key} className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-medium text-zinc-100">{axis.label}</h3>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">{axis.interpretation}</p>
+                </div>
+                <span className="rounded-md bg-black/50 px-2 py-1 font-mono text-xs text-orange-200">
+                  {axis.level}
+                </span>
+              </div>
+              <div className="mt-4">
+                <ScoreBar label="Signal" value={axis.score} tone={axis.score >= 0.56 ? "teal" : "zinc"} />
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-md border border-teal-300/10 bg-teal-400/5 p-3">
+                  <p className="text-xs font-medium uppercase text-teal-200">Evidence</p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-300">{axis.evidence}</p>
+                </div>
+                <div className="rounded-md border border-white/[0.08] bg-black/30 p-3">
+                  <p className="text-xs font-medium uppercase text-zinc-400">Next signal</p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-300">{axis.nextObservation}</p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="grid gap-3 lg:grid-cols-3">
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <h3 className="text-sm font-medium text-zinc-100">Evidence</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+              {report.evidenceSignals.map((signal) => (
+                <li key={signal}>{signal}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <h3 className="text-sm font-medium text-zinc-100">Blind Spots</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+              {report.blindSpots.map((spot) => (
+                <li key={spot}>{spot}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <h3 className="text-sm font-medium text-zinc-100">Next Observations</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+              {report.nextObservationPrompts.map((prompt) => (
+                <li key={prompt}>{prompt}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
 
       <section className="space-y-3">
         <div className="flex items-center gap-3">

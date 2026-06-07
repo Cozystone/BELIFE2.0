@@ -59,6 +59,11 @@ describe("buildConnectionPreview", () => {
 
     expect(preview.structuralSimilarity).toBeGreaterThan(0.5);
     expect(preview.idealConnectionPattern).toContain("호기심");
+    expect(preview.relationshipReport.compatibilityScore).toBeGreaterThan(0);
+    expect(preview.relationshipReport.finalScore).toBeLessThanOrEqual(preview.relationshipReport.compatibilityScore);
+    expect(preview.relationshipReport.hiddenEdgeStatus).toBe("latent");
+    expect(preview.relationshipReport.axisInsights).toHaveLength(6);
+    expect(preview.relationshipReport.axisInsights.map((axis) => axis.key)).toContain("repairPotential");
   });
 
   it("translates compatibility axes into bounded relationship scenarios", () => {
@@ -79,6 +84,16 @@ describe("buildConnectionPreview", () => {
         expect(value).toBeLessThanOrEqual(1);
       }
     }
+  });
+
+  it("surfaces evidence, blind spots, and next observation prompts for internal reports", () => {
+    const preview = buildConnectionPreview([], null, { ...trust, score: 28, label: "low" });
+
+    expect(preview.relationshipReport.confidenceLabel).toBe("early");
+    expect(preview.relationshipReport.evidenceSignals.length).toBeGreaterThanOrEqual(3);
+    expect(preview.relationshipReport.blindSpots.join(" ")).toContain("초기 프리뷰");
+    expect(preview.relationshipReport.nextObservationPrompts).toHaveLength(3);
+    expect(preview.relationshipReport.thesis).toContain("탐색 리포트");
   });
 
   it("raises misunderstanding disengagement risk when conflict sensitivity is high", () => {
