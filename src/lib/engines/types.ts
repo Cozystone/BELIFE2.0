@@ -262,7 +262,9 @@ export type ConnectionScenarioType =
   | "pressure"
   | "misunderstanding"
   | "repair_attempt"
-  | "collaboration";
+  | "collaboration"
+  | "reselection"
+  | "longitudinal_drift";
 
 export interface ConnectionScenarioState {
   trust: number;

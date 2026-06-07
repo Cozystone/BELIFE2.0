@@ -69,9 +69,11 @@ describe("buildConnectionPreview", () => {
   it("translates compatibility axes into bounded relationship scenarios", () => {
     const preview = buildConnectionPreview([], warmBehavior, trust);
 
-    expect(preview.scenarioPreviews).toHaveLength(7);
+    expect(preview.scenarioPreviews).toHaveLength(9);
     expect(preview.scenarioPreviews.map((scenario) => scenario.type)).toContain("repair_attempt");
     expect(preview.scenarioPreviews.map((scenario) => scenario.type)).toContain("misunderstanding");
+    expect(preview.scenarioPreviews.map((scenario) => scenario.type)).toContain("reselection");
+    expect(preview.scenarioPreviews.map((scenario) => scenario.type)).toContain("longitudinal_drift");
 
     for (const scenario of preview.scenarioPreviews) {
       expect(scenario.likelyDynamic.length).toBeGreaterThan(10);
@@ -106,5 +108,18 @@ describe("buildConnectionPreview", () => {
     expect(sensitiveMisunderstanding?.state.disengagementRisk).toBeGreaterThan(
       calmMisunderstanding?.state.disengagementRisk ?? 0,
     );
+  });
+
+  it("uses repair and complementarity signals for longer-horizon relationship scenarios", () => {
+    const preview = buildConnectionPreview([], warmBehavior, trust);
+    const reselection = preview.scenarioPreviews.find((scenario) => scenario.type === "reselection");
+    const drift = preview.scenarioPreviews.find((scenario) => scenario.type === "longitudinal_drift");
+
+    expect(reselection?.title).toBe("Reselection");
+    expect(reselection?.state.commitmentTendency).toBeGreaterThan(0.3);
+    expect(reselection?.supportMove).toContain("계속 남기고 싶은 리듬");
+    expect(drift?.title).toBe("Longitudinal Drift");
+    expect(drift?.state.repairWillingness).toBeGreaterThan(0.3);
+    expect(drift?.riskSignal).toContain("drift 신호");
   });
 });

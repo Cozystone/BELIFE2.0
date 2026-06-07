@@ -404,5 +404,50 @@ function buildScenarioPreviews(input: {
       }),
       confidence: scenarioConfidence,
     },
+    {
+      type: "reselection",
+      title: "Reselection",
+      likelyDynamic:
+        axes.emotionalSafety + axes.repairPotential + axes.complementarity >= 1.72
+          ? "다른 선택지나 바쁜 일정이 생겨도 이 관계를 다시 선택할 이유가 비교적 선명하게 남을 수 있습니다."
+          : "좋은 순간이 있어도 피로, 대안, 거리감이 쌓이면 이 관계를 계속 선택해야 하는 이유가 흐려질 수 있습니다.",
+      supportMove: "관계를 당연하게 두기보다, 서로에게 실제로 도움이 된 순간과 계속 남기고 싶은 리듬을 주기적으로 확인하는 편이 좋습니다.",
+      riskSignal: "편안함을 방치로 착각하거나, 한쪽만 계속 조율하는 구조가 되면 재선택 가능성이 빠르게 낮아질 수 있습니다.",
+      state: state({
+        trust: axes.emotionalSafety * 0.28 + axes.repairPotential * 0.26 + axes.complementarity * 0.22,
+        emotionalSafety: axes.emotionalSafety * 0.46 + empathy * 0.18 + warmth * 0.12,
+        curiosity: axes.structuralSimilarity * 0.28 + axes.complementarity * 0.22 + (hasGoal ? 0.14 : 0),
+        reciprocity: axes.dialogueCompatibility * 0.26 + axes.repairPotential * 0.22 + empathy * 0.16,
+        repairWillingness: axes.repairPotential * 0.52 + empathy * 0.18,
+        disengagementRisk: 0.18 + (1 - axes.complementarity) * 0.22 + conflictSensitivity * 0.22,
+        commitmentTendency:
+          axes.complementarity * 0.28 + axes.emotionalSafety * 0.24 + axes.repairPotential * 0.2 + (hasGoal ? 0.12 : 0),
+      }),
+      confidence: scenarioConfidence,
+    },
+    {
+      type: "longitudinal_drift",
+      title: "Longitudinal Drift",
+      likelyDynamic:
+        axes.structuralSimilarity + axes.dialogueCompatibility + axes.repairPotential >= 1.68
+          ? "시간이 지나며 생활 리듬이 달라져도 대화와 수리 루틴이 유지되면 관계의 방향을 다시 맞출 여지가 있습니다."
+          : "초기 호감이 있어도 반복되는 오해나 속도 차이를 방치하면 서서히 멀어지는 흐름이 생길 수 있습니다.",
+      supportMove: "관계가 조용히 식기 전에 기대, 피로, 고마움, 서운함을 작게라도 갱신하는 정기적인 대화가 도움이 됩니다.",
+      riskSignal: "갈등이 폭발하지 않아도 무응답, 미루기, 짧아지는 대화가 반복되면 drift 신호로 봐야 합니다.",
+      state: state({
+        trust: axes.structuralSimilarity * 0.22 + axes.repairPotential * 0.28 + axes.emotionalSafety * 0.2,
+        emotionalSafety: axes.emotionalSafety * 0.36 + axes.conflictCompatibility * 0.2 + warmth * 0.14,
+        irritation: conflictSensitivity * 0.3 + (1 - axes.dialogueCompatibility) * 0.18,
+        curiosity: axes.structuralSimilarity * 0.22 + pacing * 0.18 + (hasValue ? 0.12 : 0),
+        reciprocity: axes.dialogueCompatibility * 0.34 + pacing * 0.18 + empathy * 0.14,
+        openness: disclosure * 0.24 + axes.emotionalSafety * 0.24 + directness * 0.12,
+        repairWillingness: axes.repairPotential * 0.48 + axes.conflictCompatibility * 0.18,
+        disengagementRisk:
+          0.16 + (1 - axes.repairPotential) * 0.2 + (1 - axes.dialogueCompatibility) * 0.2 + conflictSensitivity * 0.18,
+        commitmentTendency:
+          axes.structuralSimilarity * 0.18 + axes.complementarity * 0.2 + axes.emotionalSafety * 0.2 + axes.repairPotential * 0.16,
+      }),
+      confidence: scenarioConfidence,
+    },
   ];
 }
