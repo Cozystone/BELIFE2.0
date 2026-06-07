@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-test.setTimeout(60_000);
+test.setTimeout(90_000);
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -290,6 +290,12 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await page.getByRole("button", { name: "Ask Twin" }).click();
   await expect(page.getByRole("heading", { name: "Evidence" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Uncertainty" })).toBeVisible();
+
+  await page.goto("/app/connection");
+  await expect(page.getByRole("heading", { name: "Human Connection Preview" })).toBeVisible();
+  await page.getByRole("link", { name: "Rehearse in Talk" }).first().click();
+  await expect(page).toHaveURL(/\/app\/talk\?conversation=new&draft=/);
+  await expect(page.locator("textarea")).toHaveValue(/관계 장면을 연습하고 싶어/);
 
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();

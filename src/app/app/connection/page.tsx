@@ -1,4 +1,5 @@
-import { FileText, Route, ShieldCheck, Users } from "lucide-react";
+import { FileText, MessageCircle, Route, ShieldCheck, Users } from "lucide-react";
+import Link from "next/link";
 import { ScoreBar } from "@/components/app/score-bar";
 import { getConnectionPreview, requireUserForPage } from "@/lib/server/belife-service";
 
@@ -6,6 +7,14 @@ export const dynamic = "force-dynamic";
 
 function percent(value: number) {
   return Math.round(value * 100);
+}
+
+function talkDraftHref(draft: string) {
+  const params = new URLSearchParams({
+    conversation: "new",
+    draft,
+  });
+  return `/app/talk?${params.toString()}`;
 }
 
 export default async function ConnectionPage() {
@@ -194,6 +203,15 @@ export default async function ConnectionPage() {
                 <ScoreBar label="Safety" value={scenario.state.emotionalSafety} />
                 <ScoreBar label="Risk" value={scenario.state.disengagementRisk} tone="zinc" />
               </div>
+              <Link
+                href={talkDraftHref(
+                  `${scenario.title} 관계 장면을 연습하고 싶어. 예상 흐름은 "${scenario.likelyDynamic}"이고, 도움이 되는 움직임은 "${scenario.supportMove}", 조심할 신호는 "${scenario.riskSignal}"이야. 내 패턴을 기준으로 실제로 어떻게 말하면 좋을지 짧은 대화 스크립트로 도와줘.`,
+                )}
+                className="mt-4 inline-flex h-9 items-center gap-2 rounded-md border border-white/10 bg-black/40 px-3 text-xs font-medium text-zinc-300 transition hover:border-orange-400/30 hover:bg-orange-500/10 hover:text-orange-100"
+              >
+                <MessageCircle className="h-3.5 w-3.5 text-orange-300" />
+                Rehearse in Talk
+              </Link>
             </article>
           ))}
         </div>
