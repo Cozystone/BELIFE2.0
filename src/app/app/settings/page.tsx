@@ -1,9 +1,10 @@
 import { Database, KeyRound, Server } from "lucide-react";
+import { ProfileEnrichmentPanel } from "@/components/app/profile-enrichment-panel";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { getOllamaBaseUrl, getOllamaHealth, getOllamaModel } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
 import { isClerkConfigured } from "@/lib/server/auth";
-import { requireUserForPage } from "@/lib/server/belife-service";
+import { getProfileEnrichmentSuggestions, requireUserForPage } from "@/lib/server/belife-service";
 import { getReadinessReport } from "@/lib/server/readiness";
 import { getStore } from "@/lib/server/store";
 import { isNativeAuthAvailable } from "@/lib/server/native-auth";
@@ -12,8 +13,11 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const user = await requireUserForPage();
-  const profile = await getStore().getProfile(user.id);
-  const ollamaHealth = await getOllamaHealth();
+  const [profile, ollamaHealth, enrichmentSuggestions] = await Promise.all([
+    getStore().getProfile(user.id),
+    getOllamaHealth(),
+    getProfileEnrichmentSuggestions(user.id),
+  ]);
   const readiness = getReadinessReport({ ollamaHealth });
   const rows = [
     ["Auth", isClerkConfigured() ? "Clerk configured" : isNativeAuthAvailable() ? "BELIFE native auth" : "Demo mode", KeyRound],
@@ -56,6 +60,7 @@ export default async function SettingsPage() {
           </article>
         ))}
       </section>
+      <ProfileEnrichmentPanel initialSuggestions={enrichmentSuggestions} />
       <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
         <h2 className="font-medium">Production Readiness</h2>
         <div className="mt-4 space-y-3">

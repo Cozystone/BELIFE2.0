@@ -6,6 +6,7 @@ import { buildConnectionPreview } from "@/lib/engines/compatibility";
 import { calculateDataTrust } from "@/lib/engines/data-trust";
 import { estimateMentalState } from "@/lib/engines/mental-state";
 import { filterOntologyView } from "@/lib/engines/ontology";
+import { buildProfileEnrichmentSuggestions, findProfileEnrichmentSuggestion } from "@/lib/engines/profile-enrichment";
 import type {
   BelifeUser,
   Briefing,
@@ -13,8 +14,10 @@ import type {
   MessageSource,
   OnboardingAnswers,
   OntologyNode,
+  ProfileEnrichmentSuggestion,
+  UserProfile,
 } from "@/lib/engines/types";
-import { compactText } from "@/lib/utils";
+import { compactText, isoNow } from "@/lib/utils";
 import { getBelifeUser } from "./auth";
 import { getStore } from "./store";
 
@@ -33,6 +36,10 @@ export const onboardingSchema = z.object({
 export const messageSchema = z.object({
   content: z.string().min(1).max(4000),
   source: z.enum(["text", "voice"]).default("text"),
+});
+
+export const profileEnrichmentSchema = z.object({
+  id: z.string().min(1).max(220),
 });
 
 export async function requireUserForPage(): Promise<BelifeUser> {
@@ -250,6 +257,48 @@ export async function getOntologyForView(userId: string, view: "core" | "expande
   return filterOntologyView(nodes, view);
 }
 
+export async function getProfileEnrichmentSuggestions(userId: string) {
+  const store = getStore();
+  const [profile, nodes] = await Promise.all([store.getProfile(userId), store.getOntologyNodes(userId)]);
+  return buildProfileEnrichmentSuggestions({ profile, nodes });
+}
+
+export async function acceptProfileEnrichment(userId: string, suggestionId: string) {
+  const store = getStore();
+  const [profile, nodes] = await Promise.all([store.getProfile(userId), store.getOntologyNodes(userId)]);
+  const suggestion = findProfileEnrichmentSuggestion({ id: suggestionId, profile, nodes });
+  if (!suggestion) {
+    throw new Error("Profile enrichment suggestion is no longer available.");
+  }
+
+  let updatedProfile = profile;
+  if (suggestion.kind === "profile_field" && suggestion.targetField && suggestion.proposedValue) {
+    if (!profile) throw new Error("Profile is required before enrichment.");
+    updatedProfile = await store.updateOnboarding(
+      userId,
+      mergeProfileAnswer(profile, suggestion.targetField, suggestion.proposedValue),
+    );
+  }
+
+  if (suggestion.ontologyNode) {
+    const promoted = promoteSuggestionNode(suggestion);
+    await store.upsertOntologyNodes(userId, [promoted]);
+  }
+
+  await store.saveMemoryChunks([
+    {
+      userId,
+      content: `사용자가 프로필 보강 제안을 승인함: ${suggestion.title} - ${suggestion.detail}`,
+      kind: "semantic",
+      salience: 0.74,
+      evidenceType: "EXTRACTED",
+      tags: ["profile-enrichment", "approval"],
+    },
+  ]);
+  const dataTrust = await refreshDataTrust(userId);
+  return { suggestion, profile: updatedProfile, dataTrust };
+}
+
 export async function getTwinAnswer(userId: string, question: string) {
   const store = getStore();
   const [profile, state, behavior, nodes] = await Promise.all([
@@ -300,4 +349,39 @@ export async function getConnectionPreview(userId: string) {
   const preview = buildConnectionPreview(nodes, behavior, dataTrust);
   await store.saveConnectionPreview(userId, preview);
   return preview;
+}
+
+function mergeProfileAnswer(
+  profile: UserProfile,
+  field: NonNullable<ProfileEnrichmentSuggestion["targetField"]>,
+  value: string,
+): OnboardingAnswers {
+  const answers: OnboardingAnswers = {
+    nickname: profile.nickname,
+    role: profile.role,
+    mainWorry: profile.mainWorry,
+    currentGoal: profile.currentGoal,
+    importantValue: profile.importantValue,
+    stressReaction: profile.stressReaction,
+    emotionalClimate: profile.emotionalClimate,
+    preferredTone: profile.preferredTone,
+    relationshipHope: profile.onboardingAnswers.relationshipHope ?? "",
+  };
+  return { ...answers, [field]: value };
+}
+
+function promoteSuggestionNode(suggestion: ProfileEnrichmentSuggestion): OntologyNode {
+  const node = suggestion.ontologyNode;
+  if (!node) throw new Error("Ontology node is required for promotion.");
+  const shouldPromoteToCore = suggestion.kind === "ontology_promotion";
+  return {
+    ...node,
+    tier: shouldPromoteToCore ? "L1" : node.tier,
+    layer: shouldPromoteToCore ? "core" : node.layer,
+    certainty: "EXTRACTED",
+    confidence: Math.max(node.confidence, shouldPromoteToCore ? 0.78 : 0.68),
+    evidenceCount: node.evidenceCount + 1,
+    status: "active",
+    lastEvidenceAt: isoNow(),
+  };
 }

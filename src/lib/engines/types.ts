@@ -144,6 +144,27 @@ export interface CompatibilityAxes {
   riskyConnectionPattern: string;
 }
 
+export type ProfileEnrichmentKind = "profile_field" | "ontology_promotion";
+export type ProfileEnrichmentField =
+  | "mainWorry"
+  | "currentGoal"
+  | "importantValue"
+  | "stressReaction"
+  | "emotionalClimate"
+  | "relationshipHope";
+
+export interface ProfileEnrichmentSuggestion {
+  id: string;
+  kind: ProfileEnrichmentKind;
+  title: string;
+  question: string;
+  detail: string;
+  confidence: number;
+  targetField?: ProfileEnrichmentField;
+  proposedValue?: string;
+  ontologyNode?: OntologyNode;
+}
+
 export interface Briefing {
   headline: string;
   stateSummary: string;
