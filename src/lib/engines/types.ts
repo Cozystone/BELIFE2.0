@@ -485,6 +485,40 @@ export interface ConnectionCandidateFilteringReport {
   deferred: ConnectionCandidateFilter[];
 }
 
+export type ConnectionRerankingDirection = "new" | "up" | "down" | "stable";
+
+export interface ConnectionModeRank {
+  mode: ConnectionRelationshipMode;
+  rank: number;
+  previousRank: number | null;
+  score: number;
+  previousScore: number | null;
+  delta: number;
+  direction: ConnectionRerankingDirection;
+}
+
+export interface ConnectionRerankingSignal {
+  key: string;
+  label: string;
+  previous: number | null;
+  current: number;
+  delta: number;
+  direction: ConnectionRerankingDirection;
+  impact: number;
+  interpretation: string;
+}
+
+export interface ConnectionRerankingReport {
+  generatedAt: string;
+  confidence: number;
+  edgeDelta: number;
+  summary: string;
+  guardrail: string;
+  modeRanking: ConnectionModeRank[];
+  signals: ConnectionRerankingSignal[];
+  nextStabilizers: string[];
+}
+
 export interface CompatibilityAxes {
   structuralSimilarity: number;
   complementarity: number;

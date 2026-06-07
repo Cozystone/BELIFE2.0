@@ -1,14 +1,18 @@
-import { FileText, ListFilter, MessageCircle, Network, Route, ShieldCheck, Users } from "lucide-react";
+import { FileText, ListFilter, MessageCircle, Network, Route, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { ConnectionSimulator } from "@/components/app/connection-simulator";
 import { ScoreBar } from "@/components/app/score-bar";
-import { buildConnectionCandidateFilteringReport } from "@/lib/engines/compatibility";
-import { getConnectionPreview, getPrivacyPreferences, requireUserForPage } from "@/lib/server/belife-service";
+import { getConnectionIntelligence, getPrivacyPreferences, requireUserForPage } from "@/lib/server/belife-service";
 
 export const dynamic = "force-dynamic";
 
 function percent(value: number) {
   return Math.round(value * 100);
+}
+
+function signedPercent(value: number) {
+  const rounded = Math.round(value * 100);
+  return rounded > 0 ? `+${rounded}` : `${rounded}`;
 }
 
 function talkDraftHref(draft: string) {
@@ -50,8 +54,7 @@ export default async function ConnectionPage() {
     );
   }
 
-  const preview = await getConnectionPreview(user.id);
-  const candidateReport = buildConnectionCandidateFilteringReport(preview);
+  const { preview, candidateReport, rerankingReport } = await getConnectionIntelligence(user.id);
   const scenarioPreviews = preview.scenarioPreviews ?? [];
   const report = preview.relationshipReport;
   const hiddenEdge = preview.hiddenEdge;
@@ -153,6 +156,69 @@ export default async function ConnectionPage() {
             <ScoreBar label="Drift risk" value={hiddenEdge.mechanisms.drift} tone="zinc" />
           </div>
         </div>
+      </section>
+
+      <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-orange-500/12 text-orange-200">
+            <TrendingUp className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold">Incremental Reranking</h2>
+              <span className="rounded-md border border-white/[0.08] bg-black/40 px-2 py-1 font-mono text-xs text-orange-200">
+                {signedPercent(rerankingReport.edgeDelta)}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-7 text-zinc-400">{rerankingReport.summary}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          {rerankingReport.modeRanking.map((mode) => (
+            <article key={mode.mode} className="rounded-md border border-white/[0.08] bg-black/35 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium capitalize text-zinc-100">{mode.mode}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    rank #{mode.rank}
+                    {mode.previousRank ? ` from #${mode.previousRank}` : " baseline"}
+                  </p>
+                </div>
+                <span className="rounded-md bg-white/[0.06] px-2 py-1 font-mono text-xs text-zinc-300">
+                  {mode.direction}
+                </span>
+              </div>
+              <div className="mt-3">
+                <ScoreBar label="Mode score" value={mode.score} tone={mode.rank === 1 ? "teal" : "zinc"} />
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+          {rerankingReport.signals.slice(0, 4).map((signal) => (
+            <article key={signal.key} className="rounded-md border border-white/[0.08] bg-black/30 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-medium text-zinc-100">{signal.label}</h3>
+                <span className="rounded-md bg-white/[0.06] px-2 py-1 font-mono text-xs text-zinc-300">
+                  {signal.direction} {signedPercent(signal.delta)}
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">{signal.interpretation}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-5 rounded-md border border-white/[0.08] bg-black/30 p-3">
+          <p className="text-xs font-medium uppercase text-zinc-500">Stabilizers</p>
+          <ul className="mt-2 space-y-1 text-sm leading-6 text-zinc-300">
+            {rerankingReport.nextStabilizers.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-zinc-500">{rerankingReport.guardrail}</p>
       </section>
 
       <div className="grid gap-3 md:grid-cols-2">

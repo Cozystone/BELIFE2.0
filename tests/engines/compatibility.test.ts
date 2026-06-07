@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildConnectionCandidateFilteringReport,
   buildConnectionPreview,
+  buildConnectionRerankingReport,
   simulateConnectionScenario,
 } from "@/lib/engines/compatibility";
 import type { BehaviorSnapshot, DataTrustScore, OntologyNode } from "@/lib/engines/types";
@@ -184,6 +185,40 @@ describe("buildConnectionPreview", () => {
       expect(candidate.riskSignals.length).toBeGreaterThan(0);
       expect(candidate.nextObservation.length).toBeGreaterThan(20);
     }
+  });
+
+  it("explains incremental hidden-edge reranking without exposing public matching", () => {
+    const firstPreview = buildConnectionPreview([], sensitiveBehavior, { ...trust, score: 48, label: "building" });
+    const nextPreview = buildConnectionPreview([], warmBehavior, trust, firstPreview);
+    const report = buildConnectionRerankingReport(nextPreview, firstPreview);
+
+    expect(report.guardrail).toContain("not public matching");
+    expect(report.summary.length).toBeGreaterThan(40);
+    expect(report.modeRanking).toHaveLength(3);
+    expect(report.modeRanking[0].rank).toBe(1);
+    expect(report.modeRanking.every((mode) => mode.score >= 0 && mode.score <= 1)).toBe(true);
+    expect(report.signals.length).toBeGreaterThanOrEqual(5);
+    expect(report.signals.map((signal) => signal.key)).toContain("edgeStrength");
+    expect(report.signals.some((signal) => signal.direction === "up" || signal.direction === "down")).toBe(true);
+    expect(report.nextStabilizers.length).toBeGreaterThanOrEqual(2);
+    for (const signal of report.signals) {
+      expect(signal.current).toBeGreaterThanOrEqual(0);
+      expect(signal.current).toBeLessThanOrEqual(1);
+      expect(signal.delta).toBeGreaterThanOrEqual(-1);
+      expect(signal.delta).toBeLessThanOrEqual(1);
+      expect(signal.impact).toBeGreaterThanOrEqual(-1);
+      expect(signal.impact).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("creates a baseline reranking report when there is no previous hidden edge", () => {
+    const preview = buildConnectionPreview([], warmBehavior, trust);
+    const report = buildConnectionRerankingReport(preview, null);
+
+    expect(report.edgeDelta).toBe(0);
+    expect(report.summary).toContain("first latent relationship ranking baseline");
+    expect(report.modeRanking.every((mode) => mode.previousRank === null)).toBe(true);
+    expect(report.signals.every((signal) => signal.direction === "new")).toBe(true);
   });
 
   it("runs custom relationship simulations without exposing public matching", () => {

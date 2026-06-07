@@ -335,8 +335,26 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await page.goto("/app/connection");
   await expect(page.getByRole("heading", { name: "Human Connection Preview" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Hidden Graph" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Incremental Reranking" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Candidate Filters" })).toBeVisible();
-  await expect(page.getByText("Edge strength")).toBeVisible();
+  await expect(page.getByText("Edge strength", { exact: true })).toBeVisible();
+  const rerankingResult = await page.evaluate(async () => {
+    const response = await fetch("/api/connection/reranking");
+    const body = await response.json();
+    return {
+      status: response.status,
+      modeCount: body.report?.modeRanking?.length ?? 0,
+      signalCount: body.report?.signals?.length ?? 0,
+      guardrail: body.report?.guardrail ?? "",
+      directions: body.report?.signals?.map((signal: { direction: string }) => signal.direction) ?? [],
+    };
+  });
+
+  expect(rerankingResult.status).toBe(200);
+  expect(rerankingResult.modeCount).toBe(3);
+  expect(rerankingResult.signalCount).toBeGreaterThan(0);
+  expect(rerankingResult.guardrail).toContain("not public matching");
+  expect(rerankingResult.directions.some((direction: string) => ["new", "up", "down", "stable"].includes(direction))).toBe(true);
   const candidateFilterResult = await page.evaluate(async () => {
     const response = await fetch("/api/connection/candidates");
     const body = await response.json();
@@ -433,6 +451,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const blockedConnectionBody = await blockedConnection.json();
     const blockedCandidates = await fetch("/api/connection/candidates");
     const blockedCandidatesBody = await blockedCandidates.json();
+    const blockedReranking = await fetch("/api/connection/reranking");
+    const blockedRerankingBody = await blockedReranking.json();
     const enabled = await fetch("/api/privacy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -445,6 +465,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const visibleBriefing = await fetch("/api/briefing");
     const visibleBriefingBody = await visibleBriefing.json();
     const allowedConnection = await fetch("/api/connection/preview");
+    const allowedReranking = await fetch("/api/connection/reranking");
 
     return {
       initialStatus: initial.status,
@@ -458,11 +479,14 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       blockedConnectionCode: blockedConnectionBody.code,
       blockedCandidatesStatus: blockedCandidates.status,
       blockedCandidatesCode: blockedCandidatesBody.code,
+      blockedRerankingStatus: blockedReranking.status,
+      blockedRerankingCode: blockedRerankingBody.code,
       enabledStatus: enabled.status,
       enabledPreferences: enabledBody.preferences,
       visibleBriefingStatus: visibleBriefing.status,
       visibleEvidenceCount: visibleBriefingBody.briefing?.evidenceLedger?.length ?? 0,
       allowedConnectionStatus: allowedConnection.status,
+      allowedRerankingStatus: allowedReranking.status,
     };
   });
 
@@ -486,6 +510,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(privacyResult.blockedConnectionCode).toBe("CONNECTION_PREVIEW_DISABLED");
   expect(privacyResult.blockedCandidatesStatus).toBe(403);
   expect(privacyResult.blockedCandidatesCode).toBe("CONNECTION_PREVIEW_DISABLED");
+  expect(privacyResult.blockedRerankingStatus).toBe(403);
+  expect(privacyResult.blockedRerankingCode).toBe("CONNECTION_PREVIEW_DISABLED");
   expect(privacyResult.enabledStatus).toBe(200);
   expect(privacyResult.enabledPreferences).toMatchObject({
     showEvidenceLedger: true,
@@ -494,6 +520,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(privacyResult.visibleBriefingStatus).toBe(200);
   expect(privacyResult.visibleEvidenceCount).toBeGreaterThan(0);
   expect(privacyResult.allowedConnectionStatus).toBe(200);
+  expect(privacyResult.allowedRerankingStatus).toBe(200);
   const importResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/import", {
       method: "POST",

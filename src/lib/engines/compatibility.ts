@@ -7,6 +7,10 @@ import type {
   ConnectionCandidateStatus,
   ConnectionHiddenEdge,
   ConnectionRelationshipMode,
+  ConnectionModeRank,
+  ConnectionRerankingDirection,
+  ConnectionRerankingReport,
+  ConnectionRerankingSignal,
   ConnectionScenarioType,
   CompatibilityAxes,
   ConnectionSimulationHorizon,
@@ -214,6 +218,29 @@ export function buildConnectionCandidateFilteringReport(
   };
 }
 
+export function buildConnectionRerankingReport(
+  current: CompatibilityAxes,
+  previous?: CompatibilityAxes | null,
+): ConnectionRerankingReport {
+  const modeRanking = buildModeRanking(current.hiddenEdge.modeScores, previous?.hiddenEdge.modeScores ?? null);
+  const signals = buildRerankingSignals(current, previous)
+    .sort((left, right) => Math.abs(right.impact) - Math.abs(left.impact) || Math.abs(right.delta) - Math.abs(left.delta))
+    .slice(0, 7);
+  const edgeDelta = previous ? clampDelta(current.hiddenEdge.edgeStrength - previous.hiddenEdge.edgeStrength) : 0;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    confidence: current.relationshipReport.confidence,
+    edgeDelta,
+    summary: rerankingSummary({ current, previous, edgeDelta, topMode: modeRanking[0], topSignal: signals[0] }),
+    guardrail:
+      "This is private incremental reranking of BELIFE's latent relationship-fit model, not public matching, people ranking, or deterministic prediction.",
+    modeRanking,
+    signals,
+    nextStabilizers: rerankingStabilizers(current, signals),
+  };
+}
+
 function buildCandidateFilters(preview: CompatibilityAxes): ConnectionCandidateFilter[] {
   const misunderstanding = scenarioByType(preview, "misunderstanding");
   const vulnerability = scenarioByType(preview, "emotional_vulnerability");
@@ -390,6 +417,216 @@ function candidateStatus(fit: number, risk: number, confidence: number): Connect
   if (risk >= 0.58 && fit < 0.62) return "defer";
   if (fit >= 0.58 && risk <= 0.5 && confidence >= 0.35) return "prioritize";
   return "watch";
+}
+
+function buildModeRanking(
+  current: CompatibilityAxes["hiddenEdge"]["modeScores"],
+  previous: CompatibilityAxes["hiddenEdge"]["modeScores"] | null,
+): ConnectionModeRank[] {
+  const modes: ConnectionRelationshipMode[] = ["friendship", "collaboration", "mentorship"];
+  const previousRanks = previous
+    ? new Map(
+        modes
+          .map((mode) => ({ mode, score: previous[mode] }))
+          .sort((left, right) => right.score - left.score)
+          .map((item, index) => [item.mode, index + 1] as const),
+      )
+    : new Map<ConnectionRelationshipMode, number>();
+
+  return modes
+    .map((mode) => {
+      const previousScore = previous?.[mode] ?? null;
+      const delta = previousScore === null ? 0 : clampDelta(current[mode] - previousScore);
+      return {
+        mode,
+        score: current[mode],
+        previousScore,
+        delta,
+      };
+    })
+    .sort((left, right) => right.score - left.score)
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1,
+      previousRank: previousRanks.get(item.mode) ?? null,
+      direction: directionFor(item.delta, previous ? 0.025 : null),
+    }));
+}
+
+function buildRerankingSignals(
+  current: CompatibilityAxes,
+  previous?: CompatibilityAxes | null,
+): ConnectionRerankingSignal[] {
+  const currentEdge = current.hiddenEdge;
+  const previousEdge = previous?.hiddenEdge;
+  const signals: Array<{
+    key: string;
+    label: string;
+    current: number;
+    previous: number | null;
+    weight: number;
+    interpretation: (direction: ConnectionRerankingDirection, delta: number) => string;
+  }> = [
+    {
+      key: "edgeStrength",
+      label: "Latent edge strength",
+      current: currentEdge.edgeStrength,
+      previous: previousEdge?.edgeStrength ?? null,
+      weight: 1,
+      interpretation: (direction) =>
+        direction === "up"
+          ? "The latent edge is strengthening as current signals reinforce prior connection structure."
+          : direction === "down"
+            ? "The latent edge is softening because current signals add more caution than reinforcement."
+            : "The latent edge is not moving enough to justify a stronger relationship interpretation.",
+    },
+    {
+      key: "sharedReality",
+      label: "Shared reality",
+      current: currentEdge.sharedReality,
+      previous: previousEdge?.sharedReality ?? null,
+      weight: 0.74,
+      interpretation: (direction) =>
+        direction === "up"
+          ? "Value, goal, and dialogue signals are aligning more clearly."
+          : direction === "down"
+            ? "Shared meaning looks less stable and needs more direct observation."
+            : "Shared meaning is currently stable but still evidence-bounded.",
+    },
+    {
+      key: "responsiveness",
+      label: "Responsiveness",
+      current: currentEdge.responsiveness,
+      previous: previousEdge?.responsiveness ?? null,
+      weight: 0.78,
+      interpretation: (direction) =>
+        direction === "up"
+          ? "The model sees stronger signs that the relationship can respond before advising or defending."
+          : direction === "down"
+            ? "Response quality is a weaker signal, so BELIFE should slow escalation."
+            : "Response quality remains the main thing to observe next.",
+    },
+    {
+      key: "repair",
+      label: "Repair capacity",
+      current: currentEdge.repair,
+      previous: previousEdge?.repair ?? null,
+      weight: 0.82,
+      interpretation: (direction) =>
+        direction === "up"
+          ? "Repair potential is carrying more of the relationship-fit estimate."
+          : direction === "down"
+            ? "Repair potential is thinner, so disagreement and misunderstanding need smaller tests."
+            : "Repair potential is steady and should be validated with a real low-stakes rupture.",
+    },
+    {
+      key: "drift",
+      label: "Drift risk",
+      current: currentEdge.mechanisms.drift,
+      previous: previousEdge?.mechanisms.drift ?? null,
+      weight: -0.64,
+      interpretation: (direction) =>
+        direction === "up"
+          ? "Longer-horizon distance or disengagement risk is becoming more relevant."
+          : direction === "down"
+            ? "Longer-horizon drift looks less dominant than before."
+            : "Drift risk is stable; it should remain a watch signal, not a conclusion.",
+    },
+    {
+      key: "conflictToxicity",
+      label: "Conflict toxicity",
+      current: currentEdge.mechanisms.conflictToxicity,
+      previous: previousEdge?.mechanisms.conflictToxicity ?? null,
+      weight: -0.72,
+      interpretation: (direction) =>
+        direction === "up"
+          ? "Conflict cost is rising, so BELIFE should prefer repair-first contexts."
+          : direction === "down"
+            ? "Conflict cost is easing and the relationship may tolerate more honest dialogue."
+            : "Conflict cost is not moving enough to update the hidden graph strongly.",
+    },
+    {
+      key: "confidence",
+      label: "Interpretation confidence",
+      current: currentEdge.confidence,
+      previous: previousEdge?.confidence ?? null,
+      weight: 0.48,
+      interpretation: (direction) =>
+        direction === "up"
+          ? "The model has more usable signal, but still must stay non-deterministic."
+          : direction === "down"
+            ? "Confidence dropped, so ranking changes should be treated as provisional."
+            : "Confidence is steady and should be improved through more observed interactions.",
+    },
+  ];
+
+  return signals.map((signal) => {
+    const delta = signal.previous === null ? 0 : clampDelta(signal.current - signal.previous);
+    const direction = directionFor(delta, signal.previous === null ? null : 0.025);
+    return {
+      key: signal.key,
+      label: signal.label,
+      previous: signal.previous,
+      current: clamp(signal.current),
+      delta,
+      direction,
+      impact: clampDelta(delta * signal.weight),
+      interpretation: signal.interpretation(direction, delta),
+    };
+  });
+}
+
+function rerankingSummary(input: {
+  current: CompatibilityAxes;
+  previous?: CompatibilityAxes | null;
+  edgeDelta: number;
+  topMode?: ConnectionModeRank;
+  topSignal?: ConnectionRerankingSignal;
+}) {
+  if (!input.previous) {
+    return "BELIFE has created the first latent relationship ranking baseline. Future conversations and rehearsals will update this hidden graph incrementally.";
+  }
+
+  const movement =
+    Math.abs(input.edgeDelta) < 0.025
+      ? "mostly stable"
+      : input.edgeDelta > 0
+        ? "slightly stronger"
+        : "more cautious";
+  const mode = input.topMode ? `${input.topMode.mode} is currently ranked #${input.topMode.rank}` : "mode ranking is forming";
+  const signal = input.topSignal ? `the largest update signal is ${input.topSignal.label}` : "no single update signal dominates";
+  return `The hidden edge is ${movement}; ${mode}, and ${signal}.`;
+}
+
+function rerankingStabilizers(current: CompatibilityAxes, signals: ConnectionRerankingSignal[]) {
+  const byKey = new Map(signals.map((signal) => [signal.key, signal]));
+  const stabilizers = [
+    "Collect one more real interaction before treating a mode rank as stable.",
+    "Prefer low-pressure scenes where response quality and repair can be observed.",
+  ];
+
+  if ((byKey.get("drift")?.current ?? current.hiddenEdge.mechanisms.drift) >= 0.5) {
+    stabilizers.push("Check whether distance appears after small friction, not only after large conflict.");
+  }
+  if ((byKey.get("conflictToxicity")?.current ?? current.hiddenEdge.mechanisms.conflictToxicity) >= 0.46) {
+    stabilizers.push("Use one explicit repair sentence before increasing relational investment.");
+  }
+  if ((byKey.get("responsiveness")?.current ?? current.hiddenEdge.responsiveness) >= 0.58) {
+    stabilizers.push("Preserve the relationship pace that produced responsiveness instead of escalating intensity.");
+  }
+
+  return stabilizers.slice(0, 4);
+}
+
+function directionFor(delta: number, threshold: number | null): ConnectionRerankingDirection {
+  if (threshold === null) return "new";
+  if (delta > threshold) return "up";
+  if (delta < -threshold) return "down";
+  return "stable";
+}
+
+function clampDelta(value: number) {
+  return Math.max(-1, Math.min(1, value));
 }
 
 function buildRelationshipReport(input: {

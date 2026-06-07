@@ -5,6 +5,7 @@ import { buildStructuredExtraction } from "@/lib/ai/structured-extraction";
 import {
   buildConnectionCandidateFilteringReport,
   buildConnectionPreview,
+  buildConnectionRerankingReport,
   simulateConnectionScenario,
 } from "@/lib/engines/compatibility";
 import { buildDataTrustAudit, calculateDataTrust } from "@/lib/engines/data-trust";
@@ -728,6 +729,22 @@ export async function simulateConnectionForUser(userId: string, input: Connectio
 export async function getConnectionCandidateFilters(userId: string) {
   const preview = await getConnectionPreview(userId);
   return buildConnectionCandidateFilteringReport(preview);
+}
+
+export async function getConnectionIntelligence(userId: string) {
+  const previousPreview = await getStore().getLatestConnectionPreview(userId);
+  const preview = await getConnectionPreview(userId);
+  return {
+    preview,
+    candidateReport: buildConnectionCandidateFilteringReport(preview),
+    rerankingReport: buildConnectionRerankingReport(preview, previousPreview),
+  };
+}
+
+export async function getConnectionReranking(userId: string) {
+  const previousPreview = await getStore().getLatestConnectionPreview(userId);
+  const preview = await getConnectionPreview(userId);
+  return buildConnectionRerankingReport(preview, previousPreview);
 }
 
 export async function getDataTrustCenter(userId: string) {
