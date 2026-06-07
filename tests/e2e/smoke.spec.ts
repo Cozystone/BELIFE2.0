@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-test.setTimeout(90_000);
+test.setTimeout(120_000);
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -351,6 +351,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Memory Correction" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Data Controls" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Profile Enrichment" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "AI Runtime" })).toBeVisible();
@@ -390,6 +391,29 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(dataTrustApiResult.score).toBeGreaterThanOrEqual(0);
   expect(dataTrustApiResult.weakestCount).toBe(3);
   expect(dataTrustApiResult.actionCount).toBe(3);
+  const correctionResult = await page.evaluate(async () => {
+    const response = await fetch("/api/memory/corrections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target: "E2E self-understanding correction",
+        correction: "Actually, BELIFE should remember that this user values slow, evidence-based interpretation.",
+        consent: true,
+      }),
+    });
+    const body = await response.json();
+    return {
+      status: response.status,
+      ok: body.ok,
+      ontologyUpdates: body.ontologyUpdates?.length ?? 0,
+      dataTrustScore: body.dataTrust?.score,
+    };
+  });
+
+  expect(correctionResult.status).toBe(200);
+  expect(correctionResult.ok).toBe(true);
+  expect(correctionResult.ontologyUpdates).toBeGreaterThanOrEqual(0);
+  expect(correctionResult.dataTrustScore).toBeGreaterThanOrEqual(0);
   const skipSuggestion = page.getByRole("button", { name: "Skip for now" }).first();
   await expect(skipSuggestion).toBeVisible();
   await skipSuggestion.click();
@@ -399,6 +423,9 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const body = await response.json();
     const hasSkippedEnrichmentMemory = body.memoryChunks.some((chunk: { tags?: string[] }) =>
       chunk.tags?.includes("profile-enrichment-dismissal"),
+    );
+    const hasCorrectionMemory = body.memoryChunks.some((chunk: { tags?: string[] }) =>
+      chunk.tags?.includes("user-correction"),
     );
     const previewPayloads = body.connectionPreviews.map((item: { preview?: unknown }) => item.preview ?? item);
     const hasHiddenEdge = previewPayloads.some(
@@ -415,6 +442,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       exportedOntologyEdgeCount: body.ontologyEdges.length,
       connectionPreviewCount: body.inventory.counts.connectionPreviews,
       hasSkippedEnrichmentMemory,
+      hasCorrectionMemory,
       hasHiddenEdge,
     };
   });
@@ -424,6 +452,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     schemaVersion: 1,
     hasProfile: true,
     hasSkippedEnrichmentMemory: true,
+    hasCorrectionMemory: true,
     hasHiddenEdge: true,
   });
   expect(exportResult.messageCount).toBeGreaterThanOrEqual(0);

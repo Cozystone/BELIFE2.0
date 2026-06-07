@@ -54,6 +54,12 @@ export const profileEnrichmentSchema = z.object({
   id: z.string().min(1).max(220),
 });
 
+export const memoryCorrectionSchema = z.object({
+  target: z.string().max(320).optional().default(""),
+  correction: z.string().min(8).max(1600),
+  consent: z.literal(true),
+});
+
 export class BelifeApiError extends Error {
   constructor(
     message: string,
@@ -388,6 +394,71 @@ export async function dismissProfileEnrichment(userId: string, suggestionId: str
   ]);
   const dataTrust = await refreshDataTrust(userId);
   return { dismissedId: suggestionId, suggestion: suggestion ?? null, dataTrust };
+}
+
+export async function saveMemoryCorrection(
+  user: BelifeUser,
+  input: z.infer<typeof memoryCorrectionSchema>,
+) {
+  const store = getStore();
+  await store.ensureProfile(user);
+
+  const target = input.target.trim();
+  const correction = input.correction.trim();
+  const correctionText = [
+    "User-confirmed BELIFE memory correction.",
+    target ? `What BELIFE should revisit: ${target}` : "",
+    `Correction: ${correction}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const [previousState, previousBehavior] = await Promise.all([
+    store.getLatestState(user.id),
+    store.getLatestBehavior(user.id),
+  ]);
+  const extraction = await buildStructuredExtraction({
+    userId: user.id,
+    text: correctionText,
+    source: "correction",
+    previousState,
+    previousBehavior,
+  });
+  const correctionChunk = {
+    userId: user.id,
+    content: correctionText,
+    kind: "correction" as const,
+    salience: 0.92,
+    evidenceType: "EXTRACTED" as const,
+    tags: ["user-correction", "explicit-consent", target ? "targeted-correction" : "general-correction"],
+  };
+  const extractedChunks = extraction.chunks.map((chunk) => ({
+    ...chunk,
+    kind: chunk.kind === "raw" ? ("semantic" as const) : chunk.kind,
+    evidenceType: chunk.evidenceType === "AMBIGUOUS" ? ("INFERRED" as const) : chunk.evidenceType,
+    salience: Math.max(chunk.salience, 0.62),
+    tags: [...new Set(["user-correction", "extracted-from-correction", ...chunk.tags])],
+  }));
+
+  await store.saveMemoryChunks([correctionChunk, ...extractedChunks]);
+  const savedNodes = await store.upsertOntologyNodes(
+    user.id,
+    extraction.nodes.map((node) => ({
+      ...node,
+      certainty: node.certainty === "AMBIGUOUS" ? "INFERRED" : "EXTRACTED",
+      confidence: Math.max(node.confidence, 0.66),
+      evidenceCount: Math.max(node.evidenceCount, 2),
+      status: "active",
+      lastEvidenceAt: isoNow(),
+    })),
+  );
+  const dataTrust = await refreshDataTrust(user.id);
+
+  return {
+    ok: true,
+    correction: correctionChunk,
+    ontologyUpdates: savedNodes,
+    dataTrust,
+  };
 }
 
 export async function getTwinAnswer(userId: string, question: string) {

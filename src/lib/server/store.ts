@@ -151,7 +151,14 @@ function mapMessage(row: MessageRow): ConversationMessage {
 }
 
 function memoryChunkKind(value: string): MemoryChunk["kind"] {
-  if (value === "raw" || value === "semantic" || value === "behavior" || value === "state" || value === "relationship") {
+  if (
+    value === "raw" ||
+    value === "semantic" ||
+    value === "behavior" ||
+    value === "state" ||
+    value === "relationship" ||
+    value === "correction"
+  ) {
     return value;
   }
   return "semantic";

@@ -108,7 +108,7 @@ export async function buildStructuredExtraction(input: {
   userId: string;
   text: string;
   messageId?: string;
-  source?: MessageSource | "onboarding";
+  source?: MessageSource | "onboarding" | "correction";
   previousState?: MentalStateEstimate | null;
   previousBehavior?: BehaviorSnapshot | null;
 }): Promise<StructuredExtraction> {
@@ -160,7 +160,7 @@ export async function buildStructuredExtraction(input: {
 
 function buildExtractionPrompt(
   text: string,
-  source: MessageSource | "onboarding",
+  source: MessageSource | "onboarding" | "correction",
   previousState?: MentalStateEstimate | null,
   previousBehavior?: BehaviorSnapshot | null,
 ) {
@@ -197,7 +197,7 @@ function toRawExtraction(
   return {
     memoryChunks: chunks.map((chunk) => ({
       content: chunk.content,
-      kind: chunk.kind === "raw" ? "semantic" : chunk.kind,
+      kind: chunk.kind === "raw" || chunk.kind === "correction" ? "semantic" : chunk.kind,
       salience: chunk.salience,
       evidenceType: chunk.evidenceType,
       tags: chunk.tags,

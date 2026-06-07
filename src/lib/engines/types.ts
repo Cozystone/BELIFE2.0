@@ -66,7 +66,7 @@ export interface MemoryChunk {
   userId: string;
   messageId?: string;
   content: string;
-  kind: "raw" | "semantic" | "behavior" | "state" | "relationship";
+  kind: "raw" | "semantic" | "behavior" | "state" | "relationship" | "correction";
   salience: number;
   evidenceType: EvidenceType;
   tags: string[];
