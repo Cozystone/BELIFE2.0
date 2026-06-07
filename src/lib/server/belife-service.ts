@@ -419,13 +419,14 @@ Return: 1) what your structure might be doing, 2) what is uncertain, 3) one ques
 
 export async function getConnectionPreview(userId: string) {
   const store = getStore();
-  const [nodes, behavior, trust] = await Promise.all([
+  const [nodes, behavior, trust, previousPreview] = await Promise.all([
     store.getOntologyNodes(userId),
     store.getLatestBehavior(userId),
     store.getLatestDataTrust(userId),
+    store.getLatestConnectionPreview(userId),
   ]);
   const dataTrust = trust ?? (await refreshDataTrust(userId));
-  const preview = buildConnectionPreview(nodes, behavior, dataTrust);
+  const preview = buildConnectionPreview(nodes, behavior, dataTrust, previousPreview);
   await store.saveConnectionPreview(userId, preview);
   return preview;
 }

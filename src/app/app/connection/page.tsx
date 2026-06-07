@@ -1,4 +1,4 @@
-import { FileText, MessageCircle, Route, ShieldCheck, Users } from "lucide-react";
+import { FileText, MessageCircle, Network, Route, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import { ScoreBar } from "@/components/app/score-bar";
 import { getConnectionPreview, requireUserForPage } from "@/lib/server/belife-service";
@@ -22,6 +22,7 @@ export default async function ConnectionPage() {
   const preview = await getConnectionPreview(user.id);
   const scenarioPreviews = preview.scenarioPreviews ?? [];
   const report = preview.relationshipReport;
+  const hiddenEdge = preview.hiddenEdge;
 
   return (
     <div className="space-y-5">
@@ -70,6 +71,55 @@ export default async function ConnectionPage() {
             <p className="text-xs text-zinc-500">Confidence</p>
             <p className="mt-2 font-mono text-2xl text-teal-200">{percent(report.confidence)}</p>
           </article>
+        </div>
+      </section>
+
+      <section className="rounded-md border border-teal-300/10 bg-teal-400/[0.04] p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-teal-400/10 text-teal-200">
+            <Network className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold">Hidden Graph</h2>
+              <span className="rounded-md border border-white/[0.08] bg-black/40 px-2 py-1 font-mono text-xs text-teal-200">
+                {hiddenEdge.status}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-7 text-zinc-400">
+              공개 매칭이 아니라, BELIFE 내부에서 관계 가능성을 조심스럽게 보관하는 잠재 엣지입니다.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <article className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+            <p className="text-xs text-zinc-500">Edge strength</p>
+            <p className="mt-2 font-mono text-2xl text-teal-200">{percent(hiddenEdge.edgeStrength)}</p>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+            <p className="text-xs text-zinc-500">Shared reality</p>
+            <p className="mt-2 font-mono text-2xl text-zinc-100">{percent(hiddenEdge.sharedReality)}</p>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+            <p className="text-xs text-zinc-500">Responsiveness</p>
+            <p className="mt-2 font-mono text-2xl text-orange-200">{percent(hiddenEdge.responsiveness)}</p>
+          </article>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-zinc-100">Mode scores</h3>
+            <ScoreBar label="Friendship" value={hiddenEdge.modeScores.friendship} tone="teal" />
+            <ScoreBar label="Collaboration" value={hiddenEdge.modeScores.collaboration} />
+            <ScoreBar label="Mentorship" value={hiddenEdge.modeScores.mentorship} tone="zinc" />
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-zinc-100">Graph mechanisms</h3>
+            <ScoreBar label="Homophily" value={hiddenEdge.mechanisms.homophily} />
+            <ScoreBar label="Reciprocity" value={hiddenEdge.mechanisms.reciprocity} tone="teal" />
+            <ScoreBar label="Drift risk" value={hiddenEdge.mechanisms.drift} tone="zinc" />
+          </div>
         </div>
       </section>
 

@@ -64,6 +64,15 @@ describe("buildConnectionPreview", () => {
     expect(preview.relationshipReport.hiddenEdgeStatus).toBe("latent");
     expect(preview.relationshipReport.axisInsights).toHaveLength(6);
     expect(preview.relationshipReport.axisInsights.map((axis) => axis.key)).toContain("repairPotential");
+    expect(preview.hiddenEdge.status).toBe("latent");
+    expect(preview.hiddenEdge.compatibility).toBe(preview.relationshipReport.compatibilityScore);
+    expect(preview.hiddenEdge.confidence).toBe(preview.relationshipReport.confidence);
+    expect(preview.hiddenEdge.edgeStrength).toBeGreaterThanOrEqual(0);
+    expect(preview.hiddenEdge.edgeStrength).toBeLessThanOrEqual(1);
+    expect(preview.hiddenEdge.modeScores.friendship).toBeGreaterThan(0);
+    expect(preview.hiddenEdge.sharedReality).toBeGreaterThan(0);
+    expect(preview.hiddenEdge.responsiveness).toBeGreaterThan(0);
+    expect(preview.hiddenEdge.repair).toBe(preview.repairPotential);
   });
 
   it("translates compatibility axes into bounded relationship scenarios", () => {
@@ -137,5 +146,16 @@ describe("buildConnectionPreview", () => {
     expect(drift?.state.repairWillingness).toBeGreaterThan(0.3);
     expect(drift?.simulation.riskCase.disengagementRisk).toBeGreaterThanOrEqual(drift?.simulation.bestCase.disengagementRisk ?? 1);
     expect(drift?.riskSignal).toContain("drift 신호");
+  });
+
+  it("uses the previous hidden edge as persistence for incremental graph updates", () => {
+    const firstPreview = buildConnectionPreview([], warmBehavior, trust);
+    const nextPreview = buildConnectionPreview([], warmBehavior, trust, firstPreview);
+
+    expect(nextPreview.hiddenEdge.mechanisms.persistence).toBe(firstPreview.hiddenEdge.edgeStrength);
+    expect(nextPreview.hiddenEdge.mechanisms.homophily).toBe(nextPreview.structuralSimilarity);
+    expect(nextPreview.hiddenEdge.mechanisms.reciprocity).toBe(nextPreview.hiddenEdge.responsiveness);
+    expect(nextPreview.hiddenEdge.mechanisms.drift).toBeGreaterThanOrEqual(0);
+    expect(nextPreview.hiddenEdge.mechanisms.conflictToxicity).toBeGreaterThanOrEqual(0);
   });
 });

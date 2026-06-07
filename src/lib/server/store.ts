@@ -895,6 +895,7 @@ class MemoryBelifeStore implements BelifeStore {
         stateAt: latestDateToIso(stateRows.map((state) => state.createdAt)),
         behaviorAt: latestDateToIso(behaviorRows.map((behavior) => behavior.createdAt)),
         dataTrustAt: latestDateToIso(trustRows.map((trust) => trust.createdAt)),
+        connectionPreviewAt: latestDateToIso(previewRows.map((preview) => preview.hiddenEdge?.lastSimulatedAt)),
       },
     });
   }

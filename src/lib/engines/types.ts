@@ -317,6 +317,34 @@ export interface ConnectionAxisInsight {
   nextObservation: string;
 }
 
+export interface ConnectionModeScores {
+  friendship: number;
+  collaboration: number;
+  mentorship: number;
+}
+
+export interface ConnectionGraphMechanisms {
+  homophily: number;
+  reciprocity: number;
+  closure: number;
+  persistence: number;
+  drift: number;
+  conflictToxicity: number;
+}
+
+export interface ConnectionHiddenEdge {
+  status: "latent";
+  compatibility: number;
+  confidence: number;
+  edgeStrength: number;
+  modeScores: ConnectionModeScores;
+  sharedReality: number;
+  responsiveness: number;
+  repair: number;
+  mechanisms: ConnectionGraphMechanisms;
+  lastSimulatedAt: string;
+}
+
 export interface ConnectionRelationshipReport {
   compatibilityScore: number;
   finalScore: number;
@@ -343,6 +371,7 @@ export interface CompatibilityAxes {
   tensionSignals: string[];
   idealConnectionPattern: string;
   riskyConnectionPattern: string;
+  hiddenEdge: ConnectionHiddenEdge;
   scenarioPreviews: ConnectionScenarioPreview[];
   relationshipReport: ConnectionRelationshipReport;
 }

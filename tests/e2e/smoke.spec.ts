@@ -304,6 +304,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/connection");
   await expect(page.getByRole("heading", { name: "Human Connection Preview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hidden Graph" })).toBeVisible();
+  await expect(page.getByText("Edge strength")).toBeVisible();
   await page.getByRole("link", { name: "Rehearse in Talk" }).first().click();
   await expect(page).toHaveURL(/\/app\/talk\?conversation=new&draft=/);
   await expect(page.locator("textarea")).toHaveValue(/관계 장면을 연습하고 싶어/);
@@ -322,13 +324,20 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const hasSkippedEnrichmentMemory = body.memoryChunks.some((chunk: { tags?: string[] }) =>
       chunk.tags?.includes("profile-enrichment-dismissal"),
     );
+    const previewPayloads = body.connectionPreviews.map((item: { preview?: unknown }) => item.preview ?? item);
+    const hasHiddenEdge = previewPayloads.some(
+      (preview: { hiddenEdge?: { status?: string; edgeStrength?: number } }) =>
+        preview.hiddenEdge?.status === "latent" && typeof preview.hiddenEdge.edgeStrength === "number",
+    );
     return {
       status: response.status,
       schemaVersion: body.schemaVersion,
       hasProfile: Boolean(body.profile),
       messageCount: body.inventory.counts.messages,
       ontologyNodeCount: body.inventory.counts.ontologyNodes,
+      connectionPreviewCount: body.inventory.counts.connectionPreviews,
       hasSkippedEnrichmentMemory,
+      hasHiddenEdge,
     };
   });
 
@@ -337,9 +346,11 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     schemaVersion: 1,
     hasProfile: true,
     hasSkippedEnrichmentMemory: true,
+    hasHiddenEdge: true,
   });
   expect(exportResult.messageCount).toBeGreaterThanOrEqual(0);
   expect(exportResult.ontologyNodeCount).toBeGreaterThanOrEqual(0);
+  expect(exportResult.connectionPreviewCount).toBeGreaterThan(0);
 
   const crossUserResult = await page.evaluate(async (conversationId) => {
     await fetch("/api/auth/native/sign-out", { method: "POST" });

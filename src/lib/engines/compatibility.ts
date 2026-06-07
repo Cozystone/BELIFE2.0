@@ -2,6 +2,7 @@ import { clamp } from "@/lib/utils";
 import type {
   BehaviorSnapshot,
   ConnectionAxisInsight,
+  ConnectionHiddenEdge,
   CompatibilityAxes,
   ConnectionRelationshipReport,
   ConnectionScenarioPreview,
@@ -15,6 +16,7 @@ export function buildConnectionPreview(
   nodes: OntologyNode[],
   behavior: BehaviorSnapshot | null,
   trust: DataTrustScore,
+  previousPreview?: CompatibilityAxes | null,
 ): CompatibilityAxes {
   const hasValue = nodes.some((node) => node.type === "Value" || node.type === "Belief");
   const hasGoal = nodes.some((node) => node.type === "Goal" || node.type === "GrowthTrajectory");
@@ -52,6 +54,13 @@ export function buildConnectionPreview(
     hasGoal,
     hasFriction,
   });
+  const hiddenEdge = buildHiddenEdge({
+    axes,
+    scenarioPreviews,
+    behavior,
+    relationshipReport,
+    previous: previousPreview?.hiddenEdge,
+  });
 
   return {
     structuralSimilarity,
@@ -79,6 +88,7 @@ export function buildConnectionPreview(
       "차분한 호기심으로 반응하고, 당신이 의미를 정리하는 속도를 존중하며, 긴장을 서두르지 않고 회복할 수 있는 사람.",
     riskyConnectionPattern:
       "즉각적인 확신을 요구하거나, 내면의 복잡성을 가볍게 여기거나, 당신의 스트레스 신호를 더 큰 압박으로 바꾸는 사람.",
+    hiddenEdge,
     scenarioPreviews,
     relationshipReport,
   };
@@ -151,6 +161,75 @@ function buildRelationshipReport(input: {
     evidenceSignals,
     blindSpots,
     nextObservationPrompts,
+  };
+}
+
+function buildHiddenEdge(input: {
+  axes: Pick<
+    CompatibilityAxes,
+    | "structuralSimilarity"
+    | "complementarity"
+    | "dialogueCompatibility"
+    | "conflictCompatibility"
+    | "repairPotential"
+    | "emotionalSafety"
+    | "confidence"
+  >;
+  scenarioPreviews: ConnectionScenarioPreview[];
+  behavior: BehaviorSnapshot | null;
+  relationshipReport: ConnectionRelationshipReport;
+  previous?: ConnectionHiddenEdge;
+}): ConnectionHiddenEdge {
+  const { axes, scenarioPreviews, behavior, relationshipReport, previous } = input;
+  const scenarioCount = Math.max(1, scenarioPreviews.length);
+  const averageDisengagement =
+    scenarioPreviews.reduce((sum, scenario) => sum + scenario.state.disengagementRisk, 0) / scenarioCount;
+  const averageIrritation = scenarioPreviews.reduce((sum, scenario) => sum + scenario.state.irritation, 0) / scenarioCount;
+  const directness = behavior?.directness ?? 0.35;
+  const empathy = behavior?.empathyOrientation ?? 0.35;
+  const solution = behavior?.solutionOrientation ?? 0.35;
+  const warmth = behavior?.warmth ?? 0.35;
+
+  const sharedReality = clamp(
+    axes.structuralSimilarity * 0.58 + axes.dialogueCompatibility * 0.22 + axes.emotionalSafety * 0.2,
+  );
+  const responsiveness = clamp(
+    axes.dialogueCompatibility * 0.45 + axes.emotionalSafety * 0.2 + warmth * 0.2 + empathy * 0.15,
+  );
+  const repair = axes.repairPotential;
+  const mechanisms = {
+    homophily: axes.structuralSimilarity,
+    reciprocity: responsiveness,
+    closure: clamp(((axes.complementarity + sharedReality) / 2) * axes.confidence),
+    persistence: previous?.edgeStrength ?? 0.22,
+    drift: clamp(averageDisengagement * 0.7 + (1 - axes.dialogueCompatibility) * 0.3),
+    conflictToxicity: clamp(averageIrritation * 0.55 + (1 - axes.conflictCompatibility) * 0.45),
+  };
+  const edgeStrength = clamp(
+    mechanisms.persistence * 0.42 +
+      relationshipReport.compatibilityScore * 0.26 +
+      mechanisms.reciprocity * 0.14 +
+      mechanisms.closure * 0.08 +
+      repair * 0.08 -
+      mechanisms.drift * 0.09 -
+      mechanisms.conflictToxicity * 0.07,
+  );
+
+  return {
+    status: "latent",
+    compatibility: relationshipReport.compatibilityScore,
+    confidence: relationshipReport.confidence,
+    edgeStrength,
+    modeScores: {
+      friendship: clamp(sharedReality * 0.28 + responsiveness * 0.28 + repair * 0.22 + axes.emotionalSafety * 0.22),
+      collaboration: clamp(axes.complementarity * 0.34 + axes.dialogueCompatibility * 0.26 + solution * 0.22 + repair * 0.18),
+      mentorship: clamp(responsiveness * 0.28 + repair * 0.24 + directness * 0.22 + axes.emotionalSafety * 0.16 + axes.structuralSimilarity * 0.1),
+    },
+    sharedReality,
+    responsiveness,
+    repair,
+    mechanisms,
+    lastSimulatedAt: new Date().toISOString(),
   };
 }
 
