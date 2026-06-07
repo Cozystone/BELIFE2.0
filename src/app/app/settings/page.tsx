@@ -1,6 +1,6 @@
 import { Database, KeyRound, Server } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { getOllamaBaseUrl, getOllamaModel } from "@/lib/ai/ollama";
+import { getOllamaBaseUrl, getOllamaHealth, getOllamaModel } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
 import { isClerkConfigured } from "@/lib/server/auth";
 import { requireUserForPage } from "@/lib/server/belife-service";
@@ -13,11 +13,12 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const user = await requireUserForPage();
   const profile = await getStore().getProfile(user.id);
-  const readiness = getReadinessReport();
+  const ollamaHealth = await getOllamaHealth();
+  const readiness = getReadinessReport({ ollamaHealth });
   const rows = [
-    ["Auth", isClerkConfigured() ? "Clerk configured" : "Demo mode", KeyRound],
+    ["Auth", isClerkConfigured() ? "Clerk configured" : isNativeAuthAvailable() ? "BELIFE native auth" : "Demo mode", KeyRound],
     ["Storage", hasDatabaseUrl() ? "Neon Postgres" : "In-memory demo", Database],
-    ["Ollama", `${getOllamaBaseUrl()} / ${getOllamaModel("chat")}`, Server],
+    ["Ollama", `${getOllamaBaseUrl()} / ${getOllamaModel("chat")} / ${ollamaHealth.ok ? "reachable" : "not ready"}`, Server],
   ] as const;
 
   return (

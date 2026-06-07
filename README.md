@@ -25,6 +25,10 @@ If Neon is not configured, the app runs in local demo mode. For production, set:
 - `OLLAMA_MODEL_CHAT`
 - `OLLAMA_MODEL_EXTRACTOR`
 
+See [docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md) for Vercel deployment, environment setup, database migration, and production health checks.
+
+Production AI requires an externally reachable Ollama URL. `localhost`, `127.0.0.1`, and private LAN addresses will not work from Vercel Functions.
+
 Clerk remains supported through:
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`

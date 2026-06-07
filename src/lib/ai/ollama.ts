@@ -8,6 +8,13 @@ export interface OllamaGenerateOptions {
   format?: "json";
 }
 
+export interface OllamaHealth {
+  ok: boolean;
+  baseUrl: string;
+  models: string[];
+  error?: string;
+}
+
 export function getOllamaBaseUrl() {
   return process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 }
@@ -25,7 +32,7 @@ function getTimeoutMs() {
   return Number(process.env.OLLAMA_TIMEOUT_MS || 18000);
 }
 
-export async function getOllamaHealth() {
+export async function getOllamaHealth(): Promise<OllamaHealth> {
   const baseUrl = getOllamaBaseUrl();
   if (shouldSkipOllamaOnVercel()) {
     return {

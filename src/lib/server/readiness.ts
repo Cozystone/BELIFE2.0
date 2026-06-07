@@ -1,4 +1,4 @@
-import { getOllamaBaseUrl, getOllamaModel } from "@/lib/ai/ollama";
+import { getOllamaBaseUrl, getOllamaModel, type OllamaHealth } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
 import { isClerkConfigured } from "./auth";
 import { isNativeAuthAvailable } from "./native-auth";
@@ -19,12 +19,20 @@ export interface ReadinessReport {
   nextActions: string[];
 }
 
-export function getReadinessReport(): ReadinessReport {
+export function getReadinessReport(options: { ollamaHealth?: OllamaHealth } = {}): ReadinessReport {
   const databaseOk = hasDatabaseUrl();
   const clerkOk = isClerkConfigured();
   const nativeAuthOk = isNativeAuthAvailable();
   const authOk = clerkOk || nativeAuthOk;
-  const ollamaOk = Boolean(process.env.OLLAMA_BASE_URL);
+  const ollamaConfigured = Boolean(process.env.OLLAMA_BASE_URL);
+  const ollamaOk = options.ollamaHealth ? options.ollamaHealth.ok : ollamaConfigured;
+  const ollamaDetail = options.ollamaHealth
+    ? options.ollamaHealth.ok
+      ? `${options.ollamaHealth.baseUrl} is reachable using ${getOllamaModel("chat")}.`
+      : `${options.ollamaHealth.baseUrl} is not ready: ${options.ollamaHealth.error || "health check failed"}.`
+    : ollamaConfigured
+      ? `${getOllamaBaseUrl()} is configured using ${getOllamaModel("chat")}.`
+      : "OLLAMA_BASE_URL is missing; Vercel AI calls use deterministic fallback.";
 
   const checks: ReadinessCheck[] = [
     {
@@ -49,9 +57,7 @@ export function getReadinessReport(): ReadinessReport {
       key: "ollama",
       label: "External Ollama endpoint",
       ok: ollamaOk,
-      detail: ollamaOk
-        ? `${getOllamaBaseUrl()} using ${getOllamaModel("chat")}.`
-        : "OLLAMA_BASE_URL is missing; Vercel AI calls use deterministic fallback.",
+      detail: ollamaDetail,
       requiredForProduction: true,
     },
   ];
