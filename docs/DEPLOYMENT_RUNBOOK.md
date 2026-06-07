@@ -83,3 +83,4 @@ curl https://belife2.vercel.app/api/health/ai
 ```
 
 `/api/health/readiness` is only `ready` when required services are configured and the Ollama health check can reach the external endpoint.
+`/api/health/ai` returns the current runtime mode (`live` or `fallback`), configured models, endpoint, timeout, and required/optional Ollama environment variables. The same runtime diagnostics are visible in Settings under AI Runtime.

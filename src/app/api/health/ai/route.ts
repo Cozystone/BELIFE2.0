@@ -1,4 +1,4 @@
-import { getOllamaHealth, getOllamaModel } from "@/lib/ai/ollama";
+import { getOllamaHealth, getOllamaModel, getOllamaRuntimeDiagnostics } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
 import { isClerkConfigured } from "@/lib/server/auth";
 import { isNativeAuthAvailable } from "@/lib/server/native-auth";
@@ -9,6 +9,7 @@ export async function GET() {
   const ollama = await getOllamaHealth();
   return Response.json({
     ollama,
+    runtime: getOllamaRuntimeDiagnostics(ollama),
     model: {
       chat: getOllamaModel("chat"),
       extractor: getOllamaModel("extractor"),

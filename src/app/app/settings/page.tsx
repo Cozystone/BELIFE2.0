@@ -1,9 +1,9 @@
-import { Database, KeyRound, Server } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Database, KeyRound, Server, Terminal } from "lucide-react";
 import { DataControlsPanel } from "@/components/app/data-controls-panel";
 import { ProfileEnrichmentPanel } from "@/components/app/profile-enrichment-panel";
 import { ScoreBar } from "@/components/app/score-bar";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { getOllamaBaseUrl, getOllamaHealth, getOllamaModel } from "@/lib/ai/ollama";
+import { getOllamaBaseUrl, getOllamaHealth, getOllamaModel, getOllamaRuntimeDiagnostics } from "@/lib/ai/ollama";
 import { hasDatabaseUrl } from "@/lib/db/client";
 import { getDataTrustCenter, getProfileEnrichmentSuggestions, requireUserForPage } from "@/lib/server/belife-service";
 import { getReadinessReport } from "@/lib/server/readiness";
@@ -29,6 +29,8 @@ export default async function SettingsPage() {
     getDataTrustCenter(user.id),
   ]);
   const readiness = getReadinessReport({ ollamaHealth });
+  const aiRuntime = getOllamaRuntimeDiagnostics(ollamaHealth);
+  const RuntimeIcon = aiRuntime.mode === "live" ? CheckCircle2 : AlertTriangle;
   const { dataTrust, stats, inventory } = dataTrustCenter;
   const rows = [
     ["Auth", user.authProvider === "clerk" ? "Clerk session" : user.authProvider === "native" ? "BELIFE native auth" : "Demo mode", KeyRound],
@@ -45,6 +47,14 @@ export default async function SettingsPage() {
     ["Behavior snapshots", inventory.counts.behaviorSnapshots],
     ["Data trust snapshots", inventory.counts.dataTrustSnapshots],
     ["Connection previews", inventory.counts.connectionPreviews],
+  ] as const;
+  const aiRuntimeRows = [
+    ["Mode", aiRuntime.mode === "live" ? "Live Ollama" : "Deterministic fallback"],
+    ["Endpoint", aiRuntime.endpoint],
+    ["Chat model", aiRuntime.chatModel],
+    ["Extractor model", aiRuntime.extractorModel],
+    ["Timeout", `${aiRuntime.timeoutMs}ms`],
+    ["Bearer token", aiRuntime.apiKeyConfigured ? "Configured" : "Not configured"],
   ] as const;
 
   return (
@@ -81,6 +91,49 @@ export default async function SettingsPage() {
             <p className="mt-2 break-words text-sm text-zinc-500">{value}</p>
           </article>
         ))}
+      </section>
+      <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-orange-500/12 text-orange-200">
+              <RuntimeIcon className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="font-medium">AI Runtime</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">{aiRuntime.detail}</p>
+            </div>
+          </div>
+          <span className={aiRuntime.mode === "live" ? "rounded-md bg-teal-400/10 px-3 py-2 text-xs font-medium text-teal-200" : "rounded-md bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-200"}>
+            {aiRuntime.mode}
+          </span>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {aiRuntimeRows.map(([label, value]) => (
+            <div key={label} className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+              <p className="text-xs text-zinc-500">{label}</p>
+              <p className="mt-2 break-words text-sm text-zinc-100">{value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="rounded-md border border-orange-300/15 bg-orange-500/5 p-3">
+            <div className="flex items-start gap-2">
+              <Terminal className="mt-0.5 h-4 w-4 flex-none text-orange-200" />
+              <div>
+                <p className="text-sm font-medium text-zinc-100">Production env</p>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">
+                  Required {aiRuntime.requiredEnv.join(", ")}. Optional {aiRuntime.optionalEnv.join(", ")}.
+                </p>
+              </div>
+            </div>
+          </div>
+          <a
+            href={aiRuntime.healthPath}
+            className="inline-flex h-10 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] px-4 text-sm font-medium text-zinc-100 transition hover:bg-white/[0.1]"
+          >
+            Open health JSON
+          </a>
+        </div>
       </section>
       <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">

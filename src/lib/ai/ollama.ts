@@ -15,6 +15,21 @@ export interface OllamaHealth {
   error?: string;
 }
 
+export interface OllamaRuntimeDiagnostics {
+  mode: "live" | "fallback";
+  configuredForProduction: boolean;
+  endpoint: string;
+  chatModel: string;
+  extractorModel: string;
+  timeoutMs: number;
+  apiKeyConfigured: boolean;
+  requiredEnv: string[];
+  optionalEnv: string[];
+  healthPath: string;
+  readinessPath: string;
+  detail: string;
+}
+
 export function getOllamaBaseUrl() {
   return process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 }
@@ -30,6 +45,30 @@ export function getOllamaModel(kind: "chat" | "extractor" = "chat") {
 
 function getTimeoutMs() {
   return Number(process.env.OLLAMA_TIMEOUT_MS || 18000);
+}
+
+export function getOllamaRuntimeDiagnostics(health?: OllamaHealth): OllamaRuntimeDiagnostics {
+  const configuredForProduction = Boolean(process.env.OLLAMA_BASE_URL);
+  const endpoint = getOllamaBaseUrl();
+  const mode = health?.ok ? "live" : "fallback";
+  return {
+    mode,
+    configuredForProduction,
+    endpoint,
+    chatModel: getOllamaModel("chat"),
+    extractorModel: getOllamaModel("extractor"),
+    timeoutMs: getTimeoutMs(),
+    apiKeyConfigured: Boolean(process.env.OLLAMA_API_KEY),
+    requiredEnv: ["OLLAMA_BASE_URL"],
+    optionalEnv: ["OLLAMA_API_KEY", "OLLAMA_MODEL_CHAT", "OLLAMA_MODEL_EXTRACTOR", "OLLAMA_TIMEOUT_MS"],
+    healthPath: "/api/health/ai",
+    readinessPath: "/api/health/readiness",
+    detail: health?.ok
+      ? `${endpoint} is reachable.`
+      : configuredForProduction
+        ? health?.error || "Ollama endpoint is configured but not reachable."
+        : "OLLAMA_BASE_URL is missing; BELIFE uses deterministic fallback on Vercel.",
+  };
 }
 
 export async function getOllamaHealth(): Promise<OllamaHealth> {
