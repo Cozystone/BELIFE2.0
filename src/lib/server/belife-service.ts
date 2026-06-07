@@ -7,6 +7,7 @@ import { calculateDataTrust } from "@/lib/engines/data-trust";
 import { buildTwinReflection } from "@/lib/engines/digital-twin";
 import { estimateMentalState } from "@/lib/engines/mental-state";
 import { buildOntologyGraph, filterOntologyView } from "@/lib/engines/ontology";
+import { buildPatternReminders } from "@/lib/engines/pattern-reminders";
 import {
   buildProfileEnrichmentSuggestions,
   filterDismissedProfileEnrichmentSuggestions,
@@ -282,6 +283,7 @@ export async function getBriefing(userId: string): Promise<Briefing> {
       ? `${highlights[0].label} 신호가 현재 자기 이해의 중심에 있습니다.`
       : "아직 충분한 반복 패턴은 없습니다. 짧은 대화 몇 번이면 첫 구조가 생깁니다.",
     recommendedPrompt: "지금 내 안에서 가장 크게 반복되는 생각은 뭐야?",
+    patternReminders: buildPatternReminders({ nodes, state: mentalState, dataTrust }),
     dataTrust,
     state: mentalState,
     ontologyHighlights: highlights,

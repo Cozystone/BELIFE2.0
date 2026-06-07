@@ -1,4 +1,4 @@
-import { Activity, Brain, Database, MessageCircle, PenLine, ShieldCheck } from "lucide-react";
+import { Activity, Brain, Database, MessageCircle, PenLine, Repeat2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { ScoreBar } from "@/components/app/score-bar";
 import { StateHistoryPanel } from "@/components/app/state-history-panel";
@@ -59,6 +59,28 @@ export default async function TodayPage() {
                 {label}
               </div>
               <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500">{draft}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+          <Repeat2 className="h-4 w-4 text-teal-300" />
+          Pattern reminders
+        </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          {briefing.patternReminders.map((reminder) => (
+            <Link
+              key={reminder.id}
+              href={talkDraftHref(reminder.talkPrompt)}
+              className="rounded-md border border-white/[0.08] bg-black/40 p-3 text-left text-sm text-zinc-300 transition hover:border-teal-300/30 hover:bg-teal-400/10 hover:text-teal-100"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium">{reminder.title}</p>
+                <span className="font-mono text-xs text-teal-200">{Math.round(reminder.confidence * 100)}</span>
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500">{reminder.detail}</p>
             </Link>
           ))}
         </div>

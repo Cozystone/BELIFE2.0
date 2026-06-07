@@ -218,6 +218,12 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   await page.goto("/app/today");
   await expect(page.getByRole("main").getByText("Today")).toBeVisible();
+  const remindersSection = page.locator("section", { hasText: "Pattern reminders" });
+  await expect(remindersSection).toBeVisible();
+  await remindersSection.getByRole("link").first().click();
+  await expect(page).toHaveURL(/\/app\/talk\?conversation=new&draft=/);
+  await expect(page.locator("textarea")).toHaveValue(/정리해줘|물어봐줘|조정하면|해석해줘/);
+  await page.goto("/app/today");
   await page.getByRole("link", { name: /반복 생각 풀기/ }).click();
   await expect(page).toHaveURL(/\/app\/talk\?conversation=new&draft=/);
   await expect(page.locator("textarea")).toHaveValue(/반복해서 떠오르는 생각/);

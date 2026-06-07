@@ -392,10 +392,20 @@ export interface Briefing {
   stateSummary: string;
   patternSummary: string;
   recommendedPrompt: string;
+  patternReminders: PatternReminder[];
   dataTrust: DataTrustScore;
   state: MentalStateEstimate;
   ontologyHighlights: OntologyNode[];
   safetyNote: string;
+}
+
+export interface PatternReminder {
+  id: string;
+  kind: "state" | "ontology" | "relationship" | "trust";
+  title: string;
+  detail: string;
+  talkPrompt: string;
+  confidence: number;
 }
 
 export interface OnboardingAnswers {
