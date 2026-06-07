@@ -12,6 +12,10 @@ export function getOllamaBaseUrl() {
   return process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 }
 
+function shouldSkipOllamaOnVercel() {
+  return Boolean(process.env.VERCEL && !process.env.OLLAMA_BASE_URL);
+}
+
 export function getOllamaModel(kind: "chat" | "extractor" = "chat") {
   if (kind === "extractor") return process.env.OLLAMA_MODEL_EXTRACTOR || "dolphin3:latest";
   return process.env.OLLAMA_MODEL_CHAT || "dolphin3:latest";
@@ -23,6 +27,14 @@ function getTimeoutMs() {
 
 export async function getOllamaHealth() {
   const baseUrl = getOllamaBaseUrl();
+  if (shouldSkipOllamaOnVercel()) {
+    return {
+      ok: false,
+      baseUrl,
+      models: [],
+      error: "OLLAMA_BASE_URL is required for production AI calls on Vercel.",
+    };
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 4000);
 
@@ -49,6 +61,10 @@ export async function getOllamaHealth() {
 }
 
 export async function ollamaGenerate(options: OllamaGenerateOptions) {
+  if (shouldSkipOllamaOnVercel()) {
+    throw new Error("OLLAMA_BASE_URL is required for production AI calls on Vercel.");
+  }
+
   const baseUrl = getOllamaBaseUrl().replace(/\/$/, "");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), getTimeoutMs());
