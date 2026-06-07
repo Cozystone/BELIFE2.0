@@ -1,11 +1,11 @@
 "use client";
 
-import { Mic, Send, Square, Volume2 } from "lucide-react";
+import { Mic, Plus, Send, Square, Volume2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { belifeFetch } from "@/lib/client/auth-fetch";
 import type { ConversationMessage } from "@/lib/engines/types";
-import { cn } from "@/lib/utils";
+import { cn, isoNow } from "@/lib/utils";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -26,13 +26,18 @@ type SpeechWindow = Window & {
   webkitSpeechRecognition?: SpeechRecognitionConstructor;
 };
 
-export function VoiceConsole({ initialMessages }: { initialMessages: ConversationMessage[] }) {
-  const [conversationId, setConversationId] = useState<string | null>(null);
+type VoiceConsoleProps = {
+  initialMessages: ConversationMessage[];
+  initialConversationId: string | null;
+};
+
+export function VoiceConsole({ initialMessages, initialConversationId }: VoiceConsoleProps) {
+  const [conversationId, setConversationId] = useState<string | null>(initialConversationId);
   const [messages, setMessages] = useState(initialMessages);
   const [draft, setDraft] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [status, setStatus] = useState("준비됨");
+  const [status, setStatus] = useState(initialConversationId ? "최근 대화를 이어갑니다" : "준비됨");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const supportsSpeech = useMemo(() => {
@@ -83,6 +88,15 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
     setStatus("준비됨");
   }
 
+  function startFreshConversation() {
+    recognitionRef.current?.abort();
+    setConversationId(null);
+    setMessages([]);
+    setDraft("");
+    setIsListening(false);
+    setStatus("새 대화를 시작합니다");
+  }
+
   function speak(text: string) {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
@@ -98,9 +112,21 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
     setIsSending(true);
     setStatus("BELIFE가 해석하는 중");
     setDraft("");
+    let pendingId: string | null = null;
 
     try {
       const id = await ensureConversation();
+      pendingId = `pending-${Date.now()}`;
+      const pendingMessage: ConversationMessage = {
+        id: pendingId,
+        conversationId: id,
+        userId: "pending",
+        role: "user",
+        content,
+        source,
+        createdAt: isoNow(),
+      };
+      setMessages((current) => [...current, pendingMessage]);
       const response = await belifeFetch(`/api/conversations/${id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,10 +137,17 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
         userMessage: ConversationMessage;
         assistantMessage: ConversationMessage;
       };
-      setMessages((current) => [...current, body.userMessage, body.assistantMessage]);
+      setMessages((current) =>
+        current.flatMap((message) =>
+          message.id === pendingId ? [body.userMessage, body.assistantMessage] : [message],
+        ),
+      );
       setStatus("기억과 상태를 업데이트했습니다");
       speak(body.assistantMessage.content);
     } catch (error) {
+      if (pendingId) {
+        setMessages((current) => current.filter((message) => message.id !== pendingId));
+      }
       setDraft(content);
       setStatus(error instanceof Error ? error.message : "보내지 못했습니다.");
     } finally {
@@ -130,16 +163,21 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
             <h1 className="text-xl font-semibold">BELIFE와 대화</h1>
             <p className="mt-1 text-sm text-zinc-500">{status}</p>
           </div>
-          <Button
-            type="button"
-            variant={isListening ? "danger" : "secondary"}
-            size="icon"
-            onClick={isListening ? stopListening : startListening}
-            title={isListening ? "음성 입력 중지" : "음성 입력 시작"}
-            disabled={!supportsSpeech}
-          >
-            {isListening ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="secondary" size="icon" onClick={startFreshConversation} title="새 대화 시작">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant={isListening ? "danger" : "secondary"}
+              size="icon"
+              onClick={isListening ? stopListening : startListening}
+              title={isListening ? "음성 입력 중지" : "음성 입력 시작"}
+              disabled={!supportsSpeech}
+            >
+              {isListening ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -54,6 +54,7 @@ export interface BelifeStore {
   updateOnboarding(userId: string, answers: OnboardingAnswers): Promise<UserProfile>;
   getProfile(userId: string): Promise<UserProfile | null>;
   createConversation(userId: string): Promise<string>;
+  getLatestConversationId(userId: string): Promise<string | null>;
   conversationBelongsToUser(conversationId: string, userId: string): Promise<boolean>;
   appendMessage(input: {
     conversationId: string;
@@ -217,6 +218,14 @@ class DbBelifeStore implements BelifeStore {
     return created.id;
   }
 
+  async getLatestConversationId(userId: string) {
+    const row = await getDb().query.conversations.findFirst({
+      where: eq(conversations.userId, userId),
+      orderBy: desc(conversations.updatedAt),
+    });
+    return row?.id ?? null;
+  }
+
   async conversationBelongsToUser(conversationId: string, userId: string) {
     const row = await getDb().query.conversations.findFirst({
       where: and(eq(conversations.id, conversationId), eq(conversations.userId, userId)),
@@ -231,7 +240,10 @@ class DbBelifeStore implements BelifeStore {
     content: string;
     source: MessageSource;
   }) {
-    const [created] = await getDb().insert(messages).values(input).returning();
+    const db = getDb();
+    const now = new Date();
+    const [created] = await db.insert(messages).values(input).returning();
+    await db.update(conversations).set({ updatedAt: now }).where(eq(conversations.id, input.conversationId));
     return mapMessage(created);
   }
 
@@ -573,7 +585,7 @@ class DbBelifeStore implements BelifeStore {
 
 interface MemoryState {
   profiles: Map<string, UserProfile>;
-  conversations: Map<string, { id: string; userId: string }>;
+  conversations: Map<string, { id: string; userId: string; updatedAt: string }>;
   messages: ConversationMessage[];
   chunks: MemoryChunk[];
   nodes: OntologyNode[];
@@ -648,8 +660,15 @@ class MemoryBelifeStore implements BelifeStore {
 
   async createConversation(userId: string) {
     const id = randomUUID();
-    memoryState.conversations.set(id, { id, userId });
+    memoryState.conversations.set(id, { id, userId, updatedAt: isoNow() });
     return id;
+  }
+
+  async getLatestConversationId(userId: string) {
+    const latest = Array.from(memoryState.conversations.values())
+      .filter((conversation) => conversation.userId === userId)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+    return latest?.id ?? null;
   }
 
   async conversationBelongsToUser(conversationId: string, userId: string) {
@@ -663,12 +682,17 @@ class MemoryBelifeStore implements BelifeStore {
     content: string;
     source: MessageSource;
   }) {
+    const now = isoNow();
     const message: ConversationMessage = {
       id: randomUUID(),
       ...input,
-      createdAt: isoNow(),
+      createdAt: now,
     };
     memoryState.messages.push(message);
+    const conversation = memoryState.conversations.get(input.conversationId);
+    if (conversation) {
+      memoryState.conversations.set(input.conversationId, { ...conversation, updatedAt: now });
+    }
     return message;
   }
 

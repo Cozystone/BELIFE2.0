@@ -65,6 +65,60 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     return body.conversationId as string;
   });
   expect(ownerConversationId).toBeTruthy();
+  const continuitySeed = `continuity-seed-${Date.now()}`;
+  const continuityFollowup = `continuity-followup-${Date.now()}`;
+  const seedMessageResult = await page.evaluate(
+    async ({ conversationId, content }) => {
+      const response = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, source: "text" }),
+      });
+      const body = await response.json();
+      return {
+        status: response.status,
+        conversationId: body.userMessage?.conversationId,
+      };
+    },
+    { conversationId: ownerConversationId, content: continuitySeed },
+  );
+  expect(seedMessageResult).toMatchObject({
+    status: 200,
+    conversationId: ownerConversationId,
+  });
+
+  await page.goto("/app/talk");
+  await expect(page.getByText(continuitySeed, { exact: true })).toBeVisible();
+  await page.locator("textarea").fill(continuityFollowup);
+  const followupResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes(`/api/conversations/${ownerConversationId}/messages`),
+  );
+  await page.getByRole("button", { name: "Send" }).click();
+  expect((await followupResponse).status()).toBe(200);
+  await expect(page.getByText(continuityFollowup, { exact: true })).toBeVisible();
+  const continuityExportResult = await page.evaluate(
+    async ({ seed, followup }) => {
+      const response = await fetch("/api/memory/export");
+      const body = await response.json();
+      const matches = body.messages
+        .filter((message: { content: string }) => message.content === seed || message.content === followup)
+        .map((message: { content: string; conversationId: string }) => ({
+          content: message.content,
+          conversationId: message.conversationId,
+        }));
+      return { status: response.status, matches };
+    },
+    { seed: continuitySeed, followup: continuityFollowup },
+  );
+  expect(continuityExportResult.status).toBe(200);
+  expect(continuityExportResult.matches).toEqual(
+    expect.arrayContaining([
+      { content: continuitySeed, conversationId: ownerConversationId },
+      { content: continuityFollowup, conversationId: ownerConversationId },
+    ]),
+  );
 
   await page.goto("/app/today");
   await expect(page.getByRole("main").getByText("Today")).toBeVisible();
