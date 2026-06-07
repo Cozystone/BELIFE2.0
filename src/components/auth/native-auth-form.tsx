@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
+function safeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  if (value.startsWith("/sign-in") || value.startsWith("/sign-up")) return null;
+  return value;
+}
+
+function nextPathFromLocation() {
+  if (typeof window === "undefined") return null;
+  return safeNextPath(new URLSearchParams(window.location.search).get("next"));
+}
+
 export function NativeAuthForm({
   mode,
   nativeAvailable,
@@ -27,24 +38,30 @@ export function NativeAuthForm({
     setLoading(true);
     setError("");
     const endpoint = isSignUp ? "/api/auth/native/sign-up" : "/api/auth/native/sign-in";
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        password,
-        ...(isSignUp ? { displayName } : {}),
-      }),
-    });
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          ...(isSignUp ? { displayName } : {}),
+        }),
+      });
 
-    if (response.ok) {
-      router.push(isSignUp ? "/onboarding" : "/app/today");
-      router.refresh();
-    } else {
-      const body = (await response.json()) as { error?: string };
-      setError(body.error || "인증에 실패했습니다.");
+      if (response.ok) {
+        router.push(isSignUp ? "/onboarding" : (nextPathFromLocation() ?? "/app/today"));
+        router.refresh();
+      } else {
+        const body = (await response.json()) as { error?: string };
+        setError(body.error || "인증에 실패했습니다.");
+      }
+    } catch {
+      setError("인증 요청을 완료하지 못했습니다.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (

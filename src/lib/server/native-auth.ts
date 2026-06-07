@@ -37,6 +37,11 @@ async function verifyPassword(password: string, storedHash: string) {
   return expected.length === derived.length && timingSafeEqual(expected, derived);
 }
 
+function isUniqueEmailConflict(error: unknown) {
+  const detail = error instanceof Error ? error.message : String(error);
+  return detail.includes("native_auth_accounts_email_idx") || detail.includes("duplicate key value");
+}
+
 async function setSessionCookie(token: string, expiresAt: Date) {
   const cookieStore = await cookies();
   cookieStore.set(sessionCookieName, token, {
@@ -96,6 +101,7 @@ export async function getNativeBelifeUser(): Promise<BelifeUser | null> {
     name: account.displayName || account.email,
     email: account.email,
     isDemo: false,
+    authProvider: "native",
   };
 }
 
@@ -114,14 +120,19 @@ export async function signUpNative(input: { email: string; password: string; dis
     throw new Error("This email is already registered.");
   }
 
+  const passwordHash = await hashPassword(input.password);
   const [account] = await db
     .insert(nativeAuthAccounts)
     .values({
       email,
       displayName,
-      passwordHash: await hashPassword(input.password),
+      passwordHash,
     })
-    .returning();
+    .returning()
+    .catch((error: unknown) => {
+      if (isUniqueEmailConflict(error)) throw new Error("This email is already registered.");
+      throw error;
+    });
 
   await db.insert(profiles).values({
     userId: account.id,

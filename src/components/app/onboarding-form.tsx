@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { belifeFetch } from "@/lib/client/auth-fetch";
 
 const fields = [
   ["nickname", "어떻게 불러드릴까요?", "예: 서연"],
@@ -36,24 +37,24 @@ export function OnboardingForm() {
     event.preventDefault();
     setSaving(true);
     setError("");
-    const response = await fetch("/api/onboarding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
-    });
-    if (response.status === 401) {
+    try {
+      const response = await belifeFetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      if (response.ok) {
+        router.push("/app/talk");
+        router.refresh();
+      } else {
+        const body = (await response.json()) as { error?: string };
+        setError(body.error || "온보딩을 저장하지 못했습니다.");
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "온보딩을 저장하지 못했습니다.");
+    } finally {
       setSaving(false);
-      router.push("/sign-in");
-      return;
     }
-    if (response.ok) {
-      router.push("/app/talk");
-      router.refresh();
-    } else {
-      const body = (await response.json()) as { error?: string };
-      setError(body.error || "온보딩을 저장하지 못했습니다.");
-    }
-    setSaving(false);
   }
 
   return (

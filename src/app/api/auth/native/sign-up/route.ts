@@ -9,6 +9,12 @@ const signUpSchema = z.object({
   displayName: z.string().min(1).max(60),
 });
 
+function publicSignUpError(error: unknown) {
+  if (error instanceof z.ZodError) return "Please check your sign-up fields.";
+  if (error instanceof Error && error.message === "This email is already registered.") return error.message;
+  return "Unable to sign up.";
+}
+
 export async function POST(request: Request) {
   try {
     const input = signUpSchema.parse(await request.json());
@@ -16,7 +22,7 @@ export async function POST(request: Request) {
     return Response.json({ account });
   } catch (error) {
     return Response.json(
-      { error: error instanceof Error ? error.message : "Unable to sign up." },
+      { error: publicSignUpError(error) },
       { status: 400 },
     );
   }

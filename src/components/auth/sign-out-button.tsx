@@ -11,7 +11,7 @@ export function SignOutButton() {
 
   async function signOut() {
     setLoading(true);
-    await fetch("/api/auth/native/sign-out", { method: "POST" });
+    await fetch("/api/auth/native/sign-out", { method: "POST", credentials: "same-origin" });
     router.push("/sign-in");
     router.refresh();
   }

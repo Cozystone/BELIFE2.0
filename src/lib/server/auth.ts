@@ -7,16 +7,17 @@ export function isClerkConfigured() {
 }
 
 export async function getBelifeUser(): Promise<BelifeUser | null> {
-  if (!isClerkConfigured()) {
-    const nativeUser = await getNativeBelifeUser();
-    if (nativeUser) return nativeUser;
+  const nativeUser = await getNativeBelifeUser();
+  if (nativeUser) return nativeUser;
 
+  if (!isClerkConfigured()) {
     if (shouldAllowDemoUser()) {
       return {
         id: "demo-user",
         name: "BELIFE Demo",
         email: "demo@belife.local",
         isDemo: true,
+        authProvider: "demo",
       };
     }
 
@@ -32,6 +33,7 @@ export async function getBelifeUser(): Promise<BelifeUser | null> {
       name: user?.firstName || user?.fullName || user?.username || "BELIFE user",
       email: user?.primaryEmailAddress?.emailAddress,
       isDemo: false,
+      authProvider: "clerk",
     };
   } catch {
     return null;

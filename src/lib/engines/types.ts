@@ -22,6 +22,7 @@ export interface BelifeUser {
   name: string;
   email?: string;
   isDemo: boolean;
+  authProvider: "clerk" | "native" | "demo";
 }
 
 export interface UserProfile {

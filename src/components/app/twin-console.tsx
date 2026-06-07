@@ -3,6 +3,7 @@
 import { Brain, Send } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { belifeFetch } from "@/lib/client/auth-fetch";
 
 export function TwinConsole() {
   const [question, setQuestion] = useState("지금 내가 왜 같은 문제를 계속 반복하는지 알려줘");
@@ -13,15 +14,11 @@ export function TwinConsole() {
     if (!question.trim() || loading) return;
     setLoading(true);
     try {
-      const response = await fetch("/api/twin", {
+      const response = await belifeFetch("/api/twin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
       });
-      if (response.status === 401) {
-        window.location.assign("/sign-in");
-        return;
-      }
       const body = (await response.json()) as { answer?: string; error?: string };
       setAnswer(body.answer || body.error || "답변을 만들지 못했습니다.");
     } finally {

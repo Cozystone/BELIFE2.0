@@ -3,6 +3,7 @@
 import { Mic, Send, Square, Volume2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { belifeFetch } from "@/lib/client/auth-fetch";
 import type { ConversationMessage } from "@/lib/engines/types";
 import { cn } from "@/lib/utils";
 
@@ -42,11 +43,7 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
 
   async function ensureConversation() {
     if (conversationId) return conversationId;
-    const response = await fetch("/api/conversations", { method: "POST" });
-    if (response.status === 401) {
-      window.location.assign("/sign-in");
-      throw new Error("로그인이 필요합니다.");
-    }
+    const response = await belifeFetch("/api/conversations", { method: "POST" });
     if (!response.ok) throw new Error("대화를 만들지 못했습니다.");
     const body = (await response.json()) as { conversationId: string };
     setConversationId(body.conversationId);
@@ -104,15 +101,11 @@ export function VoiceConsole({ initialMessages }: { initialMessages: Conversatio
 
     try {
       const id = await ensureConversation();
-      const response = await fetch(`/api/conversations/${id}/messages`, {
+      const response = await belifeFetch(`/api/conversations/${id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, source }),
       });
-      if (response.status === 401) {
-        window.location.assign("/sign-in");
-        throw new Error("로그인이 필요합니다.");
-      }
       if (!response.ok) throw new Error("메시지를 보내지 못했습니다.");
       const body = (await response.json()) as {
         userMessage: ConversationMessage;

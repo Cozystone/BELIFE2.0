@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { OntologyGraph } from "@/components/app/ontology-graph";
 import { Button } from "@/components/ui/button";
+import { belifeFetch } from "@/lib/client/auth-fetch";
 import type { OntologyNode } from "@/lib/engines/types";
 import { cn } from "@/lib/utils";
 
@@ -14,12 +15,8 @@ export function SelfMapClient({ initialNodes }: { initialNodes: OntologyNode[] }
 
   useEffect(() => {
     let alive = true;
-    fetch(`/api/ontology?view=${view}`)
+    belifeFetch(`/api/ontology?view=${view}`)
       .then((response) => {
-        if (response.status === 401) {
-          window.location.assign("/sign-in");
-          return null;
-        }
         if (!response.ok) return null;
         return response.json() as Promise<{ nodes: OntologyNode[] }>;
       })

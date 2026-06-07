@@ -3,6 +3,7 @@
 import { Check, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { belifeFetch } from "@/lib/client/auth-fetch";
 import type { ProfileEnrichmentSuggestion } from "@/lib/engines/types";
 
 export function ProfileEnrichmentPanel({
@@ -17,25 +18,25 @@ export function ProfileEnrichmentPanel({
   async function accept(id: string) {
     setSavingId(id);
     setStatus("");
-    const response = await fetch("/api/profile/enrichment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
+    try {
+      const response = await belifeFetch("/api/profile/enrichment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
 
-    if (response.status === 401) {
-      window.location.assign("/sign-in");
-      return;
+      if (response.ok) {
+        setSuggestions((current) => current.filter((suggestion) => suggestion.id !== id));
+        setStatus("BELIFE에 반영했습니다.");
+      } else {
+        const body = (await response.json()) as { error?: string };
+        setStatus(body.error || "반영하지 못했습니다.");
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "반영하지 못했습니다.");
+    } finally {
+      setSavingId(null);
     }
-
-    if (response.ok) {
-      setSuggestions((current) => current.filter((suggestion) => suggestion.id !== id));
-      setStatus("BELIFE에 반영했습니다.");
-    } else {
-      const body = (await response.json()) as { error?: string };
-      setStatus(body.error || "반영하지 못했습니다.");
-    }
-    setSavingId(null);
   }
 
   return (

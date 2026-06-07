@@ -51,7 +51,17 @@ export async function requireUserForPage(): Promise<BelifeUser> {
 export async function requireUserForApi() {
   const user = await getBelifeUser();
   if (!user) {
-    return { user: null, response: Response.json({ error: "Unauthorized" }, { status: 401 }) };
+    return {
+      user: null,
+      response: Response.json(
+        {
+          error: "Unauthorized",
+          code: "AUTH_REQUIRED",
+          redirectTo: "/sign-in",
+        },
+        { status: 401 },
+      ),
+    };
   }
   return { user, response: null };
 }
