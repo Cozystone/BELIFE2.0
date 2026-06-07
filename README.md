@@ -57,4 +57,7 @@ npm run build
 npm run test:e2e
 ```
 
+GitHub Actions runs lint, typecheck, unit tests, and build on `main` pushes and pull requests.
+Desktop E2E runs in CI only when the repository secret `BELIFE_CI_E2E_DATABASE_URL` points to a prepared Neon database.
+
 BELIFE is a non-clinical self-understanding tool. It must not claim diagnosis, therapy, guaranteed outcomes, or deterministic relationship prediction.
