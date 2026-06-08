@@ -34,6 +34,7 @@ import {
   relationshipMemoryKinds,
   relationshipPairTag,
 } from "@/lib/engines/relationship-memory";
+import { buildSafetySignalReport } from "@/lib/engines/safety";
 import { buildMentalStateHistoryReport } from "@/lib/engines/state-history";
 import { buildStateDynamicsReport } from "@/lib/engines/state-dynamics";
 import { buildMemoryHealthReport } from "@/lib/engines/memory-health";
@@ -49,6 +50,7 @@ import type {
   PrivacyPreferences,
   ProfileEnrichmentSuggestion,
   RelationshipMemoryInput,
+  SafetySignalReport,
   UserProfile,
 } from "@/lib/engines/types";
 import { compactText, isoNow } from "@/lib/utils";
@@ -241,6 +243,11 @@ export async function handleConversationMessage(input: {
   await store.saveBehavior(input.user.id, extraction.behavior);
   const dataTrust = await refreshDataTrust(input.user.id);
   const allNodes = mergeNodes(currentNodes, savedNodes);
+  const safety = buildSafetySignalReport({
+    text: input.content,
+    messages: [...recentMessages, userMessage],
+    state: extraction.state,
+  });
   const memoryEvidence = rankMemoryEvidence({
     query: input.content,
     chunks: await store.getRecentMemoryChunks(input.user.id, 60),
@@ -256,6 +263,7 @@ export async function handleConversationMessage(input: {
     memoryEvidence,
     stateSummary: extraction.state.summary,
     tone: profile?.preferredTone ?? "calm",
+    safety,
   });
 
   const assistantMessage = await store.appendMessage({
@@ -290,7 +298,17 @@ async function buildAssistantReply(input: {
   memoryEvidence: MemoryEvidenceItem[];
   stateSummary: string;
   tone: string;
+  safety: SafetySignalReport;
 }) {
+  if (input.safety.level === "urgent" || input.safety.level === "elevated") {
+    return [
+      input.safety.supportiveMessage,
+      ...input.safety.recommendedActions.slice(0, 3),
+      input.safety.guardrail,
+      "Right now, one useful reply is simply: are you physically safe for the next 10 minutes?",
+    ].join("\n\n");
+  }
+
   const context = input.nodes
     .slice(0, 8)
     .map((node) => `- ${node.type}/${node.tier}: ${node.label} (${node.certainty}, ${Math.round(node.confidence * 100)}%)`)
@@ -411,6 +429,12 @@ export async function getMentalStateHistory(userId: string, limit?: number) {
 export async function getMentalStateDynamics(userId: string, limit?: number) {
   const states = await getStore().getStateHistory(userId, limit);
   return buildStateDynamicsReport(states);
+}
+
+export async function getSafetyBoundary(userId: string) {
+  const store = getStore();
+  const [messages, state] = await Promise.all([store.getRecentMessages(userId, 24), store.getLatestState(userId)]);
+  return buildSafetySignalReport({ messages, state });
 }
 
 export async function getOntologyForView(userId: string, view: "core" | "expanded" | "full") {

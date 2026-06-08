@@ -284,6 +284,22 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(stateDynamicsResult.couplingCount).toBeGreaterThan(0);
   expect(stateDynamicsResult.guardrail).toContain("not diagnosis");
   expect(stateDynamicsResult.baselineLevel).toMatch(/low|moderate|high/);
+  await expect(page.getByRole("heading", { name: "Safety Boundary" })).toBeVisible();
+  const safetyResult = await page.evaluate(async () => {
+    const response = await fetch("/api/safety");
+    const body = await response.json();
+    return {
+      status: response.status,
+      level: body.safety?.level,
+      resourceLabels: body.safety?.resources?.map((resource: { label: string }) => resource.label) ?? [],
+      guardrail: body.safety?.guardrail ?? "",
+    };
+  });
+
+  expect(safetyResult.status).toBe(200);
+  expect(safetyResult.level).toMatch(/none|low|elevated|urgent/);
+  expect(safetyResult.resourceLabels).toContain("988 Suicide & Crisis Lifeline");
+  expect(safetyResult.guardrail).toContain("not diagnosis");
 
   const ontologyCallsBeforeSelfMap = ontologyApiUrls.length;
   await page.goto("/app/self-map");

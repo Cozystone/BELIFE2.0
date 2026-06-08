@@ -210,6 +210,28 @@ export interface StateDynamicsReport {
   watchlist: string[];
 }
 
+export type SafetySignalLevel = "none" | "low" | "elevated" | "urgent";
+
+export interface SafetyResource {
+  label: string;
+  region: string;
+  action: string;
+  availability: string;
+  url: string;
+}
+
+export interface SafetySignalReport {
+  generatedAt: string;
+  level: SafetySignalLevel;
+  confidence: number;
+  summary: string;
+  supportiveMessage: string;
+  matchedSignals: string[];
+  recommendedActions: string[];
+  resources: SafetyResource[];
+  guardrail: string;
+}
+
 export interface BehaviorSnapshot {
   questionFrequency: number;
   directness: number;

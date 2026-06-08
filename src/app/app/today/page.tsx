@@ -1,10 +1,17 @@
 import { Activity, Brain, Database, MessageCircle, PenLine, Repeat2, SearchCheck, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { SafetyBoundaryPanel } from "@/components/app/safety-boundary-panel";
 import { ScoreBar } from "@/components/app/score-bar";
 import { StateDynamicsPanel } from "@/components/app/state-dynamics-panel";
 import { StateHistoryPanel } from "@/components/app/state-history-panel";
 import { Button } from "@/components/ui/button";
-import { getBriefing, getMentalStateDynamics, getMentalStateHistory, requireUserForPage } from "@/lib/server/belife-service";
+import {
+  getBriefing,
+  getMentalStateDynamics,
+  getMentalStateHistory,
+  getSafetyBoundary,
+  requireUserForPage,
+} from "@/lib/server/belife-service";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +25,11 @@ function talkDraftHref(draft: string) {
 
 export default async function TodayPage() {
   const user = await requireUserForPage();
-  const [briefing, stateHistory, stateDynamics] = await Promise.all([
+  const [briefing, stateHistory, stateDynamics, safety] = await Promise.all([
     getBriefing(user.id),
     getMentalStateHistory(user.id, 8),
     getMentalStateDynamics(user.id, 20),
+    getSafetyBoundary(user.id),
   ]);
 
   return (
@@ -116,6 +124,8 @@ export default async function TodayPage() {
       <StateHistoryPanel history={stateHistory} />
 
       <StateDynamicsPanel dynamics={stateDynamics} />
+
+      <SafetyBoundaryPanel safety={safety} />
 
       <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
         <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
