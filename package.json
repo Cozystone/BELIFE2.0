@@ -19,6 +19,7 @@
   "dependencies": {
     "@clerk/nextjs": "^7.4.3",
     "@neondatabase/serverless": "^1.1.0",
+    "@supermemory/memory-graph": "^0.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",

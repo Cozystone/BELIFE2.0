@@ -12,7 +12,7 @@ export default async function SelfMapPage() {
   ]);
   return (
     <div className="space-y-5">
-      <SelfMapClient initialGraph={graph} />
+      <SelfMapClient initialGraph={graph} initialTimeline={timeline} />
       <MemoryTimelinePanel timeline={timeline} />
     </div>
   );
