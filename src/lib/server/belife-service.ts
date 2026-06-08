@@ -209,7 +209,7 @@ export async function handleConversationMessage(input: {
   await store.ensureProfile(input.user);
   const ownsConversation = await store.conversationBelongsToUser(input.conversationId, input.user.id);
   if (!ownsConversation) {
-    throw new BelifeApiError("Conversation not found.", 404, "CONVERSATION_NOT_FOUND");
+    throw new BelifeApiError("대화를 찾을 수 없습니다.", 404, "CONVERSATION_NOT_FOUND");
   }
 
   const userMessage = await store.appendMessage({
@@ -305,7 +305,7 @@ async function buildAssistantReply(input: {
       input.safety.supportiveMessage,
       ...input.safety.recommendedActions.slice(0, 3),
       input.safety.guardrail,
-      "Right now, one useful reply is simply: are you physically safe for the next 10 minutes?",
+      "지금은 먼저 이렇게만 확인해도 충분합니다. 앞으로 10분 동안 몸이 안전한 곳에 있나요?",
     ].join("\n\n");
   }
 
