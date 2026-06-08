@@ -25,7 +25,8 @@ BELIFE is a Korean-first, voice-first personal AI intelligence service. It turns
 - CDCS-inspired Connection Quality Lens through `GET /api/connection/quality`
 - VSA/Dyadic Coping Lens through `GET /api/connection/dyadic-coping`
 - Private pairwise relationship memory through `GET/POST /api/connection/relationship-memory`
-- Mobile-centered UI with voice input through browser speech APIs
+- Mobile-centered voice conversation with browser speech input, editable transcripts, and Korean TTS response playback
+- Korean-first ontology knowledge graph UI for self-structure nodes and interpretable relationship edges
 
 ## Local Development
 

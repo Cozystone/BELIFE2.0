@@ -8,7 +8,7 @@ import { buildOnboardingStarterDraft } from "@/lib/engines/onboarding";
 import type { OnboardingAnswers } from "@/lib/engines/types";
 
 const fields = [
-  ["nickname", "어떻게 불러드릴까요?", "예: 서연"],
+  ["nickname", "어떻게 불러드릴까요?", "예: 지훈"],
   ["role", "요즘 당신의 역할은 무엇인가요?", "예: 창업을 준비하는 대학생"],
   ["mainWorry", "지금 가장 자주 떠오르는 걱정은 무엇인가요?", "짧게 적어도 괜찮아요"],
   ["currentGoal", "요즘 가장 중요한 목표는 무엇인가요?", "방향만 적어주세요"],
@@ -29,7 +29,7 @@ export function OnboardingForm() {
     importantValue: "",
     stressReaction: "",
     emotionalClimate: "",
-    preferredTone: "차분하고 솔직하게",
+    preferredTone: "차분하지만 솔직하게",
     relationshipHope: "",
   });
   const [error, setError] = useState("");
@@ -54,10 +54,10 @@ export function OnboardingForm() {
         router.refresh();
       } else {
         const body = (await response.json()) as { error?: string };
-        setError(body.error || "온보딩을 저장하지 못했습니다.");
+        setError(body.error || "온보딩 정보를 저장하지 못했습니다.");
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : "온보딩을 저장하지 못했습니다.");
+      setError(error instanceof Error ? error.message : "온보딩 정보를 저장하지 못했습니다.");
     } finally {
       setSaving(false);
     }
@@ -72,13 +72,13 @@ export function OnboardingForm() {
             value={values[name]}
             onChange={(event) => setValues((current) => ({ ...current, [name]: event.target.value }))}
             placeholder={placeholder}
-            className="mt-2 h-11 w-full rounded-md border border-white/[0.1] bg-black px-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-orange-400/60"
+            className="mt-2 h-11 w-full rounded-md border border-white/[0.1] bg-slate-950 px-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-cyan-400/60"
           />
         </label>
       ))}
       {error ? <p className="rounded-md border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100">{error}</p> : null}
       <Button type="submit" size="lg" className="w-full" disabled={saving}>
-        Start BELIFE
+        BELIFE 시작
       </Button>
     </form>
   );

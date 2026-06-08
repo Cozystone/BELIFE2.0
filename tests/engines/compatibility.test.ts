@@ -144,14 +144,14 @@ describe("buildConnectionPreview", () => {
     const reselection = preview.scenarioPreviews.find((scenario) => scenario.type === "reselection");
     const drift = preview.scenarioPreviews.find((scenario) => scenario.type === "longitudinal_drift");
 
-    expect(reselection?.title).toBe("Reselection");
+    expect(reselection?.title).toBe("관계 재선택");
     expect(reselection?.state.commitmentTendency).toBeGreaterThan(0.3);
     expect(reselection?.simulation.bestCase.trust).toBeGreaterThanOrEqual(reselection?.simulation.riskCase.trust ?? 1);
     expect(reselection?.supportMove).toContain("계속 남기고 싶은 리듬");
-    expect(drift?.title).toBe("Longitudinal Drift");
+    expect(drift?.title).toBe("장기적 흔들림");
     expect(drift?.state.repairWillingness).toBeGreaterThan(0.3);
     expect(drift?.simulation.riskCase.disengagementRisk).toBeGreaterThanOrEqual(drift?.simulation.bestCase.disengagementRisk ?? 1);
-    expect(drift?.riskSignal).toContain("drift 신호");
+    expect(drift?.riskSignal).toContain("흔들림 신호");
   });
 
   it("uses the previous hidden edge as persistence for incremental graph updates", () => {
@@ -169,7 +169,7 @@ describe("buildConnectionPreview", () => {
     const preview = buildConnectionPreview([], warmBehavior, trust);
     const report = buildConnectionCandidateFilteringReport(preview);
 
-    expect(report.guardrail).toContain("not public matching");
+    expect(report.guardrail).toContain("공개 매칭");
     expect(report.candidates.length).toBeGreaterThanOrEqual(4);
     expect(report.candidates.some((candidate) => candidate.status === "prioritize" || candidate.status === "watch")).toBe(true);
     expect(report.candidates.map((candidate) => candidate.id)).toContain("grounded-reciprocity");
@@ -192,7 +192,7 @@ describe("buildConnectionPreview", () => {
     const nextPreview = buildConnectionPreview([], warmBehavior, trust, firstPreview);
     const report = buildConnectionRerankingReport(nextPreview, firstPreview);
 
-    expect(report.guardrail).toContain("not public matching");
+    expect(report.guardrail).toContain("공개 매칭");
     expect(report.summary.length).toBeGreaterThan(40);
     expect(report.modeRanking).toHaveLength(3);
     expect(report.modeRanking[0].rank).toBe(1);
@@ -239,7 +239,7 @@ describe("buildConnectionPreview", () => {
     });
 
     expect(calmSimulation.guardrail).toContain("not a prediction");
-    expect(calmSimulation.scenario.title).toContain("Custom");
+    expect(calmSimulation.scenario.title).toContain("사용자 설정");
     expect(calmSimulation.guidance.openingMove.length).toBeGreaterThan(20);
     expect(calmSimulation.modeFit).toBe(preview.hiddenEdge.modeScores.friendship);
     expect(pressuredSimulation.stressLoad).toBeGreaterThan(calmSimulation.stressLoad);

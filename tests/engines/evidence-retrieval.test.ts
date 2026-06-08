@@ -97,7 +97,7 @@ describe("rankMemoryEvidence", () => {
     expect(evidence).toHaveLength(1);
     expect(evidence[0]).toMatchObject({
       source: "memory",
-      label: "semantic memory",
+      label: "의미 기억",
     });
   });
 });

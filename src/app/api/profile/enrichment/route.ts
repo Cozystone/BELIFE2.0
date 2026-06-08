@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     return Response.json(result);
   } catch (error) {
     return Response.json(
-      { error: error instanceof Error ? error.message : "Unable to accept profile enrichment." },
+      { error: error instanceof Error ? error.message : "프로필 보강을 반영하지 못했습니다." },
       { status: 400 },
     );
   }
@@ -42,7 +42,7 @@ export async function DELETE(request: Request) {
     return Response.json(result);
   } catch (error) {
     return Response.json(
-      { error: error instanceof Error ? error.message : "Unable to skip profile enrichment." },
+      { error: error instanceof Error ? error.message : "프로필 보강을 건너뛰지 못했습니다." },
       { status: 400 },
     );
   }

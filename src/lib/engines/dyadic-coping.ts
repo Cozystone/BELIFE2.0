@@ -57,7 +57,7 @@ export function buildDyadicCopingReport(input: {
   const axes: DyadicCopingAxis[] = [
     axis({
       key: "stressCommunication",
-      label: "Stress Communication",
+      label: "스트레스 소통",
       polarity: "protective",
       score:
         preview.dialogueCompatibility * 0.26 +
@@ -67,17 +67,17 @@ export function buildDyadicCopingReport(input: {
         (1 - currentWithdrawal) * 0.12 +
         stateConfidence(state) * 0.06,
       interpretation:
-        "Whether stress can be named early enough that the relationship does not have to guess, test, or withdraw.",
+        "관계가 추측하거나 시험하거나 멀어지기 전에 스트레스를 충분히 이르게 말할 수 있는지 봅니다.",
       evidence: [
-        `Dialogue fit ${percent(preview.dialogueCompatibility)}`,
-        `Vulnerability openness ${percent(vulnerability.state.openness)}`,
-        `Current withdrawal inverse ${percent(1 - currentWithdrawal)}`,
+        `대화 적합도 ${percent(preview.dialogueCompatibility)}`,
+        `취약성 공유 개방도 ${percent(vulnerability.state.openness)}`,
+        `현재 거리두기 역지표 ${percent(1 - currentWithdrawal)}`,
       ],
-      nextObservation: "Name one small pressure point before it becomes a rupture and watch whether the response stays specific.",
+      nextObservation: "균열이 되기 전에 작은 압박 지점 하나를 말하고, 응답이 구체적으로 유지되는지 보세요.",
     }),
     axis({
       key: "supportiveResponse",
-      label: "Supportive Response",
+      label: "지지적 반응",
       polarity: "protective",
       score:
         preview.hiddenEdge.responsiveness * 0.26 +
@@ -87,17 +87,17 @@ export function buildDyadicCopingReport(input: {
         vulnerability.state.emotionalSafety * 0.14 +
         (1 - volatility) * 0.08,
       interpretation:
-        "Whether pressure is met with pacing, reflection, and useful care instead of instant advice or defensiveness.",
+        "압박이 즉각적 조언이나 방어 대신 속도 조절, 반영, 실제 도움으로 맞아지는지 봅니다.",
       evidence: [
-        `Responsiveness ${percent(preview.hiddenEdge.responsiveness)}`,
-        `Observed safety ${percent(memorySignals.emotionalSafety)}`,
-        `Volatility inverse ${percent(1 - volatility)}`,
+        `반응성 ${percent(preview.hiddenEdge.responsiveness)}`,
+        `관찰된 안전감 ${percent(memorySignals.emotionalSafety)}`,
+        `변동성 역지표 ${percent(1 - volatility)}`,
       ],
-      nextObservation: "Share a bounded need and observe whether the other side reflects impact before moving to a solution.",
+      nextObservation: "경계가 분명한 필요를 하나 공유하고, 상대가 해결책 전에 영향을 먼저 반영하는지 보세요.",
     }),
     axis({
       key: "jointRegulation",
-      label: "Joint Regulation",
+      label: "공동 조절",
       polarity: "protective",
       score:
         preview.complementarity * 0.18 +
@@ -108,17 +108,17 @@ export function buildDyadicCopingReport(input: {
         preview.dialogueCompatibility * 0.12 +
         (1 - supportNeed * 0.35) * 0.08,
       interpretation:
-        "Whether the relationship can turn stress into shared coordination rather than two isolated coping strategies.",
+        "스트레스를 각자 버티는 방식이 아니라 함께 조율하는 흐름으로 바꿀 수 있는지 봅니다.",
       evidence: [
-        `Collaboration reciprocity ${percent(collaboration.state.reciprocity)}`,
-        `Observed reciprocity ${percent(memorySignals.reciprocity)}`,
-        `Scenario stress inverse ${percent(1 - scenarioStress)}`,
+        `협업 상호성 ${percent(collaboration.state.reciprocity)}`,
+        `관찰된 상호성 ${percent(memorySignals.reciprocity)}`,
+        `시나리오 스트레스 역지표 ${percent(1 - scenarioStress)}`,
       ],
-      nextObservation: "Try one explicit shared plan: what each person owns, what can wait, and what counts as enough.",
+      nextObservation: "명시적인 공동 계획 하나를 시도하세요. 각자 맡을 것, 미뤄도 되는 것, 충분함의 기준을 정합니다.",
     }),
     axis({
       key: "repairAfterStress",
-      label: "Repair After Stress",
+      label: "스트레스 후 회복",
       polarity: "protective",
       score:
         preview.repairPotential * 0.26 +
@@ -128,27 +128,27 @@ export function buildDyadicCopingReport(input: {
         preview.conflictCompatibility * 0.12 +
         (1 - misunderstanding.state.irritation) * 0.04,
       interpretation:
-        "Whether tension can move toward clarification, empathy, and repair after impact has already happened.",
+        "이미 영향이 생긴 뒤에도 긴장이 설명, 공감, 회복으로 이동할 수 있는지 봅니다.",
       evidence: [
-        `Repair potential ${percent(preview.repairPotential)}`,
-        `Observed repair ${percent(memorySignals.repairEvidence)}`,
-        `Repair scenario willingness ${percent(repair.state.repairWillingness)}`,
+        `회복 가능성 ${percent(preview.repairPotential)}`,
+        `관찰된 회복 근거 ${percent(memorySignals.repairEvidence)}`,
+        `회복 시나리오 의지 ${percent(repair.state.repairWillingness)}`,
       ],
-      nextObservation: "After a small misunderstanding, separate intention, impact, and next behavior in three short sentences.",
+      nextObservation: "작은 오해 뒤에 의도, 영향, 다음 행동을 세 문장으로 나누어 말해 보세요.",
     }),
     axis({
       key: "withdrawalRisk",
-      label: "Withdrawal Risk",
+      label: "거리두기 위험",
       polarity: "risk",
       score: withdrawalRisk,
       interpretation:
-        "How likely pressure is to become avoidance, blame, emotional shutdown, or distance before repair can happen.",
+        "회복이 일어나기 전에 압박이 회피, 비난, 정서적 차단, 거리두기로 바뀔 가능성입니다.",
       evidence: [
-        `Current withdrawal ${percent(currentWithdrawal)}`,
-        `Pressure disengagement ${percent(pressure.state.disengagementRisk)}`,
-        `Memory risk ${percent(memorySignals.riskPenalty)}`,
+        `현재 거리두기 ${percent(currentWithdrawal)}`,
+        `압박 상황 이탈 위험 ${percent(pressure.state.disengagementRisk)}`,
+        `기억 기반 위험 ${percent(memorySignals.riskPenalty)}`,
       ],
-      nextObservation: "When distance appears, ask whether this is a need for recovery time or a sign that repair is being avoided.",
+      nextObservation: "거리가 생기면 회복 시간이 필요한 것인지, 회복을 피하고 있다는 신호인지 구분해 보세요.",
     }),
   ];
 
@@ -165,7 +165,7 @@ export function buildDyadicCopingReport(input: {
     confidence,
     summary: buildSummary({ protectiveAverage, withdrawalRisk, confidence, totalInteractions: relationshipMemory.totalInteractions }),
     guardrail:
-      "This VSA and dyadic-coping lens is private BELIFE relationship reflection, not public matching, therapy, diagnosis, or deterministic prediction.",
+      "이 VSA/관계 대처 렌즈는 BELIFE의 비공개 관계 성찰입니다. 공개 매칭, 치료, 진단, 결정론적 예측이 아닙니다.",
     memoryCoverage: {
       pairCount: relationshipMemory.pairCount,
       totalInteractions: relationshipMemory.totalInteractions,
@@ -233,14 +233,14 @@ function buildSummary(input: {
   confidence: number;
   totalInteractions: number;
 }) {
-  const evidence = input.totalInteractions >= 3 ? "repeated pair memory" : "early pair memory";
+  const evidence = input.totalInteractions >= 3 ? "반복된 관계 기억" : "초기 관계 기억";
   if (input.withdrawalRisk >= 0.48 && input.protectiveAverage < 0.62) {
-    return `Stress may still move toward distance before repair. BELIFE should treat this as ${evidence}, not proof, and slow the relationship rhythm. Confidence ${percent(input.confidence)}.`;
+    return `스트레스가 회복 전에 거리두기로 이동할 수 있습니다. BELIFE는 이것을 증명이 아니라 ${evidence} 기반 가설로 보고 관계 리듬을 늦춥니다. 신뢰도 ${percent(input.confidence)}.`;
   }
   if (input.protectiveAverage >= 0.62) {
-    return `Dyadic coping capacity is forming: stress can be named, shared, and repaired when the pace stays explicit. Evidence is ${evidence}. Confidence ${percent(input.confidence)}.`;
+    return `관계 대처 능력이 형성되고 있습니다. 속도가 명시적일 때 스트레스를 말하고, 나누고, 회복할 수 있습니다. 근거는 ${evidence}입니다. 신뢰도 ${percent(input.confidence)}.`;
   }
-  return `Dyadic coping is still a working hypothesis. The next signal is whether pressure leads to clarification and repair, not avoidance. Evidence is ${evidence}. Confidence ${percent(input.confidence)}.`;
+  return `관계 대처는 아직 작업 가설입니다. 다음 신호는 압박이 회피가 아니라 설명과 회복으로 이어지는지입니다. 근거는 ${evidence}입니다. 신뢰도 ${percent(input.confidence)}.`;
 }
 
 function buildVsa(input: {
@@ -257,27 +257,27 @@ function buildVsa(input: {
 }): DyadicCopingReport["vsa"] {
   const vulnerabilities = [
     input.currentStress >= 0.55
-      ? `Current stress load is elevated at ${percent(input.currentStress)}, so the relationship needs slower pacing under pressure.`
-      : `Current stress load is moderate at ${percent(input.currentStress)} and still worth naming before it spikes.`,
+      ? `현재 스트레스 부하가 ${percent(input.currentStress)}로 높아, 압박 속에서는 관계 속도를 늦출 필요가 있습니다.`
+      : `현재 스트레스 부하는 ${percent(input.currentStress)}로 중간 수준이며, 커지기 전에 말해 둘 가치가 있습니다.`,
     input.currentWithdrawal >= 0.48
-      ? `Social withdrawal is a visible vulnerability at ${percent(input.currentWithdrawal)}.`
-      : `Withdrawal is not the dominant signal yet, but distance should still be interpreted carefully.`,
+      ? `사회적 거리두기가 ${percent(input.currentWithdrawal)}로 보이는 취약성입니다.`
+      : `거리두기가 아직 지배적인 신호는 아니지만, 거리는 조심스럽게 해석해야 합니다.`,
     input.preview.conflictCompatibility < 0.5
-      ? `Conflict fit is still building at ${percent(input.preview.conflictCompatibility)}.`
-      : `Conflict fit has enough signal to test repair gently at ${percent(input.preview.conflictCompatibility)}.`,
+      ? `갈등 적합도는 ${percent(input.preview.conflictCompatibility)}로 아직 형성 중입니다.`
+      : `갈등 적합도는 ${percent(input.preview.conflictCompatibility)}로, 회복을 부드럽게 시험할 만큼의 신호가 있습니다.`,
   ];
 
   const stressfulEvents = [
-    `Pressure scenario disengagement risk ${percent(input.pressure.state.disengagementRisk)}.`,
-    `Misunderstanding irritation ${percent(input.misunderstanding.state.irritation)}.`,
-    `Longitudinal drift risk ${percent(input.drift.state.disengagementRisk)}.`,
+    `압박 시나리오 이탈 위험 ${percent(input.pressure.state.disengagementRisk)}.`,
+    `오해 상황 자극도 ${percent(input.misunderstanding.state.irritation)}.`,
+    `장기적 흔들림 위험 ${percent(input.drift.state.disengagementRisk)}.`,
   ];
-  if (input.state?.drivers.length) stressfulEvents.push(`Current state drivers: ${input.state.drivers.slice(0, 2).join(", ")}.`);
+  if (input.state?.drivers.length) stressfulEvents.push(`현재 상태 동인: ${input.state.drivers.slice(0, 2).join(", ")}.`);
 
   const adaptiveProcesses = [
-    `Repair willingness under stress ${percent(input.repair.state.repairWillingness)}.`,
-    `Observed relationship repair evidence ${percent(input.memorySignals.repairEvidence)}.`,
-    `Withdrawal risk to contain ${percent(input.withdrawalRisk)}.`,
+    `스트레스 속 회복 의지 ${percent(input.repair.state.repairWillingness)}.`,
+    `관찰된 관계 회복 근거 ${percent(input.memorySignals.repairEvidence)}.`,
+    `다뤄야 할 거리두기 위험 ${percent(input.withdrawalRisk)}.`,
   ];
 
   return {
@@ -295,15 +295,15 @@ function buildStressSignals(input: {
   withdrawalRisk: number;
 }) {
   return [
-    `Scenario stress load ${percent(input.scenarioStress)}.`,
-    `Pressure irritation ${percent(input.pressure.state.irritation)} and disengagement ${percent(
+    `시나리오 스트레스 부하 ${percent(input.scenarioStress)}.`,
+    `압박 상황 자극도 ${percent(input.pressure.state.irritation)}와 이탈 위험 ${percent(
       input.pressure.state.disengagementRisk,
     )}.`,
-    `Misunderstanding disengagement ${percent(input.misunderstanding.state.disengagementRisk)}.`,
+    `오해 상황 이탈 위험 ${percent(input.misunderstanding.state.disengagementRisk)}.`,
     input.state
-      ? `Current support need ${percent(input.state.supportNeed)} with mental-state confidence ${percent(input.state.confidence)}.`
-      : "No current mental-state estimate is available, so stress signals lean on relationship simulations.",
-    `Withdrawal risk ${percent(input.withdrawalRisk)}.`,
+      ? `현재 지지 필요 ${percent(input.state.supportNeed)}, 멘탈 상태 신뢰도 ${percent(input.state.confidence)}.`
+      : "현재 멘탈 상태 추정이 없어 스트레스 신호는 관계 시뮬레이션에 더 기대고 있습니다.",
+    `거리두기 위험 ${percent(input.withdrawalRisk)}.`,
   ];
 }
 
@@ -313,11 +313,11 @@ function buildSupportMoves(axes: DyadicCopingAxis[], memorySignals: Relationship
     .sort((left, right) => left.score - right.score)[0];
   const moves = [
     weakestProtective.nextObservation,
-    "Use a two-step check: first reflect the pressure, then ask what kind of support would actually help.",
-    "After a tense moment, record whether repair happened through clarification, empathy, or a concrete next behavior.",
+    "두 단계로 확인하세요. 먼저 압박을 반영하고, 실제로 도움이 되는 지지가 무엇인지 묻습니다.",
+    "긴장 뒤에는 설명, 공감, 구체적 다음 행동 중 무엇으로 회복이 일어났는지 기록하세요.",
   ];
   if (memorySignals.confidence < 0.35) {
-    moves.push("Add one consented relationship memory note before treating this coping lens as stable.");
+    moves.push("이 대처 렌즈를 안정적으로 보기 전에 동의한 관계 기억 메모를 하나 더 추가하세요.");
   }
   return moves;
 }
@@ -331,17 +331,17 @@ function buildRiskSignals(input: {
 }) {
   const signals = [
     input.withdrawalRisk >= 0.55
-      ? "Distance may become the first coping move when pressure rises."
-      : "Withdrawal is not dominant, but it should be checked before interpreting distance as rejection.",
+      ? "압박이 올라갈 때 거리두기가 첫 번째 대처가 될 수 있습니다."
+      : "거리두기가 지배적이지는 않지만, 거리를 거절로 해석하기 전에 확인해야 합니다.",
     input.memorySignals.repairEvidence < 0.35
-      ? "Repair evidence is still thin; warmth alone should not be treated as stability."
-      : "Repair evidence exists, but it still needs consistency under different stress levels.",
+      ? "회복 근거가 아직 얇습니다. 따뜻함만으로 안정성을 판단하지 마세요."
+      : "회복 근거는 있지만, 다른 스트레스 수준에서도 일관성이 필요합니다.",
     input.pressure.state.irritation >= 0.45
-      ? "Pressure scenarios can raise irritation enough to distort the next response."
-      : "Pressure irritation is manageable if support is named early.",
+      ? "압박 시나리오는 다음 반응을 왜곡할 만큼 자극도를 높일 수 있습니다."
+      : "지지를 일찍 말하면 압박 자극도는 관리 가능한 수준입니다.",
   ];
   if ((input.state?.emotionalVolatility ?? 0) >= 0.55) {
-    signals.push("Current emotional volatility could make neutral silence feel more threatening than it is.");
+    signals.push("현재 정서 변동성 때문에 중립적인 침묵도 실제보다 더 위협적으로 느껴질 수 있습니다.");
   }
   return signals;
 }
@@ -352,9 +352,9 @@ function buildNextConversationMove(axes: DyadicCopingAxis[]) {
     .filter((axisItem) => axisItem.polarity === "protective")
     .sort((left, right) => left.score - right.score)[0];
   if (withdrawal && withdrawal.score >= 0.48) {
-    return "Start with: 'When pressure rises, I sometimes go quiet. Can we agree how to pause and come back without guessing?'";
+    return "이렇게 시작하세요: '압박이 올라오면 내가 조용해질 때가 있어. 서로 추측하지 않도록 멈췄다가 돌아오는 방식을 정해볼 수 있을까?'";
   }
-  return `Start with the weakest coping axis: ${weakestProtective.nextObservation}`;
+  return `가장 약한 대처 축부터 시작하세요: ${weakestProtective.nextObservation}`;
 }
 
 function scenarioByType(preview: CompatibilityAxes, type: ConnectionScenarioPreview["type"]) {

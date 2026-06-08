@@ -35,61 +35,58 @@ export function buildConnectionQualityLens(input: {
   const axes: ConnectionQualityAxis[] = [
     qualityAxis({
       key: "sharedReality",
-      label: "Shared Reality",
+      label: "공유 현실감",
       score:
         preview.hiddenEdge.sharedReality * 0.38 +
         preview.structuralSimilarity * 0.22 +
         memorySignals.averageQuality * 0.16 +
         memorySignals.reciprocity * 0.14 +
         memorySignals.confidence * 0.1,
-      interpretation:
-        "How much the relationship can feel like both sides are looking at the same meaning, context, and reality.",
+      interpretation: "두 사람이 같은 의미, 맥락, 현실감을 보고 있다고 느낄 수 있는 정도입니다.",
       evidence: [
-        `Latent shared reality ${percent(preview.hiddenEdge.sharedReality)}`,
-        `Structural similarity ${percent(preview.structuralSimilarity)}`,
-        `Observed pair quality ${percent(memorySignals.averageQuality)}`,
+        `잠재 공유 현실감 ${percent(preview.hiddenEdge.sharedReality)}`,
+        `구조적 유사성 ${percent(preview.structuralSimilarity)}`,
+        `관찰된 관계 질 ${percent(memorySignals.averageQuality)}`,
       ],
-      nextObservation: "In the next meaningful conversation, watch whether the other side reflects your actual meaning before moving to advice.",
+      nextObservation: "다음 의미 있는 대화에서 상대가 조언으로 넘어가기 전에 내 실제 의미를 먼저 반영하는지 보세요.",
     }),
     qualityAxis({
       key: "partnerResponsiveness",
-      label: "Partner Responsiveness",
+      label: "상대 반응성",
       score:
         preview.hiddenEdge.responsiveness * 0.32 +
         preview.dialogueCompatibility * 0.2 +
         memorySignals.reciprocity * 0.18 +
         memorySignals.repairEvidence * 0.16 +
         memorySignals.emotionalSafety * 0.14,
-      interpretation:
-        "How clearly the interaction shows being understood, valued, and responded to with appropriate pacing.",
+      interpretation: "이해받고, 존중받고, 적절한 속도로 응답받는 느낌이 얼마나 분명한지 봅니다.",
       evidence: [
-        `Responsiveness ${percent(preview.hiddenEdge.responsiveness)}`,
-        `Dialogue fit ${percent(preview.dialogueCompatibility)}`,
-        `Observed repair ${percent(memorySignals.repairEvidence)}`,
+        `반응성 ${percent(preview.hiddenEdge.responsiveness)}`,
+        `대화 적합도 ${percent(preview.dialogueCompatibility)}`,
+        `관찰된 회복 근거 ${percent(memorySignals.repairEvidence)}`,
       ],
-      nextObservation: "Name one small need or boundary and observe whether the response becomes more specific, calmer, and more mutual.",
+      nextObservation: "작은 필요나 경계를 하나 말한 뒤, 응답이 더 구체적이고 차분하며 상호적으로 바뀌는지 보세요.",
     }),
     qualityAxis({
       key: "participantInterest",
-      label: "Participant Interest",
+      label: "상호 관심",
       score:
         scenarioCuriosity * 0.28 +
         memorySignals.averageQuality * 0.24 +
         memorySignals.reciprocity * 0.22 +
         preview.complementarity * 0.14 +
         preview.hiddenEdge.modeScores.friendship * 0.12,
-      interpretation:
-        "Whether interest is sustained and mutual enough for the relationship to keep selecting itself over time.",
+      interpretation: "관계가 시간이 지나도 스스로 다시 선택될 만큼 관심이 지속적이고 상호적인지 봅니다.",
       evidence: [
-        `Scenario curiosity ${percent(scenarioCuriosity)}`,
-        `Reciprocity ${percent(memorySignals.reciprocity)}`,
-        `Friendship mode ${percent(preview.hiddenEdge.modeScores.friendship)}`,
+        `시나리오 호기심 ${percent(scenarioCuriosity)}`,
+        `상호성 ${percent(memorySignals.reciprocity)}`,
+        `우정 모드 ${percent(preview.hiddenEdge.modeScores.friendship)}`,
       ],
-      nextObservation: "Look for repeated initiative from both sides, not only intensity in one good interaction.",
+      nextObservation: "한 번의 강한 순간보다 양쪽에서 반복적으로 주도성이 나오는지 보세요.",
     }),
     qualityAxis({
       key: "affectiveExperience",
-      label: "Affective Experience",
+      label: "정서 경험",
       score:
         preview.emotionalSafety * 0.26 +
         memorySignals.emotionalSafety * 0.26 +
@@ -97,14 +94,13 @@ export function buildConnectionQualityLens(input: {
         preview.repairPotential * 0.12 +
         repairScenario * 0.1 +
         (1 - memorySignals.riskPenalty) * 0.1,
-      interpretation:
-        "Whether the emotional tone feels safe, natural, and recoverable when closeness or pressure increases.",
+      interpretation: "친밀감이나 압박이 커질 때 감정 톤이 안전하고 자연스럽고 회복 가능한지 봅니다.",
       evidence: [
-        `Emotional safety ${percent(preview.emotionalSafety)}`,
-        `Observed safety ${percent(memorySignals.emotionalSafety)}`,
-        `Risk inverse ${percent(1 - memorySignals.riskPenalty)}`,
+        `정서적 안전감 ${percent(preview.emotionalSafety)}`,
+        `관찰된 안전감 ${percent(memorySignals.emotionalSafety)}`,
+        `위험 역지표 ${percent(1 - memorySignals.riskPenalty)}`,
       ],
-      nextObservation: "Under mild pressure, notice whether your body feels more settled after the interaction or more guarded and compressed.",
+      nextObservation: "약한 압박 뒤에 몸이 더 안정되는지, 아니면 더 경계하고 움츠러드는지 살펴보세요.",
     }),
   ];
 
@@ -121,7 +117,7 @@ export function buildConnectionQualityLens(input: {
     confidence,
     summary: buildQualitySummary(strongestAxis, weakestAxis, confidence, relationshipMemory.totalInteractions),
     guardrail:
-      "This CDCS-inspired lens is private interaction-quality reflection for BELIFE self-understanding, not public matching, diagnosis, or deterministic relationship prediction.",
+      "이 연결 품질 렌즈는 BELIFE의 개인적 자기 이해를 위한 비공개 상호작용 해석입니다. 공개 매칭, 진단, 결정론적 관계 예측이 아닙니다.",
     memoryCoverage: {
       pairCount: relationshipMemory.pairCount,
       totalInteractions: relationshipMemory.totalInteractions,
@@ -180,9 +176,9 @@ function buildQualitySummary(
 ) {
   const evidencePhrase =
     totalInteractions >= 3
-      ? "relationship memory now has repeated interaction evidence"
-      : "relationship memory is still early, so BELIFE keeps this as a working hypothesis";
-  return `${strongestAxis.label} is currently the clearest quality signal, while ${weakestAxis.label} needs the next observation. ${evidencePhrase}. Confidence ${percent(confidence)}.`;
+      ? "반복된 관계 기억 근거가 쌓이고 있습니다"
+      : "관계 기억이 아직 초기라 BELIFE는 이것을 작업 가설로만 둡니다";
+  return `현재 가장 또렷한 품질 신호는 ${strongestAxis.label}이고, 다음 관찰이 필요한 축은 ${weakestAxis.label}입니다. ${evidencePhrase}. 신뢰도 ${percent(confidence)}.`;
 }
 
 function buildComfortSources(
@@ -191,13 +187,13 @@ function buildComfortSources(
   strongestAxis: ConnectionQualityAxis,
 ) {
   return [
-    `${strongestAxis.label} is the strongest CDCS-inspired signal at ${percent(strongestAxis.score)}.`,
-    `Emotional safety combines latent fit ${percent(preview.emotionalSafety)} with observed pair safety ${percent(
+    `${strongestAxis.label}이 가장 강한 품질 신호로 보이며 점수는 ${percent(strongestAxis.score)}입니다.`,
+    `정서적 안전감은 잠재 적합도 ${percent(preview.emotionalSafety)}와 관찰된 관계 안전감 ${percent(
       memorySignals.emotionalSafety,
-    )}.`,
+    )}를 함께 봅니다.`,
     memorySignals.strongestPair
-      ? `${memorySignals.strongestPair.personLabel} has the strongest current pair evidence.`
-      : "No named pair has enough repeated evidence yet, so comfort should be tested slowly.",
+      ? `${memorySignals.strongestPair.personLabel} 관계에서 현재 가장 강한 근거가 보입니다.`
+      : "아직 반복 근거가 충분한 특정 관계가 없어, 편안함은 천천히 검증해야 합니다.",
   ];
 }
 
@@ -207,40 +203,37 @@ function buildTensionSources(
   weakestAxis: ConnectionQualityAxis,
 ) {
   return [
-    `${weakestAxis.label} is the most useful tension lens to observe next.`,
-    `Conflict fit ${percent(preview.conflictCompatibility)} and repair memory ${percent(
+    `${weakestAxis.label}은 다음에 관찰할 긴장 렌즈로 가장 유용합니다.`,
+    `갈등 적합도 ${percent(preview.conflictCompatibility)}와 회복 기억 ${percent(
       memorySignals.repairEvidence,
-    )} set the current recovery ceiling.`,
+    )}가 현재 회복 가능성의 상한을 만듭니다.`,
     memorySignals.riskiestPair
-      ? `${memorySignals.riskiestPair.personLabel} carries the highest private risk signal.`
-      : "The main tension source is missing evidence, not proof that a relationship is unsafe.",
+      ? `${memorySignals.riskiestPair.personLabel} 관계에 가장 높은 개인 위험 신호가 있습니다.`
+      : "지금의 긴장은 위험의 증거라기보다 아직 비어 있는 근거에서 옵니다.",
   ];
 }
 
 function buildHealthyPattern(strongestAxis: ConnectionQualityAxis, memorySignals: RelationshipMemorySignals) {
   if (memorySignals.repairEvidence >= 0.45) {
-    return `A healthier pattern is emerging when ${strongestAxis.label.toLowerCase()} is paired with explicit repair after small misunderstandings.`;
+    return `더 건강한 패턴은 ${strongestAxis.label}이 작은 오해 뒤의 명시적 회복과 함께 나타날 때입니다.`;
   }
-  return `A healthier pattern would keep ${strongestAxis.label.toLowerCase()} while adding more observable reciprocity and repair before increasing closeness.`;
+  return `더 건강한 패턴은 ${strongestAxis.label}을 유지하되, 친밀도를 키우기 전에 상호성과 회복 근거를 더 확인하는 것입니다.`;
 }
 
 function buildRiskyPattern(weakestAxis: ConnectionQualityAxis, memorySignals: RelationshipMemorySignals) {
   if (memorySignals.riskPenalty >= 0.58) {
-    return `The risky pattern is repeated intensity without enough ${weakestAxis.label.toLowerCase()}, especially when repair is missing after tension.`;
+    return `위험한 패턴은 ${weakestAxis.label}이 충분하지 않은 상태에서 강도만 반복되고, 긴장 뒤 회복이 빠지는 경우입니다.`;
   }
-  return `The risky pattern is over-interpreting early warmth as stable connection before ${weakestAxis.label.toLowerCase()} has repeated evidence.`;
+  return `위험한 패턴은 ${weakestAxis.label}의 반복 근거가 생기기 전에 초기의 따뜻함을 안정적 연결로 과해석하는 것입니다.`;
 }
 
 function buildMicroExperiments(axes: ConnectionQualityAxis[], totalInteractions: number) {
   const weakest = [...axes].sort((left, right) => left.score - right.score)[0];
-  const base = [
-    weakest.nextObservation,
-    "After one interaction, record whether care, initiative, and repair moved both ways.",
-  ];
+  const base = [weakest.nextObservation, "상호작용 한 번 뒤에 돌봄, 주도성, 회복이 양방향으로 움직였는지 기록하세요."];
   if (totalInteractions < 2) {
-    base.push("Add one consented relationship memory note before treating this lens as stable.");
+    base.push("이 렌즈를 안정적인 해석으로 보기 전에 동의한 관계 기억 메모를 하나 더 추가하세요.");
   } else {
-    base.push("Compare two recent interactions and look for the repeated quality, not the single best moment.");
+    base.push("최근 두 번의 상호작용을 비교하고, 가장 좋았던 한 순간보다 반복된 품질을 보세요.");
   }
   return base;
 }

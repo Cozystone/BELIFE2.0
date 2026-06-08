@@ -20,12 +20,14 @@ export const relationshipMemoryKinds = [
 ] as const satisfies readonly [RelationshipMemoryKind, ...RelationshipMemoryKind[]];
 
 export function relationshipPairKey(label: string) {
-  return label
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9가-힣]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64) || "unnamed-relationship";
+  return (
+    label
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9가-힣]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 64) || "unnamed-relationship"
+  );
 }
 
 export function relationshipPersonTag(label: string) {
@@ -48,15 +50,15 @@ export function relationshipMemoryChunk(userId: string, input: RelationshipMemor
   return {
     userId,
     content: [
-      "User-consented pairwise relationship memory.",
-      `Person/context: ${personLabel}`,
-      `Pair key: ${pairKey}`,
-      `Relationship type: ${input.relationshipType}`,
-      `Interaction quality: ${quality.toFixed(2)}`,
-      `Emotional safety: ${safety.toFixed(2)}`,
-      `Reciprocity: ${reciprocity.toFixed(2)}`,
-      `Repair attempted: ${repair}`,
-      "Interaction note:",
+      "사용자가 동의한 관계별 개인 기억입니다.",
+      `사람/맥락: ${personLabel}`,
+      `관계 키: ${pairKey}`,
+      `관계 유형: ${input.relationshipType}`,
+      `상호작용의 질: ${quality.toFixed(2)}`,
+      `정서적 안전감: ${safety.toFixed(2)}`,
+      `상호성: ${reciprocity.toFixed(2)}`,
+      `회복 시도: ${repair}`,
+      "상호작용 메모:",
       input.interactionNote.trim(),
     ].join("\n"),
     kind: "relationship",
@@ -101,7 +103,7 @@ export function buildRelationshipMemoryReport(
     pairCount: pairs.length,
     totalInteractions: relationshipChunks.length,
     guardrail:
-      "Relationship memory is private pairwise context for self-understanding, not public matching, diagnosis, or a score of another person.",
+      "관계 기억은 자기 이해를 위한 개인별 맥락입니다. 공개 매칭, 진단, 상대에 대한 점수화로 사용하지 않습니다.",
     pairs,
   };
 }
@@ -169,11 +171,12 @@ function relationshipSummary(input: {
   repairEvidence: number;
   riskLevel: RelationshipPairMemorySummary["riskLevel"];
 }) {
-  const safety = input.emotionalSafety >= 0.62 ? "safe enough to observe more closely" : "still needs slower safety checks";
-  const repair = input.repairEvidence >= 0.35 ? "repair evidence is visible" : "repair evidence is still thin";
-  return `${input.personLabel} is ${input.riskLevel}-risk private relationship memory: quality ${Math.round(
+  const riskLabel = input.riskLevel === "high" ? "주의가 큰" : input.riskLevel === "moderate" ? "천천히 확인할" : "비교적 안정적인";
+  const safety = input.emotionalSafety >= 0.62 ? "더 가까이 관찰해도 될 만큼 안전감이 보입니다" : "안전감을 더 천천히 확인해야 합니다";
+  const repair = input.repairEvidence >= 0.35 ? "회복 근거가 보입니다" : "회복 근거는 아직 얇습니다";
+  return `${input.personLabel} 관계 기억은 ${riskLabel} 패턴입니다. 상호작용의 질 ${Math.round(
     input.averageQuality * 100,
-  )}, safety ${Math.round(input.emotionalSafety * 100)}, reciprocity ${Math.round(input.reciprocity * 100)}. It looks ${safety}; ${repair}.`;
+  )}, 안전감 ${Math.round(input.emotionalSafety * 100)}, 상호성 ${Math.round(input.reciprocity * 100)}입니다. ${safety}; ${repair}.`;
 }
 
 function relationshipSignals(input: {
@@ -184,11 +187,11 @@ function relationshipSignals(input: {
   latest: MemoryChunk;
 }) {
   return [
-    `Average interaction quality ${Math.round(input.averageQuality * 100)}`,
-    `Emotional safety ${Math.round(input.emotionalSafety * 100)}`,
-    `Reciprocity ${Math.round(input.reciprocity * 100)}`,
-    `Repair evidence ${Math.round(input.repairEvidence * 100)}`,
-    `Latest note: ${compactText(input.latest.content.split("Interaction note:").at(-1)?.trim() ?? input.latest.content, 110)}`,
+    `평균 상호작용의 질 ${Math.round(input.averageQuality * 100)}`,
+    `정서적 안전감 ${Math.round(input.emotionalSafety * 100)}`,
+    `상호성 ${Math.round(input.reciprocity * 100)}`,
+    `회복 근거 ${Math.round(input.repairEvidence * 100)}`,
+    `최근 메모: ${compactText(input.latest.content.split("상호작용 메모:").at(-1)?.trim() ?? input.latest.content, 110)}`,
   ];
 }
 
@@ -199,15 +202,15 @@ function relationshipNextObservation(input: {
   repairEvidence: number;
 }) {
   if (input.riskLevel === "high") {
-    return "Keep the next interaction small and watch whether safety improves after a clear boundary or need is named.";
+    return "다음 상호작용은 작게 유지하고, 경계나 필요를 말한 뒤 안전감이 회복되는지 보세요.";
   }
   if (input.repairEvidence < 0.2) {
-    return "Before increasing closeness, observe one small misunderstanding and whether both sides can repair without escalation.";
+    return "가까워지기 전에 작은 오해 하나를 두고 양쪽이 커지지 않게 회복할 수 있는지 관찰하세요.";
   }
   if (input.reciprocity < 0.48) {
-    return "Watch whether care, attention, and initiative move both ways across more than one interaction.";
+    return "돌봄, 주의, 주도성이 한쪽으로만 흐르지 않고 여러 번 왕복되는지 보세요.";
   }
-  return "The next useful signal is consistency: does the same safety and repair rhythm repeat under mild pressure?";
+  return "다음 유용한 신호는 일관성입니다. 약한 압박 속에서도 같은 안전감과 회복 리듬이 반복되는지 확인하세요.";
 }
 
 function tagValue(tags: string[], key: string) {

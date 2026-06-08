@@ -321,13 +321,13 @@ function edgeCertainty(source: OntologyNode, target: OntologyNode, confidence: n
 
 function relationLabel(relation: OntologyGraphRelation) {
   const labels: Record<OntologyGraphRelation, string> = {
-    anchors: "anchors",
-    drives: "drives",
-    shapes: "shapes",
-    amplifies: "amplifies",
-    needs_recovery: "needs recovery",
-    orients_connection: "orients connection",
-    co_occurs: "co-occurs",
+    anchors: "기준이 됨",
+    drives: "방향을 밀어줌",
+    shapes: "표현을 형성",
+    amplifies: "강도를 키움",
+    needs_recovery: "회복 단서 필요",
+    orients_connection: "관계 방향을 정함",
+    co_occurs: "함께 관찰됨",
   };
   return labels[relation];
 }

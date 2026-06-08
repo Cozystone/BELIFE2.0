@@ -32,7 +32,7 @@ describe("relationship memory", () => {
       { ...second, createdAt: "2026-01-02T00:00:00.000Z" },
     ]);
 
-    expect(report.guardrail).toContain("not public matching");
+    expect(report.guardrail).toContain("공개 매칭");
     expect(report.pairCount).toBe(1);
     expect(report.totalInteractions).toBe(2);
     expect(report.pairs[0].personLabel).toBe("Alex");
@@ -71,6 +71,6 @@ describe("relationship memory", () => {
     expect(report.pairCount).toBe(1);
     expect(report.pairs[0].personLabel).toBe("Taylor");
     expect(report.pairs[0].riskLevel).toBe("high");
-    expect(report.pairs[0].summary).toContain("high-risk");
+    expect(report.pairs[0].summary).toContain("주의가 큰");
   });
 });

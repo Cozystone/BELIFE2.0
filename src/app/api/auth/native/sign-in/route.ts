@@ -9,8 +9,8 @@ const signInSchema = z.object({
 });
 
 function handledSignInError(error: unknown) {
-  if (error instanceof z.ZodError) return "Please check your email and password.";
-  if (error instanceof Error && error.message === "Invalid email or password.") return error.message;
+  if (error instanceof z.ZodError) return "이메일과 비밀번호를 확인해 주세요.";
+  if (error instanceof Error && error.message === "이메일 또는 비밀번호가 올바르지 않습니다.") return error.message;
   return null;
 }
 
@@ -25,6 +25,6 @@ export async function POST(request: Request) {
     }
 
     console.error("Native sign-in failed", error);
-    return Response.json({ ok: false, error: "Unable to sign in." }, { status: 500 });
+    return Response.json({ ok: false, error: "로그인할 수 없습니다." }, { status: 500 });
   }
 }

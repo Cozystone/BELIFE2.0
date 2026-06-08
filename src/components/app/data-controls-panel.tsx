@@ -41,7 +41,7 @@ export function DataControlsPanel() {
 
   return (
     <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
-      <h2 className="font-medium">Data Controls</h2>
+      <h2 className="font-medium">데이터 제어</h2>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <a
           href="/api/memory/export"
@@ -51,22 +51,22 @@ export function DataControlsPanel() {
             <Download className="h-4 w-4" />
           </span>
           <span>
-            <span className="block text-sm font-medium text-zinc-100">Export BELIFE data</span>
+            <span className="block text-sm font-medium text-zinc-100">BELIFE 데이터 내보내기</span>
             <span className="mt-2 block text-sm leading-6 text-zinc-500">
-              프로필, 대화, 기억 조각, 온톨로지, 상태 추정, 관계 프리뷰를 JSON으로 내려받습니다.
+              프로필, 저장된 기억 조각, 온톨로지, 상태 추정, 관계 프리뷰를 JSON으로 내려받습니다.
             </span>
           </span>
         </a>
 
-        <div className="rounded-md border border-orange-300/15 bg-orange-500/5 p-3">
+        <div className="rounded-md border border-cyan-300/15 bg-cyan-500/5 p-3">
           <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-orange-500/10 text-orange-200">
+            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-cyan-500/10 text-cyan-200">
               <RotateCcw className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-sm font-medium text-zinc-100">Reset BELIFE memory</p>
+              <p className="text-sm font-medium text-zinc-100">BELIFE 기억 초기화</p>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                계정은 유지하고 BELIFE가 쌓은 앱 데이터와 해석 구조를 초기화합니다.
+                계정은 유지하고 BELIFE가 쌓은 데이터와 해석 구조를 초기화합니다.
               </p>
             </div>
           </div>
@@ -75,13 +75,13 @@ export function DataControlsPanel() {
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
               placeholder="RESET 입력"
-              className="h-10 rounded-md border border-white/[0.1] bg-black px-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-orange-400/60"
+              className="h-10 rounded-md border border-white/[0.1] bg-slate-950 px-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-cyan-400/60"
             />
             <Button type="button" variant="danger" onClick={resetMemory} disabled={!canReset || resetting}>
-              Reset
+              초기화
             </Button>
           </div>
-          {status ? <p className="mt-3 text-sm text-orange-200">{status}</p> : null}
+          {status ? <p className="mt-3 text-sm text-cyan-200">{status}</p> : null}
         </div>
       </div>
     </section>

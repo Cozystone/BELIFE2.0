@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     return Response.json(result);
   } catch (error) {
     return Response.json(
-      { error: error instanceof Error ? error.message : "Unable to update privacy preferences." },
+      { error: error instanceof Error ? error.message : "프라이버시 설정을 업데이트하지 못했습니다." },
       { status: 400 },
     );
   }

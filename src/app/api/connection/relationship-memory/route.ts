@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       return Response.json({ error: error.message, code: error.code }, { status: error.status });
     }
     return Response.json(
-      { error: error instanceof Error ? error.message : "Unable to save relationship memory." },
+      { error: error instanceof Error ? error.message : "관계 기억을 저장하지 못했습니다." },
       { status: 400 },
     );
   }

@@ -67,7 +67,7 @@ export function getOllamaRuntimeDiagnostics(health?: OllamaHealth): OllamaRuntim
       ? `${endpoint} is reachable.`
       : configuredForProduction
         ? health?.error || "Ollama endpoint is configured but not reachable."
-        : "OLLAMA_BASE_URL is missing; BELIFE uses deterministic fallback on Vercel.",
+        : "OLLAMA_BASE_URL이 없어 Vercel에서 결정론적 fallback을 사용합니다.",
   };
 }
 
@@ -78,7 +78,7 @@ export async function getOllamaHealth(): Promise<OllamaHealth> {
       ok: false,
       baseUrl,
       models: [],
-      error: "OLLAMA_BASE_URL is required for production AI calls on Vercel.",
+      error: "Vercel 프로덕션 AI 호출에는 OLLAMA_BASE_URL이 필요합니다.",
     };
   }
   const controller = new AbortController();
@@ -99,7 +99,7 @@ export async function getOllamaHealth(): Promise<OllamaHealth> {
       ok: false,
       baseUrl,
       models: [],
-      error: error instanceof Error ? error.message : "Unable to reach Ollama",
+      error: error instanceof Error ? error.message : "Ollama에 연결하지 못했습니다.",
     };
   } finally {
     clearTimeout(timer);
@@ -108,7 +108,7 @@ export async function getOllamaHealth(): Promise<OllamaHealth> {
 
 export async function ollamaGenerate(options: OllamaGenerateOptions) {
   if (shouldSkipOllamaOnVercel()) {
-    throw new Error("OLLAMA_BASE_URL is required for production AI calls on Vercel.");
+    throw new Error("Vercel 프로덕션 AI 호출에는 OLLAMA_BASE_URL이 필요합니다.");
   }
 
   const baseUrl = getOllamaBaseUrl().replace(/\/$/, "");

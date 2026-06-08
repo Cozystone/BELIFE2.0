@@ -3,11 +3,11 @@ import { cn, toPercent } from "@/lib/utils";
 export function ScoreBar({
   label,
   value,
-  tone = "orange",
+  tone = "cyan",
 }: {
   label: string;
   value: number;
-  tone?: "orange" | "teal" | "zinc";
+  tone?: "cyan" | "teal" | "zinc";
 }) {
   const percent = value > 1 ? Math.round(value) : toPercent(value);
   return (
@@ -20,7 +20,7 @@ export function ScoreBar({
         <div
           className={cn(
             "h-full rounded-sm",
-            tone === "orange" && "bg-orange-500",
+            tone === "cyan" && "bg-cyan-500",
             tone === "teal" && "bg-teal-400",
             tone === "zinc" && "bg-zinc-300",
           )}

@@ -158,7 +158,7 @@ export function simulateConnectionScenario(
   );
   const adjustedScenario: ConnectionScenarioPreview = {
     ...scenario,
-    title: `${scenario.title} - Custom`,
+    title: `${scenario.title} - 사용자 설정`,
     likelyDynamic: buildCustomLikelyDynamic(normalizedInput, scenario, adjustedState, stressLoad),
     supportMove: buildCustomSupportMove(normalizedInput, preview, scenario),
     riskSignal: buildCustomRiskSignal(normalizedInput, scenario, adjustedState),
@@ -211,7 +211,7 @@ export function buildConnectionCandidateFilteringReport(
     generatedAt: new Date().toISOString(),
     confidence: preview.relationshipReport.confidence,
     guardrail:
-      "These are private BELIFE relationship candidate filters, not public matching suggestions, rankings of people, or deterministic predictions.",
+      "이 후보 필터는 BELIFE 내부 관계 성찰용입니다. 공개 매칭 제안, 사람 순위, 결정론적 예측이 아닙니다.",
     candidates,
     prioritized: candidates.filter((candidate) => candidate.status === "prioritize"),
     deferred: candidates.filter((candidate) => candidate.status === "defer"),
@@ -234,7 +234,7 @@ export function buildConnectionRerankingReport(
     edgeDelta,
     summary: rerankingSummary({ current, previous, edgeDelta, topMode: modeRanking[0], topSignal: signals[0] }),
     guardrail:
-      "This is private incremental reranking of BELIFE's latent relationship-fit model, not public matching, people ranking, or deterministic prediction.",
+      "이 리랭킹은 BELIFE 내부 잠재 관계 적합 모델의 점진적 갱신입니다. 공개 매칭, 사람 순위, 결정론적 예측이 아닙니다.",
     modeRanking,
     signals,
     nextStabilizers: rerankingStabilizers(current, signals),
@@ -254,7 +254,7 @@ function buildCandidateFilters(preview: CompatibilityAxes): ConnectionCandidateF
   return [
     candidateFilter({
       id: "grounded-reciprocity",
-      label: "Grounded reciprocity",
+      label: "근거 있는 상호성",
       relationshipMode: "friendship",
       scenarioType: "first_contact",
       fit: sharedSafety * 0.34 +
@@ -263,21 +263,21 @@ function buildCandidateFilters(preview: CompatibilityAxes): ConnectionCandidateF
         vulnerability.state.emotionalSafety * 0.2,
       risk: vulnerability.state.disengagementRisk * 0.46 + (1 - preview.emotionalSafety) * 0.34 + misunderstanding.state.irritation * 0.2,
       confidence: preview.relationshipReport.confidence,
-      why: "Prioritize people and contexts where response quality, pacing, and emotional safety are visible before intensity rises.",
+      why: "강도가 올라가기 전에 반응의 질, 속도 조절, 정서적 안전감이 보이는 사람과 맥락을 우선합니다.",
       evidence: [
-        `Friendship mode ${Math.round(preview.hiddenEdge.modeScores.friendship * 100)}`,
-        `Shared reality ${Math.round(preview.hiddenEdge.sharedReality * 100)}`,
-        `Vulnerability safety ${Math.round(vulnerability.state.emotionalSafety * 100)}`,
+        `우정 모드 ${Math.round(preview.hiddenEdge.modeScores.friendship * 100)}`,
+        `공유 현실감 ${Math.round(preview.hiddenEdge.sharedReality * 100)}`,
+        `취약성 공유 안전감 ${Math.round(vulnerability.state.emotionalSafety * 100)}`,
       ],
       riskSignals: [
-        "Early over-disclosure without reciprocal checking",
-        "Warmth that disappears when a small need is named",
+        "상호 확인 없이 너무 이른 과잉 자기노출",
+        "작은 필요를 말하면 사라지는 따뜻함",
       ],
-      nextObservation: "In the next close interaction, watch whether the other person reflects your meaning before offering a fix.",
+      nextObservation: "다음 가까운 상호작용에서 상대가 해결책을 말하기 전에 내 의미를 먼저 반영하는지 보세요.",
     }),
     candidateFilter({
       id: "repair-capable-challenger",
-      label: "Repair-capable challenger",
+      label: "회복 가능한 도전형",
       relationshipMode: "friendship",
       scenarioType: "repair_attempt",
       fit: repairCapacity * 0.42 +
@@ -286,21 +286,21 @@ function buildCandidateFilters(preview: CompatibilityAxes): ConnectionCandidateF
         repair.simulation.stability * 0.18,
       risk: misunderstanding.state.irritation * 0.38 + (1 - repairCapacity) * 0.36 + misunderstanding.state.disengagementRisk * 0.26,
       confidence: preview.relationshipReport.confidence,
-      why: "A useful challenging relationship is not low-friction; it is one where tension can be named and repaired.",
+      why: "좋은 도전 관계는 마찰이 없는 관계가 아니라, 긴장을 말하고 회복할 수 있는 관계입니다.",
       evidence: [
-        `Repair capacity ${Math.round(repairCapacity * 100)}`,
-        `Conflict fit ${Math.round(preview.conflictCompatibility * 100)}`,
-        `Repair stability ${Math.round(repair.simulation.stability * 100)}`,
+        `회복 역량 ${Math.round(repairCapacity * 100)}`,
+        `갈등 적합도 ${Math.round(preview.conflictCompatibility * 100)}`,
+        `회복 안정성 ${Math.round(repair.simulation.stability * 100)}`,
       ],
       riskSignals: [
-        "Debate becomes a test of worth",
-        "The other side avoids impact repair after disagreement",
+        "토론이 가치 증명 시험처럼 변함",
+        "이견 뒤 상대가 영향 회복을 피함",
       ],
-      nextObservation: "Notice whether disagreement ends with one concrete repair move or only with explanation.",
+      nextObservation: "이견이 구체적인 회복 행동 하나로 끝나는지, 설명만 남기는지 보세요.",
     }),
     candidateFilter({
       id: "structured-collaborator",
-      label: "Structured collaborator",
+      label: "구조화된 협업자",
       relationshipMode: "collaboration",
       scenarioType: "collaboration",
       fit: preview.hiddenEdge.modeScores.collaboration * 0.32 +
@@ -309,21 +309,21 @@ function buildCandidateFilters(preview: CompatibilityAxes): ConnectionCandidateF
         collaboration.simulation.stability * 0.22,
       risk: collaboration.state.irritation * 0.34 + (1 - preview.dialogueCompatibility) * 0.3 + drift.state.disengagementRisk * 0.2 + (1 - preview.complementarity) * 0.16,
       confidence: preview.relationshipReport.confidence,
-      why: "Collaboration should be filtered for pace, role clarity, and repair under pressure rather than surface enthusiasm.",
+      why: "협업은 표면적 열정보다 속도, 역할 명확성, 압박 속 회복 가능성으로 걸러야 합니다.",
       evidence: [
-        `Collaboration mode ${Math.round(preview.hiddenEdge.modeScores.collaboration * 100)}`,
-        `Complementarity ${Math.round(preview.complementarity * 100)}`,
-        `Scenario stability ${Math.round(collaboration.simulation.stability * 100)}`,
+        `협업 모드 ${Math.round(preview.hiddenEdge.modeScores.collaboration * 100)}`,
+        `상호 보완성 ${Math.round(preview.complementarity * 100)}`,
+        `시나리오 안정성 ${Math.round(collaboration.simulation.stability * 100)}`,
       ],
       riskSignals: [
-        "Ambiguous ownership of decisions",
-        "Fast agreement that avoids constraints",
+        "결정 책임이 모호함",
+        "제약을 피하는 빠른 동의",
       ],
-      nextObservation: "Before committing to shared work, test one small decision with explicit roles and a clear pace.",
+      nextObservation: "함께 일하기 전에 역할과 속도가 분명한 작은 결정 하나를 시험해 보세요.",
     }),
     candidateFilter({
       id: "steady-mentor",
-      label: "Steady mentor / guide",
+      label: "안정적인 멘토/가이드",
       relationshipMode: "mentorship",
       scenarioType: "emotional_vulnerability",
       fit: preview.hiddenEdge.modeScores.mentorship * 0.32 +
@@ -333,21 +333,21 @@ function buildCandidateFilters(preview: CompatibilityAxes): ConnectionCandidateF
         preview.emotionalSafety * 0.14,
       risk: (1 - vulnerability.state.emotionalSafety) * 0.36 + vulnerability.state.disengagementRisk * 0.28 + (1 - preview.hiddenEdge.responsiveness) * 0.2 + misunderstanding.state.irritation * 0.16,
       confidence: preview.relationshipReport.confidence,
-      why: "Mentorship fit depends on calm truth-telling and pacing, not authority or intensity.",
+      why: "멘토링 적합성은 권위나 강도가 아니라 차분한 사실 말하기와 속도 조절에 달려 있습니다.",
       evidence: [
-        `Mentorship mode ${Math.round(preview.hiddenEdge.modeScores.mentorship * 100)}`,
-        `Dialogue fit ${Math.round(preview.dialogueCompatibility * 100)}`,
-        `Openness under vulnerability ${Math.round(vulnerability.state.openness * 100)}`,
+        `멘토링 모드 ${Math.round(preview.hiddenEdge.modeScores.mentorship * 100)}`,
+        `대화 적합도 ${Math.round(preview.dialogueCompatibility * 100)}`,
+        `취약성 속 개방도 ${Math.round(vulnerability.state.openness * 100)}`,
       ],
       riskSignals: [
-        "Advice arrives before understanding",
-        "Authority replaces mutual consent",
+        "이해보다 조언이 먼저 옴",
+        "상호 동의가 권위로 대체됨",
       ],
-      nextObservation: "Ask for one bounded reflection and see whether it increases clarity without shrinking your agency.",
+      nextObservation: "경계가 분명한 피드백 하나를 요청하고, 내 주도성을 줄이지 않으면서 명료함이 늘어나는지 보세요.",
     }),
     candidateFilter({
       id: "high-intensity-low-repair",
-      label: "High-intensity, low-repair dynamic",
+      label: "고강도 저회복 관계",
       relationshipMode: "friendship",
       scenarioType: "longitudinal_drift",
       fit: preview.structuralSimilarity * 0.24 + reselection.state.curiosity * 0.2 + preview.hiddenEdge.sharedReality * 0.18,
@@ -356,21 +356,21 @@ function buildCandidateFilters(preview: CompatibilityAxes): ConnectionCandidateF
         misunderstanding.state.irritation * 0.22 +
         (1 - drift.simulation.stability) * 0.16,
       confidence: preview.relationshipReport.confidence,
-      why: "Some relationships feel meaningful because of intensity, but BELIFE should defer them when repair and stability are not visible.",
+      why: "어떤 관계는 강도 때문에 의미 있게 느껴지지만, 회복과 안정성이 보이지 않으면 BELIFE는 판단을 미룹니다.",
       evidence: [
-        `Repair capacity ${Math.round(repairCapacity * 100)}`,
-        `Drift risk ${Math.round(drift.state.disengagementRisk * 100)}`,
-        `Long-term stability ${Math.round(drift.simulation.stability * 100)}`,
+        `회복 역량 ${Math.round(repairCapacity * 100)}`,
+        `흔들림 위험 ${Math.round(drift.state.disengagementRisk * 100)}`,
+        `장기 안정성 ${Math.round(drift.simulation.stability * 100)}`,
       ],
       riskSignals: [
-        "Strong resonance followed by avoidant distance",
-        "Repeated tension without a reliable repair rhythm",
+        "강한 공명 뒤에 회피적 거리두기가 이어짐",
+        "믿을 만한 회복 리듬 없이 긴장만 반복됨",
       ],
-      nextObservation: "Do not increase investment until the relationship shows a repeatable repair pattern after a small rupture.",
+      nextObservation: "작은 균열 뒤 반복 가능한 회복 패턴이 보이기 전까지 관계 투자를 늘리지 마세요.",
     }),
     candidateFilter({
       id: "novelty-without-safety",
-      label: "Novelty without safety",
+      label: "안전감 없는 새로움",
       relationshipMode: "collaboration",
       scenarioType: "first_contact",
       fit: preview.complementarity * 0.2 + preview.structuralSimilarity * 0.16 + preview.hiddenEdge.mechanisms.closure * 0.16,
@@ -379,17 +379,17 @@ function buildCandidateFilters(preview: CompatibilityAxes): ConnectionCandidateF
         misunderstanding.state.disengagementRisk * 0.2 +
         collaboration.state.irritation * 0.18,
       confidence: preview.relationshipReport.confidence,
-      why: "Novelty can be useful, but BELIFE should filter it through observed safety, responsiveness, and disagreement handling.",
+      why: "새로움은 유용할 수 있지만, BELIFE는 관찰된 안전감, 반응성, 이견 처리 방식으로 다시 걸러 봅니다.",
       evidence: [
-        `Emotional safety ${Math.round(preview.emotionalSafety * 100)}`,
-        `Responsiveness ${Math.round(preview.hiddenEdge.responsiveness * 100)}`,
-        `Closure mechanism ${Math.round(preview.hiddenEdge.mechanisms.closure * 100)}`,
+        `정서적 안전감 ${Math.round(preview.emotionalSafety * 100)}`,
+        `반응성 ${Math.round(preview.hiddenEdge.responsiveness * 100)}`,
+        `닫힘 메커니즘 ${Math.round(preview.hiddenEdge.mechanisms.closure * 100)}`,
       ],
       riskSignals: [
-        "The connection feels energizing but not stabilizing",
-        "Curiosity substitutes for trust evidence",
+        "연결이 활력을 주지만 안정감을 주지는 않음",
+        "호기심이 신뢰 근거를 대체함",
       ],
-      nextObservation: "Treat novelty as exploratory until it proves calmness under a boundary or disagreement.",
+      nextObservation: "경계나 이견 속에서도 차분함이 증명되기 전까지 새로움은 탐색으로만 두세요.",
     }),
   ];
 }
@@ -469,94 +469,94 @@ function buildRerankingSignals(
   }> = [
     {
       key: "edgeStrength",
-      label: "Latent edge strength",
+      label: "잠재 엣지 강도",
       current: currentEdge.edgeStrength,
       previous: previousEdge?.edgeStrength ?? null,
       weight: 1,
       interpretation: (direction) =>
         direction === "up"
-          ? "The latent edge is strengthening as current signals reinforce prior connection structure."
+          ? "현재 신호가 기존 연결 구조를 보강하면서 잠재 엣지가 강해지고 있습니다."
           : direction === "down"
-            ? "The latent edge is softening because current signals add more caution than reinforcement."
-            : "The latent edge is not moving enough to justify a stronger relationship interpretation.",
+            ? "현재 신호가 보강보다 주의를 더 추가해 잠재 엣지가 약해지고 있습니다."
+            : "더 강한 관계 해석을 정당화할 만큼 잠재 엣지가 움직이지 않았습니다.",
     },
     {
       key: "sharedReality",
-      label: "Shared reality",
+      label: "공유 현실감",
       current: currentEdge.sharedReality,
       previous: previousEdge?.sharedReality ?? null,
       weight: 0.74,
       interpretation: (direction) =>
         direction === "up"
-          ? "Value, goal, and dialogue signals are aligning more clearly."
+          ? "가치, 목표, 대화 신호가 더 분명하게 정렬되고 있습니다."
           : direction === "down"
-            ? "Shared meaning looks less stable and needs more direct observation."
-            : "Shared meaning is currently stable but still evidence-bounded.",
+            ? "공유 의미가 덜 안정적으로 보여 더 직접적인 관찰이 필요합니다."
+            : "공유 의미는 현재 안정적이지만 여전히 근거 안에서만 해석해야 합니다.",
     },
     {
       key: "responsiveness",
-      label: "Responsiveness",
+      label: "반응성",
       current: currentEdge.responsiveness,
       previous: previousEdge?.responsiveness ?? null,
       weight: 0.78,
       interpretation: (direction) =>
         direction === "up"
-          ? "The model sees stronger signs that the relationship can respond before advising or defending."
+          ? "조언하거나 방어하기 전에 반응할 수 있다는 신호가 더 강해졌습니다."
           : direction === "down"
-            ? "Response quality is a weaker signal, so BELIFE should slow escalation."
-            : "Response quality remains the main thing to observe next.",
+            ? "반응의 질이 약한 신호라 BELIFE는 관계 확대 속도를 늦춥니다."
+            : "반응의 질은 다음에 가장 중요하게 볼 신호입니다.",
     },
     {
       key: "repair",
-      label: "Repair capacity",
+      label: "회복 역량",
       current: currentEdge.repair,
       previous: previousEdge?.repair ?? null,
       weight: 0.82,
       interpretation: (direction) =>
         direction === "up"
-          ? "Repair potential is carrying more of the relationship-fit estimate."
+          ? "회복 가능성이 관계 적합성 추정에서 더 큰 비중을 차지하고 있습니다."
           : direction === "down"
-            ? "Repair potential is thinner, so disagreement and misunderstanding need smaller tests."
-            : "Repair potential is steady and should be validated with a real low-stakes rupture.",
+            ? "회복 가능성이 얇아 이견과 오해는 더 작은 시험으로 봐야 합니다."
+            : "회복 가능성은 안정적이며, 실제 낮은 부담의 균열에서 검증해야 합니다.",
     },
     {
       key: "drift",
-      label: "Drift risk",
+      label: "흔들림 위험",
       current: currentEdge.mechanisms.drift,
       previous: previousEdge?.mechanisms.drift ?? null,
       weight: -0.64,
       interpretation: (direction) =>
         direction === "up"
-          ? "Longer-horizon distance or disengagement risk is becoming more relevant."
+          ? "장기적 거리두기나 이탈 위험이 더 중요해지고 있습니다."
           : direction === "down"
-            ? "Longer-horizon drift looks less dominant than before."
-            : "Drift risk is stable; it should remain a watch signal, not a conclusion.",
+            ? "장기적 흔들림이 이전보다 덜 지배적으로 보입니다."
+            : "흔들림 위험은 안정적입니다. 결론이 아니라 관찰 신호로 둡니다.",
     },
     {
       key: "conflictToxicity",
-      label: "Conflict toxicity",
+      label: "갈등 독성",
       current: currentEdge.mechanisms.conflictToxicity,
       previous: previousEdge?.mechanisms.conflictToxicity ?? null,
       weight: -0.72,
       interpretation: (direction) =>
         direction === "up"
-          ? "Conflict cost is rising, so BELIFE should prefer repair-first contexts."
+          ? "갈등 비용이 올라가고 있어 BELIFE는 회복이 먼저 가능한 맥락을 선호합니다."
           : direction === "down"
-            ? "Conflict cost is easing and the relationship may tolerate more honest dialogue."
-            : "Conflict cost is not moving enough to update the hidden graph strongly.",
+            ? "갈등 비용이 완화되어 더 솔직한 대화를 견딜 가능성이 있습니다."
+            : "숨김 그래프를 강하게 갱신할 만큼 갈등 비용이 움직이지 않았습니다.",
     },
     {
       key: "confidence",
-      label: "Interpretation confidence",
+      label: "해석 신뢰도",
       current: currentEdge.confidence,
       previous: previousEdge?.confidence ?? null,
       weight: 0.48,
       interpretation: (direction) =>
         direction === "up"
-          ? "The model has more usable signal, but still must stay non-deterministic."
+          ? "사용 가능한 신호가 늘었지만, 여전히 결정론적으로 보지 않습니다."
           : direction === "down"
-            ? "Confidence dropped, so ranking changes should be treated as provisional."
-            : "Confidence is steady and should be improved through more observed interactions.",
+            ? "신뢰도가 낮아져 순위 변화는 임시 가설로 다뤄야 합니다."
+            : "신뢰도는 안정적이며 더 많은 관찰된 상호작용으로 개선해야 합니다.",
     },
   ];
 
@@ -727,10 +727,10 @@ function buildFallbackScenario(preview: CompatibilityAxes): ConnectionScenarioPr
   };
   return {
     type: "first_contact",
-    title: "First Contact",
-    likelyDynamic: "BELIFE has enough signal for an early relationship rehearsal, but not for a deterministic prediction.",
-    supportMove: "Start with a small, observable exchange before making a strong relationship conclusion.",
-    riskSignal: "If the exchange starts demanding certainty too quickly, slow the pace and collect more signal.",
+    title: "첫 만남",
+    likelyDynamic: "BELIFE는 초기 관계 리허설을 할 만큼의 신호는 있지만 결정론적 예측을 할 만큼의 신호는 없습니다.",
+    supportMove: "강한 관계 결론을 내리기 전에 작고 관찰 가능한 교환부터 시작하세요.",
+    riskSignal: "교환이 너무 빨리 확신을 요구하기 시작하면 속도를 늦추고 신호를 더 모으세요.",
     state,
     confidence: preview.relationshipReport.confidence,
     simulation: buildScenarioSimulation(state, "first_contact", {
@@ -1169,7 +1169,7 @@ function buildScenarioPreviews(input: {
   const scenarios: Omit<ConnectionScenarioPreview, "simulation">[] = [
     {
       type: "first_contact",
-      title: "First Contact",
+      title: "첫 만남",
       likelyDynamic:
         axes.dialogueCompatibility >= 0.55
           ? "처음 만남에서는 차분한 질문과 반응 속도가 맞을 때 호기심이 빨리 살아날 수 있습니다."
@@ -1186,7 +1186,7 @@ function buildScenarioPreviews(input: {
     },
     {
       type: "light_disagreement",
-      title: "Light Disagreement",
+      title: "가벼운 이견",
       likelyDynamic:
         axes.conflictCompatibility >= 0.55
           ? "가벼운 의견 차이는 관계를 깨기보다 서로의 기준을 더 선명하게 만드는 장면이 될 수 있습니다."
@@ -1204,7 +1204,7 @@ function buildScenarioPreviews(input: {
     },
     {
       type: "emotional_vulnerability",
-      title: "Emotional Vulnerability",
+      title: "정서적 취약성 공유",
       likelyDynamic:
         axes.emotionalSafety >= 0.56
           ? "취약한 이야기는 과잉 조언보다 안정적인 반응을 받을 때 신뢰를 키우는 재료가 됩니다."
@@ -1222,7 +1222,7 @@ function buildScenarioPreviews(input: {
     },
     {
       type: "pressure",
-      title: "Pressure / Stress",
+      title: "압박과 스트레스",
       likelyDynamic:
         hasFriction || conflictSensitivity > 0.44
           ? "압박이 생기면 관계의 좋고 나쁨보다 회복 루틴과 속도 조절이 먼저 중요해집니다."
@@ -1240,7 +1240,7 @@ function buildScenarioPreviews(input: {
     },
     {
       type: "misunderstanding",
-      title: "Misunderstanding",
+      title: "오해",
       likelyDynamic:
         axes.repairPotential >= 0.52
           ? "오해는 빠른 해명보다 감정 확인과 의미 재정렬을 거치면 회복 가능한 장면이 됩니다."
@@ -1258,7 +1258,7 @@ function buildScenarioPreviews(input: {
     },
     {
       type: "repair_attempt",
-      title: "Repair Attempt",
+      title: "회복 시도",
       likelyDynamic:
         axes.repairPotential >= 0.55
           ? "회복 시도는 사과의 형식보다 상대가 받은 영향을 인정할 때 가장 잘 작동합니다."
@@ -1276,7 +1276,7 @@ function buildScenarioPreviews(input: {
     },
     {
       type: "collaboration",
-      title: "Collaboration",
+      title: "협업",
       likelyDynamic:
         axes.complementarity >= 0.56
           ? "함께 무언가를 만들 때는 서로의 다른 강점이 역할 분담으로 이어질 가능성이 있습니다."
@@ -1295,7 +1295,7 @@ function buildScenarioPreviews(input: {
     },
     {
       type: "reselection",
-      title: "Reselection",
+      title: "관계 재선택",
       likelyDynamic:
         axes.emotionalSafety + axes.repairPotential + axes.complementarity >= 1.72
           ? "다른 선택지나 바쁜 일정이 생겨도 이 관계를 다시 선택할 이유가 비교적 선명하게 남을 수 있습니다."
@@ -1316,13 +1316,13 @@ function buildScenarioPreviews(input: {
     },
     {
       type: "longitudinal_drift",
-      title: "Longitudinal Drift",
+      title: "장기적 흔들림",
       likelyDynamic:
         axes.structuralSimilarity + axes.dialogueCompatibility + axes.repairPotential >= 1.68
           ? "시간이 지나며 생활 리듬이 달라져도 대화와 수리 루틴이 유지되면 관계의 방향을 다시 맞출 여지가 있습니다."
           : "초기 호감이 있어도 반복되는 오해나 속도 차이를 방치하면 서서히 멀어지는 흐름이 생길 수 있습니다.",
       supportMove: "관계가 조용히 식기 전에 기대, 피로, 고마움, 서운함을 작게라도 갱신하는 정기적인 대화가 도움이 됩니다.",
-      riskSignal: "갈등이 폭발하지 않아도 무응답, 미루기, 짧아지는 대화가 반복되면 drift 신호로 봐야 합니다.",
+      riskSignal: "갈등이 폭발하지 않아도 무응답, 미루기, 짧아지는 대화가 반복되면 흔들림 신호로 봐야 합니다.",
       state: state({
         trust: axes.structuralSimilarity * 0.22 + axes.repairPotential * 0.28 + axes.emotionalSafety * 0.2,
         emotionalSafety: axes.emotionalSafety * 0.36 + axes.conflictCompatibility * 0.2 + warmth * 0.14,

@@ -71,8 +71,8 @@ describe("dyadic coping lens", () => {
     ]);
     const report = buildDyadicCopingReport({ preview, relationshipMemory, state: stableState });
 
-    expect(report.guardrail).toContain("not public matching");
-    expect(report.guardrail).toContain("not");
+    expect(report.guardrail).toContain("공개 매칭");
+    expect(report.guardrail).toContain("아닙니다");
     expect(report.axes.map((axis) => axis.key)).toEqual([
       "stressCommunication",
       "supportiveResponse",
@@ -117,8 +117,8 @@ describe("dyadic coping lens", () => {
 
     expect(withdrawal?.polarity).toBe("risk");
     expect(withdrawal?.score).toBeGreaterThan(0.48);
-    expect(report.summary).toContain("Stress");
-    expect(report.nextConversationMove).toContain("go quiet");
+    expect(report.summary).toContain("스트레스");
+    expect(report.nextConversationMove).toContain("조용해질");
     expect(report.memoryCoverage.pairCount).toBe(0);
   });
 });

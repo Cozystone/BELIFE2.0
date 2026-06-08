@@ -66,19 +66,19 @@ export function ProfileEnrichmentPanel({
   return (
     <section className="rounded-md border border-white/[0.08] bg-white/[0.04] p-4">
       <div className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-orange-300" />
-        <h2 className="font-medium">Profile Enrichment</h2>
+        <Sparkles className="h-4 w-4 text-cyan-300" />
+        <h2 className="font-medium">프로필 보강</h2>
       </div>
       <div className="mt-4 space-y-3">
         {suggestions.length ? (
           suggestions.map((suggestion) => (
-            <article key={suggestion.id} className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+            <article key={suggestion.id} className="rounded-md border border-white/[0.08] bg-slate-950/40 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-zinc-100">{suggestion.title}</p>
                   <p className="mt-1 text-sm leading-6 text-zinc-500">{suggestion.question}</p>
                 </div>
-                <span className="font-mono text-xs text-orange-200">{Math.round(suggestion.confidence * 100)}</span>
+                <span className="font-mono text-xs text-cyan-200">{Math.round(suggestion.confidence * 100)}</span>
               </div>
               <p className="mt-3 text-sm leading-6 text-zinc-300">{suggestion.detail}</p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -90,7 +90,7 @@ export function ProfileEnrichmentPanel({
                   disabled={savingId === suggestion.id}
                 >
                   <Check className="h-3.5 w-3.5" />
-                  Add to BELIFE
+                  BELIFE에 추가
                 </Button>
                 <Button
                   type="button"
@@ -100,18 +100,18 @@ export function ProfileEnrichmentPanel({
                   disabled={savingId === suggestion.id}
                 >
                   <X className="h-3.5 w-3.5" />
-                  Skip for now
+                  지금은 건너뛰기
                 </Button>
               </div>
             </article>
           ))
         ) : (
-          <div className="rounded-md border border-white/[0.08] bg-black/40 p-3 text-sm leading-6 text-zinc-500">
-            대화를 조금 더 나누면 승인 가능한 자기 신호가 여기에 나타납니다.
+          <div className="rounded-md border border-white/[0.08] bg-slate-950/40 p-3 text-sm leading-6 text-zinc-500">
+            대화를 조금 더 나누면 확인 가능한 자기 신호가 여기에 나타납니다.
           </div>
         )}
       </div>
-      {status ? <p className="mt-3 text-sm text-orange-200">{status}</p> : null}
+      {status ? <p className="mt-3 text-sm text-cyan-200">{status}</p> : null}
     </section>
   );
 }

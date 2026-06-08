@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     return Response.json(result);
   } catch (error) {
     return Response.json(
-      { error: error instanceof Error ? error.message : "Unable to import BELIFE memory." },
+      { error: error instanceof Error ? error.message : "BELIFE 기억을 가져오지 못했습니다." },
       { status: 400 },
     );
   }

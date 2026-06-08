@@ -57,12 +57,12 @@ describe("getReadinessReport", () => {
         ok: false,
         baseUrl: "http://127.0.0.1:11434",
         models: [],
-        error: "OLLAMA_BASE_URL is required for production AI calls on Vercel.",
+        error: "Vercel 프로덕션 AI 호출에는 OLLAMA_BASE_URL이 필요합니다.",
       },
     });
 
     const ollama = report.checks.find((check) => check.key === "ollama");
-    expect(ollama?.detail).toContain("OLLAMA_BASE_URL is missing");
+    expect(ollama?.detail).toContain("OLLAMA_BASE_URL이 없어");
   });
 
   it("exposes machine-readable Ollama runtime diagnostics", () => {
@@ -106,6 +106,6 @@ describe("getReadinessReport", () => {
     expect(diagnostics.mode).toBe("fallback");
     expect(diagnostics.configuredForProduction).toBe(false);
     expect(diagnostics.apiKeyConfigured).toBe(false);
-    expect(diagnostics.detail).toContain("OLLAMA_BASE_URL is missing");
+    expect(diagnostics.detail).toContain("OLLAMA_BASE_URL이 없어");
   });
 });

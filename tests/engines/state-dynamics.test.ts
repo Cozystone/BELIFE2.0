@@ -36,8 +36,8 @@ describe("state dynamics", () => {
     expect(report.modelKind).toBe("lagged-delta");
     expect(report.sampleSize).toBe(5);
     expect(report.couplings.length).toBeGreaterThan(0);
-    expect(report.guardrail).toContain("not diagnosis");
-    expect(report.summary).toContain("Confidence");
+    expect(report.guardrail).toContain("진단");
+    expect(report.summary).toContain("신뢰도");
     expect(report.baselineShift.level).toMatch(/low|moderate|high/);
     for (const coupling of report.couplings) {
       expect(coupling.strength).toBeGreaterThanOrEqual(0);
@@ -60,7 +60,7 @@ describe("state dynamics", () => {
     expect(report.modelKind).toBe("early-heuristic");
     expect(report.sampleSize).toBe(1);
     expect(report.couplings.length).toBeGreaterThan(0);
-    expect(report.summary).toContain("early heuristic");
+    expect(report.summary).toContain("초기 휴리스틱");
     expect(report.stabilizers.length).toBeGreaterThan(0);
     expect(report.watchlist.length).toBeGreaterThan(0);
   });

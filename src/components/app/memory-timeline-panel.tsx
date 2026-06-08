@@ -9,8 +9,8 @@ function formatDate(value: string) {
 }
 
 function metric(item: BelifeMemoryTimelineItem) {
-  if (typeof item.confidence === "number") return `confidence ${Math.round(item.confidence * 100)}`;
-  if (typeof item.salience === "number") return `salience ${Math.round(item.salience * 100)}`;
+  if (typeof item.confidence === "number") return `신뢰도 ${Math.round(item.confidence * 100)}`;
+  if (typeof item.salience === "number") return `중요도 ${Math.round(item.salience * 100)}`;
   return item.evidenceType ?? item.source ?? item.kind;
 }
 
@@ -22,15 +22,15 @@ export function MemoryTimelinePanel({ timeline }: { timeline: BelifeMemoryTimeli
           <Clock3 className="h-4 w-4" />
         </span>
         <div>
-          <h2 className="text-lg font-semibold">Memory Timeline</h2>
-          <p className="mt-1 text-sm text-zinc-500">BELIFE가 최근에 저장하고 해석한 신호입니다.</p>
+          <h2 className="text-lg font-semibold">기억 타임라인</h2>
+          <p className="mt-1 text-sm text-zinc-500">BELIFE가 최근 저장하고 해석한 신호입니다.</p>
         </div>
       </div>
 
       <div className="mt-4 space-y-3">
         {timeline.items.length ? (
-          timeline.items.map((item) => (
-            <article key={`${item.kind}-${item.id}`} className="rounded-md border border-white/[0.08] bg-black/40 p-3">
+          timeline.items.map((item, index) => (
+            <article key={`${item.kind}-${item.id}-${index}`} className="rounded-md border border-white/[0.08] bg-slate-950/40 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -38,7 +38,7 @@ export function MemoryTimelinePanel({ timeline }: { timeline: BelifeMemoryTimeli
                       {item.kind}
                     </span>
                     {item.evidenceType ? (
-                      <span className="rounded-sm bg-orange-500/10 px-2 py-1 text-[11px] uppercase text-orange-200">
+                      <span className="rounded-sm bg-cyan-500/10 px-2 py-1 text-[11px] uppercase text-cyan-200">
                         {item.evidenceType}
                       </span>
                     ) : null}
@@ -49,12 +49,12 @@ export function MemoryTimelinePanel({ timeline }: { timeline: BelifeMemoryTimeli
               </div>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-400">{item.body}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                <span className="inline-flex items-center gap-1 text-orange-200">
+                <span className="inline-flex items-center gap-1 text-cyan-200">
                   <Sparkles className="h-3 w-3" />
                   {metric(item)}
                 </span>
-                {item.tags.slice(0, 4).map((tag) => (
-                  <span key={tag} className="rounded-sm border border-white/[0.08] px-2 py-1">
+                {item.tags.slice(0, 4).map((tag, tagIndex) => (
+                  <span key={`${tag}-${tagIndex}`} className="rounded-sm border border-white/[0.08] px-2 py-1">
                     {tag}
                   </span>
                 ))}
@@ -62,7 +62,7 @@ export function MemoryTimelinePanel({ timeline }: { timeline: BelifeMemoryTimeli
             </article>
           ))
         ) : (
-          <div className="rounded-md border border-white/[0.08] bg-black/40 p-4 text-sm leading-6 text-zinc-500">
+          <div className="rounded-md border border-white/[0.08] bg-slate-950/40 p-4 text-sm leading-6 text-zinc-500">
             아직 표시할 기억 신호가 없습니다.
           </div>
         )}

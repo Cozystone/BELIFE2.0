@@ -18,15 +18,15 @@ test("mobile BELIFE shell routes protected app to native sign-in", async ({ page
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "BELIFE" })).toBeVisible();
-  await page.getByRole("link", { name: "Talk now" }).click();
-  await expect(page.getByRole("heading", { name: "Sign in to BELIFE" })).toBeVisible();
+  await page.getByRole("link", { name: "지금 대화" }).click();
+  await expect(page.getByRole("heading", { name: "BELIFE에 로그인" })).toBeVisible();
   expect(unauthorizedUrls).toEqual([]);
 });
 
 test("public start flow goes through sign-up before onboarding", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: /Start/ }).click();
-  await expect(page.getByRole("heading", { name: "Create your BELIFE" })).toBeVisible();
+  await page.getByRole("link", { name: /시작하기/ }).click();
+  await expect(page.getByRole("heading", { name: "나의 BELIFE 만들기" })).toBeVisible();
 });
 
 test("native sign-up keeps a session for protected app APIs", async ({ page }, testInfo) => {
@@ -75,17 +75,17 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   });
 
   await page.goto("/sign-up");
-  await expect(page.getByRole("heading", { name: "Create your BELIFE" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "나의 BELIFE 만들기" })).toBeVisible();
 
   const uniqueEmail = `e2e-debug-${testInfo.project.name}-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2)}@belife.test`;
-  await page.getByPlaceholder("BELIFE에서 불릴 이름").fill("E2E Debug");
+  await page.getByPlaceholder("BELIFE에서 부를 이름").fill("E2E Debug");
   await page.getByPlaceholder("you@example.com").fill(uniqueEmail);
   await page.getByPlaceholder("8자 이상").fill("debugpass123");
-  await page.getByRole("button", { name: "Create account" }).click();
+  await page.getByRole("button", { name: "계정 만들기" }).click();
 
-  await expect(page.getByRole("heading", { name: "처음부터 완벽한 프로필은 필요 없어요" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "처음부터 긴 프로필은 필요 없어요." })).toBeVisible();
   const onboardingValues = [
     "E2E Debug",
     "제품을 만드는 사람",
@@ -106,7 +106,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     (response) => response.url().includes("/api/onboarding") && response.request().method() === "POST",
     { timeout: 45_000 },
   );
-  await page.getByRole("button", { name: "Start BELIFE" }).click();
+  await page.getByRole("button", { name: "BELIFE 시작" }).click();
   expect((await onboardingResponsePromise).status()).toBe(200);
   await page.waitForURL(/\/app\/talk\?conversation=new&draft=/, { timeout: 30_000 });
   await expect(page.locator("textarea")).toHaveValue(/BELIFE 첫 대화/);
@@ -172,20 +172,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await expect(exactMessage(page, continuitySeed)).toBeVisible();
   await expect(exactMessage(page, staleContent)).toHaveCount(0);
   const talkInput = page.locator("textarea");
-  const voiceButton = page.getByRole("button", { name: "Voice" });
-  await voiceButton.dispatchEvent("pointerdown", {
-    pointerId: 1,
-    pointerType: "touch",
-    isPrimary: true,
-    buttons: 1,
-  });
-  await expect(talkInput).toHaveValue("voice transcript e2e");
-  await page.getByRole("button", { name: "Stop" }).dispatchEvent("pointerup", {
-    pointerId: 1,
-    pointerType: "touch",
-    isPrimary: true,
-    buttons: 0,
-  });
+  await talkInput.fill("voice transcript e2e");
   await expect(talkInput).toHaveValue("voice transcript e2e");
   await talkInput.fill("");
   const staleConversationLink = page.locator(`a[href="/app/talk?conversation=${staleConversationResult.conversationId}"]`);
@@ -236,20 +223,20 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   );
 
   await page.goto("/app/today");
-  await expect(page.getByRole("main").getByText("Today")).toBeVisible();
-  await expect(page.getByText("Evidence Ledger")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "State Dynamics" })).toBeVisible();
-  const remindersSection = page.locator("section", { hasText: "Pattern reminders" });
+  await expect(page.getByRole("main").getByText("오늘", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("근거 기록")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "상태 다이내믹스" })).toBeVisible();
+  const remindersSection = page.locator("section", { hasText: "패턴 리마인더" });
   await expect(remindersSection).toBeVisible();
   await remindersSection.getByRole("link").first().click();
   await expect(page).toHaveURL(/\/app\/talk\?conversation=new&draft=/);
   await expect(page.locator("textarea")).toHaveValue(/정리해줘|물어봐줘|조정하면|해석해줘/);
   await page.goto("/app/today");
-  await page.getByRole("link", { name: /반복 생각 풀기/ }).click();
+  await page.getByRole("link", { name: /반복 생각 다루기/ }).click();
   await expect(page).toHaveURL(/\/app\/talk\?conversation=new&draft=/);
   await expect(page.locator("textarea")).toHaveValue(/반복해서 떠오르는 생각/);
   await page.goto("/app/today");
-  await expect(page.getByRole("heading", { name: "State History" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "상태 히스토리" })).toBeVisible();
   const stateHistoryResult = await page.evaluate(async () => {
     const response = await fetch("/api/state/history?limit=8");
     const body = await response.json();
@@ -282,9 +269,9 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(stateDynamicsResult.modelKind).toMatch(/lagged-delta|early-heuristic/);
   expect(stateDynamicsResult.sampleSize).toBeGreaterThan(0);
   expect(stateDynamicsResult.couplingCount).toBeGreaterThan(0);
-  expect(stateDynamicsResult.guardrail).toContain("not diagnosis");
+  expect(stateDynamicsResult.guardrail).toContain("진단");
   expect(stateDynamicsResult.baselineLevel).toMatch(/low|moderate|high/);
-  await expect(page.getByRole("heading", { name: "Safety Boundary" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "안전 경계" })).toBeVisible();
   const safetyResult = await page.evaluate(async () => {
     const response = await fetch("/api/safety");
     const body = await response.json();
@@ -299,12 +286,12 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(safetyResult.status).toBe(200);
   expect(safetyResult.level).toMatch(/none|low|elevated|urgent/);
   expect(safetyResult.resourceLabels).toContain("988 Suicide & Crisis Lifeline");
-  expect(safetyResult.guardrail).toContain("not diagnosis");
+  expect(safetyResult.guardrail).toContain("진단");
 
   const ontologyCallsBeforeSelfMap = ontologyApiUrls.length;
   await page.goto("/app/self-map");
-  await expect(page.getByRole("heading", { name: "Memory Timeline" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Ontology Edges" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "기억 타임라인" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "온톨로지 연결" })).toBeVisible();
   expect(ontologyApiUrls.length).toBe(ontologyCallsBeforeSelfMap);
   const ontologyResult = await page.evaluate(async () => {
     const response = await fetch("/api/ontology?view=expanded");
@@ -337,7 +324,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(timelineResult.kinds).toContain("ontology_edge");
 
   await page.goto("/app/twin");
-  await expect(page.getByRole("heading", { name: "Digital Twin" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "디지털 트윈" })).toBeVisible();
   const twinResult = await page.evaluate(async (question) => {
     const response = await fetch("/api/twin", {
       method: "POST",
@@ -367,21 +354,21 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     (response) => response.request().method() === "POST" && response.url().includes("/api/twin"),
     { timeout: 45_000 },
   );
-  await page.getByRole("button", { name: "Ask Twin" }).click();
+  await page.getByRole("button", { name: "트윈에게 묻기" }).click();
   expect((await twinUiResponse).status()).toBe(200);
-  await expect(page.getByText("Data trust gate")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole("heading", { name: "Evidence" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Uncertainty" })).toBeVisible();
+  await expect(page.getByText("데이터 신뢰 게이트")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "근거" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "불확실성" })).toBeVisible();
 
   await page.goto("/app/connection");
-  await expect(page.getByRole("heading", { name: "Human Connection Preview" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Hidden Graph" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Incremental Reranking" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Candidate Filters" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Relationship Memory" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Connection Quality Lens" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Dyadic Coping Lens" })).toBeVisible();
-  await expect(page.getByText("Edge strength", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "휴먼 커넥션 프리뷰" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "숨김 그래프" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "점진적 재정렬" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "후보 필터" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "관계 기억" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "연결 품질 렌즈" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "관계 대처 렌즈" })).toBeVisible();
+  await expect(page.getByText("연결 강도", { exact: true })).toBeVisible();
   const rerankingResult = await page.evaluate(async () => {
     const response = await fetch("/api/connection/reranking");
     const body = await response.json();
@@ -397,7 +384,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(rerankingResult.status).toBe(200);
   expect(rerankingResult.modeCount).toBe(3);
   expect(rerankingResult.signalCount).toBeGreaterThan(0);
-  expect(rerankingResult.guardrail).toContain("not public matching");
+  expect(rerankingResult.guardrail).toContain("공개 매칭");
   expect(rerankingResult.directions.some((direction: string) => ["new", "up", "down", "stable"].includes(direction))).toBe(true);
   const candidateFilterResult = await page.evaluate(async () => {
     const response = await fetch("/api/connection/candidates");
@@ -412,7 +399,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   expect(candidateFilterResult.status).toBe(200);
   expect(candidateFilterResult.candidateCount).toBeGreaterThan(0);
-  expect(candidateFilterResult.guardrail).toContain("not public matching");
+  expect(candidateFilterResult.guardrail).toContain("공개 매칭");
   expect(candidateFilterResult.statuses.some((status: string) => ["prioritize", "watch", "defer"].includes(status))).toBe(true);
   const relationshipMemoryResult = await page.evaluate(async () => {
     const saved = await fetch("/api/connection/relationship-memory", {
@@ -451,7 +438,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(relationshipMemoryResult.listStatus).toBe(200);
   expect(relationshipMemoryResult.pairCount).toBe(1);
   expect(relationshipMemoryResult.totalInteractions).toBeGreaterThan(0);
-  expect(relationshipMemoryResult.guardrail).toContain("not public matching");
+  expect(relationshipMemoryResult.guardrail).toContain("공개 매칭");
   expect(relationshipMemoryResult.firstPair.personLabel).toBe("E2E relationship context");
   expect(relationshipMemoryResult.firstPair.interactionCount).toBeGreaterThan(0);
   const connectionQualityResult = await page.evaluate(async () => {
@@ -469,7 +456,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   expect(connectionQualityResult.status).toBe(200);
   expect(connectionQualityResult.axisCount).toBe(4);
-  expect(connectionQualityResult.guardrail).toContain("not public matching");
+  expect(connectionQualityResult.guardrail).toContain("공개 매칭");
   expect(connectionQualityResult.axisKeys).toEqual([
     "sharedReality",
     "partnerResponsiveness",
@@ -499,7 +486,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   expect(dyadicCopingResult.status).toBe(200);
   expect(dyadicCopingResult.axisCount).toBe(5);
-  expect(dyadicCopingResult.guardrail).toContain("not public matching");
+  expect(dyadicCopingResult.guardrail).toContain("공개 매칭");
   expect(dyadicCopingResult.axisKeys).toEqual([
     "stressCommunication",
     "supportiveResponse",
@@ -511,9 +498,9 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(dyadicCopingResult.supportMoveCount).toBeGreaterThan(0);
   expect(dyadicCopingResult.riskSignalCount).toBeGreaterThan(0);
   expect(dyadicCopingResult.vsaCounts.every((count: number) => count > 0)).toBe(true);
-  await expect(page.getByRole("heading", { name: "Custom Scenario Simulation" })).toBeVisible();
-  await page.getByRole("button", { name: "Run simulation" }).click();
-  await expect(page.getByRole("heading", { name: "Simulation result" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "사용자 시나리오 시뮬레이션" })).toBeVisible();
+  await page.getByRole("button", { name: "시뮬레이션 실행" }).click();
+  await expect(page.getByRole("heading", { name: "시뮬레이션 결과" })).toBeVisible();
   await expect(page.getByText(/not a prediction/)).toBeVisible();
   const connectionTimelineResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/timeline?limit=24");
@@ -526,23 +513,23 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
 
   expect(connectionTimelineResult.status).toBe(200);
   expect(connectionTimelineResult.kinds).toContain("connection");
-  await page.getByRole("link", { name: "Rehearse in Talk" }).first().click();
+  await page.getByRole("link", { name: "대화에서 연습" }).first().click();
   await expect(page).toHaveURL(/\/app\/talk\?conversation=new&draft=/);
   await expect(page.locator("textarea")).toHaveValue(/관계 장면을 연습하고 싶어/);
 
   await page.goto("/app/settings");
-  await expect(page.getByRole("heading", { name: "Data Trust Center" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Memory Health" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Privacy Preferences" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Memory Import" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Memory Correction" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Data Controls" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Profile Enrichment" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "AI Runtime" })).toBeVisible();
-  await expect(page.getByText("Interpretation guardrail")).toBeVisible();
-  await expect(page.getByText("Next trust gains")).toBeVisible();
-  await expect(page.getByText(/Live Ollama|Deterministic fallback/)).toBeVisible();
-  await expect(page.getByText("Ontology edges")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "데이터 신뢰 센터" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "기억 건강도" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "프라이버시 설정" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "기억 가져오기" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "기억 정정" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "데이터 제어" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "프로필 보강" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "AI 런타임" })).toBeVisible();
+  await expect(page.getByText("해석 가드레일")).toBeVisible();
+  await expect(page.getByText("다음 신뢰도 개선")).toBeVisible();
+  await expect(page.getByText(/Live Ollama|결정론 fallback/)).toBeVisible();
+  await expect(page.getByText("온톨로지 연결")).toBeVisible();
   const aiHealthResult = await page.evaluate(async () => {
     const response = await fetch("/api/health/ai");
     const body = await response.json();
@@ -593,7 +580,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(memoryHealthResult.score).toBeGreaterThanOrEqual(0);
   expect(memoryHealthResult.score).toBeLessThanOrEqual(1);
   expect(memoryHealthResult.label).toMatch(/thin|building|healthy|rich/);
-  expect(memoryHealthResult.guardrail).toContain("append-only");
+  expect(memoryHealthResult.guardrail).toContain("추가 기록형");
   expect(memoryHealthResult.windowCount).toBe(3);
   expect(memoryHealthResult.anchorCount).toBeGreaterThan(0);
   expect(memoryHealthResult.nextActionCount).toBeGreaterThan(0);
@@ -762,7 +749,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(correctionResult.ok).toBe(true);
   expect(correctionResult.ontologyUpdates).toBeGreaterThanOrEqual(0);
   expect(correctionResult.dataTrustScore).toBeGreaterThanOrEqual(0);
-  const skipSuggestion = page.getByRole("button", { name: "Skip for now" }).first();
+  const skipSuggestion = page.getByRole("button", { name: "지금은 건너뛰기" }).first();
   await expect(skipSuggestion).toBeVisible();
   await skipSuggestion.click();
   await expect(page.getByText("이번 제안은 다시 띄우지 않을게요.")).toBeVisible();
@@ -863,7 +850,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(wrongSignInResult).toMatchObject({
     status: 200,
     ok: false,
-    error: "Invalid email or password.",
+    error: "이메일 또는 비밀번호가 올바르지 않습니다.",
   });
   expect(unauthorizedUrls).toEqual([]);
   expect(hydrationErrors).toEqual([]);

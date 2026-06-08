@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     return Response.json(result);
   } catch (error) {
     return Response.json(
-      { error: error instanceof Error ? error.message : "Unable to save memory correction." },
+      { error: error instanceof Error ? error.message : "기억 정정을 저장하지 못했습니다." },
       { status: 400 },
     );
   }

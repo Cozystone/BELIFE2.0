@@ -50,7 +50,7 @@ describe("connection quality lens", () => {
     ]);
     const report = buildConnectionQualityLens({ preview, relationshipMemory: memory });
 
-    expect(report.guardrail).toContain("not public matching");
+    expect(report.guardrail).toContain("공개 매칭");
     expect(report.axes).toHaveLength(4);
     expect(report.axes.map((axis) => axis.key)).toEqual([
       "sharedReality",
@@ -84,8 +84,8 @@ describe("connection quality lens", () => {
 
     expect(report.memoryCoverage.pairCount).toBe(0);
     expect(report.memoryCoverage.totalInteractions).toBe(0);
-    expect(report.summary).toContain("working hypothesis");
-    expect(report.nextMicroExperiments.join(" ")).toContain("relationship memory note");
+    expect(report.summary).toContain("작업 가설");
+    expect(report.nextMicroExperiments.join(" ")).toContain("관계 기억 메모");
     expect(report.confidence).toBeGreaterThanOrEqual(0);
     expect(report.confidence).toBeLessThanOrEqual(1);
   });

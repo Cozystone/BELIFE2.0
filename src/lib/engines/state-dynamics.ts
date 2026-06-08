@@ -20,17 +20,17 @@ const dynamicsMetrics: MentalStateTrendMetric[] = [
 ];
 
 const labels: Record<MentalStateTrendMetric, string> = {
-  stressLoad: "Stress",
-  burnoutRisk: "Burnout",
-  rumination: "Rumination",
-  emotionalVolatility: "Volatility",
-  motivation: "Motivation",
-  socialWithdrawal: "Withdrawal",
-  supportNeed: "Support need",
-  cognitiveDistortionRisk: "Distortion caution",
-  motivationalCollapseRisk: "Motivation risk",
-  baselineDeviation: "Baseline shift",
-  abstentionRisk: "Interpretation caution",
+  stressLoad: "스트레스",
+  burnoutRisk: "번아웃 위험",
+  rumination: "반복 사고",
+  emotionalVolatility: "정서 변동성",
+  motivation: "동기",
+  socialWithdrawal: "사회적 거리두기",
+  supportNeed: "지지 필요",
+  cognitiveDistortionRisk: "왜곡 주의",
+  motivationalCollapseRisk: "동기 저하 위험",
+  baselineDeviation: "기준선 변화",
+  abstentionRisk: "해석 주의",
 };
 
 const stabilizingMetric = new Set<MentalStateTrendMetric>(["motivation"]);
@@ -58,7 +58,7 @@ export function buildStateDynamicsReport(states: MentalStateEstimate[]): StateDy
     confidence,
     summary: buildSummary({ modelKind, sampleSize: items.length, confidence, baselineShift, couplings }),
     guardrail:
-      "State Dynamics is a private BELIFE personal-dynamics hypothesis, not diagnosis, therapy, or proof of causality.",
+      "상태 다이내믹은 BELIFE의 비공개 개인 변화 가설입니다. 진단, 치료, 인과관계의 증명이 아닙니다.",
     baselineShift,
     couplings,
     stabilizers: buildStabilizers(couplings, current),
@@ -150,7 +150,7 @@ function buildHeuristicCouplings(
       target: "motivationalCollapseRisk",
       strength: current.burnoutRisk * 0.44 + current.motivationalCollapseRisk * 0.44 + Math.max(0, latest?.burnoutRisk ?? 0) * 0.12,
       correlation: 0.5,
-      evidence: `Burnout risk ${percent(current.burnoutRisk)} and motivation risk ${percent(
+      evidence: `번아웃 위험 ${percent(current.burnoutRisk)}와 동기 저하 위험 ${percent(
         current.motivationalCollapseRisk,
       )}.`,
     },
@@ -159,7 +159,7 @@ function buildHeuristicCouplings(
       target: "motivationalCollapseRisk",
       strength: current.motivation * 0.36 + (1 - current.motivationalCollapseRisk) * 0.38 + Math.max(0, latest?.motivation ?? 0) * 0.26,
       correlation: -0.48,
-      evidence: `Motivation ${percent(current.motivation)} with motivation-risk inverse ${percent(
+      evidence: `동기 ${percent(current.motivation)}와 동기 저하 위험 역지표 ${percent(
         1 - current.motivationalCollapseRisk,
       )}.`,
     },
@@ -168,7 +168,7 @@ function buildHeuristicCouplings(
       target: "socialWithdrawal",
       strength: current.stressLoad * 0.34 + current.socialWithdrawal * 0.44 + Math.max(0, latest?.socialWithdrawal ?? 0) * 0.22,
       correlation: 0.45,
-      evidence: `Stress ${percent(current.stressLoad)} and withdrawal ${percent(current.socialWithdrawal)}.`,
+      evidence: `스트레스 ${percent(current.stressLoad)}와 사회적 거리두기 ${percent(current.socialWithdrawal)}.`,
     },
   ];
 
@@ -253,7 +253,7 @@ function buildBaselineShift(items: MentalStateEstimate[]): StateDynamicsReport["
       ? "Recent state differs enough from baseline that BELIFE should slow down and ask for evidence."
       : level === "moderate"
         ? "There is a moderate baseline shift; compare this with recent sleep, pressure, and relationship context."
-        : "Baseline shift is low; repeated patterns matter more than anomaly interpretation right now.";
+        : "기준선 변화는 낮습니다. 지금은 이상치 해석보다 반복 패턴이 더 중요합니다.";
 
   return {
     current: clamp(current),
@@ -277,8 +277,8 @@ function buildSummary(input: {
   if (!strongest) {
     return `State dynamics are still thin. BELIFE has ${input.sampleSize} state estimate(s), so it should ask for more repeated check-ins before drawing links.`;
   }
-  const method = input.modelKind === "lagged-delta" ? "lagged state changes" : "early heuristic signals";
-  return `${strongest.sourceLabel} -> ${strongest.targetLabel} is the clearest current dynamics hypothesis from ${method}. Baseline shift is ${input.baselineShift.level}. Confidence ${percent(input.confidence)}.`;
+  const method = input.modelKind === "lagged-delta" ? "지연 상태 변화" : "초기 휴리스틱 신호";
+  return `${strongest.sourceLabel} -> ${strongest.targetLabel}이 현재 가장 또렷한 상태 다이내믹 가설입니다. 방법은 ${method}이고, 기준선 변화는 ${input.baselineShift.level}입니다. 신뢰도 ${percent(input.confidence)}.`;
 }
 
 function buildStabilizers(couplings: StateDynamicsCoupling[], current: MentalStateEstimate | null) {

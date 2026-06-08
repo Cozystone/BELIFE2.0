@@ -73,6 +73,18 @@ function normalizeItems(items: MemoryEvidenceItem[], limit: number) {
     .slice(0, limit);
 }
 
+function memoryKindLabel(kind: string) {
+  const labels: Record<string, string> = {
+    onboarding: "온보딩",
+    conversation: "대화",
+    correction: "정정",
+    import: "가져온",
+    relationship: "관계",
+    semantic: "의미",
+  };
+  return labels[kind] ?? kind;
+}
+
 export function rankMemoryEvidence(input: {
   query: string;
   chunks: MemoryChunk[];
@@ -91,7 +103,7 @@ export function rankMemoryEvidence(input: {
       items.push({
         id: chunk.id ?? `${chunk.kind}:${chunk.content}`,
         source: "memory",
-        label: `${chunk.kind} memory`,
+        label: `${memoryKindLabel(chunk.kind)} 기억`,
         detail: compactText(chunk.content, 220),
         score,
         confidence: clamp(chunk.salience * 0.7 + evidenceWeight(chunk.evidenceType)),
@@ -127,7 +139,7 @@ export function rankMemoryEvidence(input: {
       items.push({
         id: message.id,
         source: "message",
-        label: "User message",
+        label: "사용자 메시지",
         detail: compactText(message.content, 220),
         score,
         confidence: clamp(score),

@@ -24,7 +24,7 @@ export async function POST(request: Request, segmentData: { params: Promise<{ id
     }
 
     return Response.json(
-      { error: error instanceof Error ? error.message : "Unable to process message" },
+      { error: error instanceof Error ? error.message : "메시지를 처리하지 못했습니다." },
       { status: 400 },
     );
   }

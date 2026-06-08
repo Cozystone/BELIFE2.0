@@ -56,7 +56,7 @@ export function buildMemoryHealthReport(input: {
     label: memoryHealthLabel(score),
     summary: memoryHealthSummary(score, evidenceBalance, contradictionWatchlist.length, forgettingCandidates.length),
     guardrail:
-      "Memory Health is a maintenance lens for BELIFE's append-only memory. It flags stale, ambiguous, or correction-worthy signals; it does not delete memories or decide facts by itself.",
+      "기억 건강도는 BELIFE의 추가 기록형 기억을 관리하는 렌즈입니다. 오래되었거나 모호하거나 정정이 필요한 신호를 표시하지만, 스스로 기억을 삭제하거나 사실을 단정하지 않습니다.",
     freshness: {
       score: freshnessScore,
       latestMemoryAt,
@@ -99,11 +99,11 @@ function buildContradictionWatchlist(chunks: MemoryChunk[], nodes: OntologyNode[
     .map((chunk) => watchItem({
       id: chunk.id ?? `ambiguous-${hashKey(chunk.content)}`,
       kind: "contradiction",
-      label: `${chunk.kind} memory needs validation`,
+      label: `${memoryKindLabel(chunk.kind)} 기억 검증 필요`,
       severity: chunk.salience >= 0.72 ? "high" : "medium",
-      reason: "This memory was stored as ambiguous evidence and should not be promoted without confirmation.",
+      reason: "이 기억은 모호한 근거로 저장되어 확인 없이 핵심 패턴으로 올리면 안 됩니다.",
       evidence: compactText(chunk.content, 150),
-      suggestedAction: "Ask BELIFE to confirm, correct, or archive this interpretation before using it as a stable pattern.",
+      suggestedAction: "안정 패턴으로 쓰기 전에 BELIFE에 이 해석을 확인, 정정, 보관하도록 요청하세요.",
       createdAt: chunk.createdAt,
     }));
   const weakNodes = nodes
@@ -115,10 +115,10 @@ function buildContradictionWatchlist(chunks: MemoryChunk[], nodes: OntologyNode[
       severity: node.tier === "L1" ? "high" : "medium",
       reason:
         node.certainty === "AMBIGUOUS"
-          ? "This ontology node is ambiguous but still visible in the self model."
-          : "This ontology node has low confidence and needs more repeated evidence.",
+          ? "이 온톨로지 노드는 모호하지만 아직 자기 모델에 보입니다."
+          : "이 온톨로지 노드는 신뢰도가 낮아 반복 근거가 더 필요합니다.",
       evidence: compactText(node.summary, 150),
-      suggestedAction: "Keep it as a hypothesis until repeated evidence or a user correction clarifies it.",
+      suggestedAction: "반복 근거나 사용자 정정으로 명확해질 때까지 가설로만 유지하세요.",
       createdAt: node.lastEvidenceAt,
     }));
   const correctionChunks = chunks
@@ -126,11 +126,11 @@ function buildContradictionWatchlist(chunks: MemoryChunk[], nodes: OntologyNode[
     .map((chunk) => watchItem({
       id: chunk.id ?? `correction-${hashKey(chunk.content)}`,
       kind: "correction",
-      label: "User correction should override older readings",
+      label: "사용자 정정이 오래된 해석보다 우선되어야 합니다",
       severity: "high",
-      reason: "A user-confirmed correction is the strongest signal that older interpretations need reconciliation.",
+      reason: "사용자가 확인한 정정은 오래된 해석을 조정해야 한다는 가장 강한 신호입니다.",
       evidence: compactText(chunk.content, 150),
-      suggestedAction: "Use this correction as the preferred interpretation when generating future twin, briefing, and ontology output.",
+      suggestedAction: "향후 트윈, 브리핑, 온톨로지 출력에서는 이 정정을 우선 해석으로 사용하세요.",
       createdAt: chunk.createdAt,
     }));
   const tagConflicts = buildTagConflictWatchlist(chunks);
@@ -154,11 +154,11 @@ function buildTagConflictWatchlist(chunks: MemoryChunk[]): MemoryHealthWatchItem
     .map(([tag, group]) => watchItem({
       id: `tag-conflict-${hashKey(tag)}`,
       kind: "contradiction",
-      label: `Repeated ambiguous tag: ${tag}`,
+      label: `반복되는 모호한 태그: ${tag}`,
       severity: group.some((chunk) => chunk.salience >= 0.75) ? "high" : "medium",
-      reason: "Several memories share this tag, but at least one is ambiguous. BELIFE should separate facts from hypotheses.",
+      reason: "여러 기억이 이 태그를 공유하지만 일부가 모호합니다. BELIFE는 사실과 가설을 분리해야 합니다.",
       evidence: compactText(group.map((chunk) => chunk.content).join(" / "), 180),
-      suggestedAction: "Review this cluster and add a correction if BELIFE has blended unlike situations.",
+      suggestedAction: "이 묶음을 검토하고, BELIFE가 다른 상황을 섞었다면 정정을 추가하세요.",
       createdAt: latestIso(group.flatMap((chunk) => (chunk.createdAt ? [chunk.createdAt] : []))),
     }));
 }
@@ -175,11 +175,11 @@ function buildForgettingCandidates(
     .map((chunk) => watchItem({
       id: chunk.id ?? `stale-${hashKey(chunk.content)}`,
       kind: "stale",
-      label: `${chunk.kind} memory may be stale`,
+      label: `${memoryKindLabel(chunk.kind)} 기억이 오래되었을 수 있습니다`,
       severity: daysSince(chunk.createdAt, now) >= 90 ? "medium" : "low",
-      reason: "Older low-salience or inferred memory should stay append-only, but it should not dominate current interpretation.",
+      reason: "오래된 저중요도 또는 추론 기억은 보존하되 현재 해석을 지배하면 안 됩니다.",
       evidence: compactText(chunk.content, 150),
-      suggestedAction: "Down-weight this memory unless a recent message confirms it still applies.",
+      suggestedAction: "최근 메시지가 여전히 유효하다고 확인하기 전까지 이 기억의 가중치를 낮추세요.",
       createdAt: chunk.createdAt,
     }));
   const staleNodes = nodes
@@ -191,9 +191,9 @@ function buildForgettingCandidates(
       kind: "stale",
       label: `${node.type}: ${node.label}`,
       severity: node.layer === "archive" || node.status === "archived" ? "low" : "medium",
-      reason: "This ontology signal has aged without enough confirming evidence.",
+      reason: "이 온톨로지 신호는 충분한 확인 근거 없이 오래되었습니다.",
       evidence: compactText(node.summary, 150),
-      suggestedAction: "Keep it as historical context, but ask for fresh evidence before using it as an active self pattern.",
+      suggestedAction: "역사적 맥락으로 보관하되, 현재 자기 패턴으로 쓰기 전에는 새 근거를 요청하세요.",
       createdAt: node.lastEvidenceAt,
     }));
 
@@ -212,7 +212,7 @@ function buildEpisodicAnchors(
     .map((chunk) => ({
       id: chunk.id ?? `chunk-${hashKey(chunk.content)}`,
       source: "memory",
-      label: `${chunk.kind} memory`,
+      label: `${memoryKindLabel(chunk.kind)} 기억`,
       detail: compactText(chunk.content, 150),
       confidence: chunk.evidenceType === "EXTRACTED" ? 0.82 : chunk.evidenceType === "INFERRED" ? 0.56 : 0.34,
       salience: chunk.salience,
@@ -223,7 +223,7 @@ function buildEpisodicAnchors(
     .map((message) => ({
       id: message.id,
       source: "message",
-      label: "Recent user episode",
+      label: "최근 사용자 에피소드",
       detail: compactText(message.content, 150),
       confidence: 0.72,
       createdAt: message.createdAt,
@@ -354,4 +354,16 @@ function hashKey(value: string) {
     hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
   }
   return hash.toString(36);
+}
+
+function memoryKindLabel(kind: string) {
+  const labels: Record<string, string> = {
+    onboarding: "온보딩",
+    conversation: "대화",
+    correction: "정정",
+    import: "가져온",
+    relationship: "관계",
+    semantic: "의미",
+  };
+  return labels[kind] ?? kind;
 }

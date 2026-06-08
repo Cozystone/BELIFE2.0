@@ -57,16 +57,16 @@ const lowSignals = [
 export const safetyResources: SafetyResource[] = [
   {
     label: "988 Suicide & Crisis Lifeline",
-    region: "United States",
-    action: "Call or text 988, or use the 988 Lifeline chat.",
+    region: "미국",
+    action: "988로 전화 또는 문자하거나 988 Lifeline 채팅을 사용하세요.",
     availability: "24/7",
     url: "https://988lifeline.org/",
   },
   {
-    label: "Local emergency services",
-    region: "Local",
-    action: "Call your local emergency number if there is immediate danger.",
-    availability: "Immediate emergency response",
+    label: "지역 긴급 서비스",
+    region: "지역",
+    action: "즉각적인 위험이 있으면 지역 긴급 번호로 연락하세요.",
+    availability: "즉시 긴급 대응",
     url: "tel:911",
   },
 ];
@@ -113,7 +113,7 @@ export function buildSafetySignalReport(input: {
     recommendedActions: actionsFor(level),
     resources: level === "none" ? [safetyResources[0]] : safetyResources,
     guardrail:
-      "Safety Boundary is a non-clinical signal check, not diagnosis, therapy, emergency monitoring, or a replacement for local emergency services.",
+      "Safety Boundary는 비임상 신호 점검입니다. 진단, 치료, 긴급 모니터링, 지역 긴급 서비스의 대체물이 아닙니다.",
   };
 }
 

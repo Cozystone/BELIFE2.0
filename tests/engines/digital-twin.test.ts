@@ -101,7 +101,7 @@ describe("digital twin reflection", () => {
     expect(reflection.confidence).toBeGreaterThan(0.4);
     expect(reflection.trustGate.score).toBe(72);
     expect(reflection.nextQuestion).toContain("반복 생각");
-    expect(reflection.guardrail).toContain("Data trust");
+    expect(reflection.guardrail).toContain("데이터 신뢰도");
     expect(reflection.guardrail).toContain("진단");
   });
 
@@ -129,6 +129,6 @@ describe("digital twin reflection", () => {
 
     expect(reflection.trustGate.ceiling).toBeCloseTo(0.4224);
     expect(reflection.confidence).toBeLessThanOrEqual(reflection.trustGate.ceiling);
-    expect(reflection.uncertainties.some((item) => item.includes("Data trust"))).toBe(true);
+    expect(reflection.uncertainties.some((item) => item.includes("Data trust") || item.includes("데이터 신뢰도"))).toBe(true);
   });
 });

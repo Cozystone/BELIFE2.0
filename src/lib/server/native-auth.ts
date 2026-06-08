@@ -107,7 +107,7 @@ export async function getNativeBelifeUser(): Promise<BelifeUser | null> {
 
 export async function signUpNative(input: { email: string; password: string; displayName: string }) {
   if (!isNativeAuthAvailable()) {
-    throw new Error("Native auth requires DATABASE_URL.");
+    throw new Error("네이티브 인증에는 DATABASE_URL이 필요합니다.");
   }
 
   const email = normalizeEmail(input.email);
@@ -117,7 +117,7 @@ export async function signUpNative(input: { email: string; password: string; dis
     where: eq(nativeAuthAccounts.email, email),
   });
   if (existing) {
-    throw new Error("This email is already registered.");
+    throw new Error("이미 등록된 이메일입니다.");
   }
 
   const passwordHash = await hashPassword(input.password);
@@ -130,7 +130,7 @@ export async function signUpNative(input: { email: string; password: string; dis
     })
     .returning()
     .catch((error: unknown) => {
-      if (isUniqueEmailConflict(error)) throw new Error("This email is already registered.");
+      if (isUniqueEmailConflict(error)) throw new Error("이미 등록된 이메일입니다.");
       throw error;
     });
 
@@ -151,7 +151,7 @@ export async function signUpNative(input: { email: string; password: string; dis
 
 export async function signInNative(input: { email: string; password: string }) {
   if (!isNativeAuthAvailable()) {
-    throw new Error("Native auth requires DATABASE_URL.");
+    throw new Error("네이티브 인증에는 DATABASE_URL이 필요합니다.");
   }
 
   const email = normalizeEmail(input.email);
@@ -160,7 +160,7 @@ export async function signInNative(input: { email: string; password: string }) {
   });
 
   if (!account || !(await verifyPassword(input.password, account.passwordHash))) {
-    throw new Error("Invalid email or password.");
+    throw new Error("이메일 또는 비밀번호가 올바르지 않습니다.");
   }
 
   await createNativeSession(account.id);

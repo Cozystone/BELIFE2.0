@@ -35,7 +35,7 @@ describe("safety boundary", () => {
     expect(report.matchedSignals).toEqual(expect.arrayContaining(["want to die", "hurt myself"]));
     expect(report.resources.some((resource) => resource.label.includes("988"))).toBe(true);
     expect(report.recommendedActions.join(" ")).toContain("emergency services");
-    expect(report.guardrail).toContain("not diagnosis");
+    expect(report.guardrail).toContain("진단");
   });
 
   it("recognizes Korean urgent language without claiming diagnosis", () => {
@@ -46,7 +46,7 @@ describe("safety boundary", () => {
     expect(report.level).toBe("urgent");
     expect(report.matchedSignals).toEqual(expect.arrayContaining(["자살", "죽고 싶"]));
     expect(report.supportiveMessage).toContain("988");
-    expect(report.guardrail).toContain("emergency monitoring");
+    expect(report.guardrail).toContain("긴급 모니터링");
   });
 
   it("uses state pressure as an elevated lightweight signal when words are indirect", () => {

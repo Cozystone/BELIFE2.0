@@ -45,10 +45,10 @@ function ConversationRail({
   fresh: boolean;
 }) {
   return (
-    <section className="mb-3 rounded-md border border-white/[0.08] bg-[#090909] p-3">
+    <section className="mb-3 rounded-md border border-white/10 bg-slate-950/55 p-3 backdrop-blur">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
-          <MessageCircle className="h-4 w-4 text-orange-300" />
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
+          <MessageCircle className="h-4 w-4 text-cyan-100" />
           대화 기록
         </div>
         <Link
@@ -56,8 +56,8 @@ function ConversationRail({
           className={cn(
             "inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition",
             fresh
-              ? "border-orange-400/40 bg-orange-500/15 text-orange-100"
-              : "border-white/10 bg-white/[0.06] text-zinc-300 hover:bg-white/[0.1]",
+              ? "border-cyan-200/35 bg-cyan-200/10 text-cyan-100"
+              : "border-white/10 bg-white/[0.06] text-slate-300 hover:bg-white/[0.1]",
           )}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -75,21 +75,21 @@ function ConversationRail({
                 className={cn(
                   "min-w-[13rem] rounded-md border p-3 text-left transition",
                   active
-                    ? "border-orange-400/40 bg-orange-500/15 text-orange-50"
-                    : "border-white/[0.08] bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08]",
+                    ? "border-cyan-200/35 bg-cyan-200/10 text-cyan-50"
+                    : "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]",
                 )}
               >
                 <div className="line-clamp-1 text-sm font-medium">{conversation.title}</div>
-                <div className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500">{conversation.preview}</div>
-                <div className="mt-2 text-[11px] text-zinc-600">
-                  {conversation.messageCount} messages · {formatConversationTime(conversation.updatedAt)}
+                <div className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{conversation.preview}</div>
+                <div className="mt-2 text-[11px] text-slate-600">
+                  메시지 {conversation.messageCount}개 · {formatConversationTime(conversation.updatedAt)}
                 </div>
               </Link>
             );
           })}
         </div>
       ) : (
-        <div className="rounded-md border border-white/[0.08] bg-white/[0.04] p-3 text-sm text-zinc-500">
+        <div className="rounded-md border border-white/10 bg-white/[0.04] p-3 text-sm text-slate-500">
           아직 저장된 대화가 없습니다.
         </div>
       )}

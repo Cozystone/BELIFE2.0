@@ -68,7 +68,7 @@ function buildTrustGate(dataTrust?: DataTrustScore | null): TwinReflection["trus
       score: 0,
       label: "low",
       ceiling: 0.34,
-      note: "Data trust가 아직 없어 Twin confidence를 early 수준으로 제한합니다.",
+      note: "데이터 신뢰도가 아직 없어 트윈 신뢰도를 초기 수준으로 제한합니다.",
     };
   }
 
@@ -76,12 +76,12 @@ function buildTrustGate(dataTrust?: DataTrustScore | null): TwinReflection["trus
   const ceiling = clamp(0.24 + score * 0.76);
   const note =
     dataTrust.label === "strong"
-      ? "Data trust가 높아도 Twin은 근거와 불확실성을 함께 표시합니다."
+      ? "데이터 신뢰도가 높아도 트윈은 근거와 불확실성을 함께 표시합니다."
       : dataTrust.label === "clear"
-        ? "Data trust가 쌓이고 있어 Twin은 근거 있는 가설로 답합니다."
+        ? "데이터 신뢰도가 쌓이고 있어 트윈은 근거 있는 가설로 답합니다."
         : dataTrust.label === "building"
-          ? "Data trust가 형성 중이라 Twin은 답변을 가설 수준으로 제한합니다."
-          : "Data trust가 낮아 Twin은 해석보다 확인 질문을 우선합니다.";
+          ? "데이터 신뢰도가 형성 중이라 트윈은 답변을 가설 수준으로 제한합니다."
+          : "데이터 신뢰도가 낮아 트윈은 해석보다 확인 질문을 우선합니다.";
 
   return {
     score: dataTrust.score,
@@ -157,7 +157,7 @@ function buildTwinEvidence(input: BuildTwinReflectionInput): TwinEvidenceItem[] 
 function buildUncertainties(input: BuildTwinReflectionInput, evidence: TwinEvidenceItem[]) {
   const uncertainties = [];
   if (!input.dataTrust || input.dataTrust.score < 58) {
-    uncertainties.push("Data trust가 아직 충분히 높지 않아 Twin 답변은 확정이 아니라 확인해야 할 가설입니다.");
+    uncertainties.push("데이터 신뢰도가 아직 충분히 높지 않아 트윈 답변은 확정이 아니라 확인해야 할 가설입니다.");
   }
   if (!input.state) uncertainties.push("최근 상태 추정이 부족해 지금의 컨디션 변화는 조심스럽게 봅니다.");
   if (!input.behavior) uncertainties.push("대화 행동 관측이 부족해 말의 속도와 반응 패턴은 아직 초기 가설입니다.");

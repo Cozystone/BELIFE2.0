@@ -136,7 +136,7 @@ export async function requireUserForApi() {
       user: null,
       response: Response.json(
         {
-          error: "Unauthorized",
+          error: "로그인이 필요합니다.",
           code: "AUTH_REQUIRED",
           redirectTo: "/sign-in",
         },

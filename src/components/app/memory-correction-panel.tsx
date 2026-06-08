@@ -34,17 +34,17 @@ export function MemoryCorrectionPanel() {
       });
       const body = (await response.json()) as CorrectionResponse;
       if (!response.ok || !body.ok) {
-        throw new Error(body.error || "Unable to save memory correction.");
+        throw new Error(body.error || "기억 정정을 저장하지 못했습니다.");
       }
       setStatus(
-        `Correction saved. ${body.ontologyUpdates?.length ?? 0} ontology signals updated. Data trust ${body.dataTrust?.score ?? "n/a"}.`,
+        `정정을 저장했습니다. 온톨로지 신호 ${body.ontologyUpdates?.length ?? 0}개가 갱신되었습니다. 데이터 신뢰도 ${body.dataTrust?.score ?? "n/a"}.`,
       );
       setTarget("");
       setCorrection("");
       setConsent(false);
       router.refresh();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Unable to save memory correction.");
+      setStatus(error instanceof Error ? error.message : "기억 정정을 저장하지 못했습니다.");
     } finally {
       setSaving(false);
     }
@@ -57,49 +57,49 @@ export function MemoryCorrectionPanel() {
           <PencilLine className="h-4 w-4" />
         </span>
         <div>
-          <h2 className="font-medium">Memory Correction</h2>
+          <h2 className="font-medium">기억 정정</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Tell BELIFE what it misunderstood. Corrections are stored as explicit user-confirmed memory.
+            BELIFE가 잘못 이해한 부분을 알려주세요. 정정 내용은 사용자가 확인한 명시 기억으로 저장됩니다.
           </p>
         </div>
       </div>
 
       <div className="mt-4 grid gap-3">
         <label className="block text-sm">
-          <span className="text-zinc-400">What should BELIFE revisit?</span>
+          <span className="text-zinc-400">다시 봐야 할 기억</span>
           <input
             value={target}
             onChange={(event) => setTarget(event.target.value)}
             maxLength={320}
-            placeholder="Optional: a pattern, memory, or relationship signal"
-            className="mt-2 h-10 w-full rounded-md border border-white/[0.1] bg-black px-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-teal-300/60"
+            placeholder="선택: 패턴, 기억, 관계 신호"
+            className="mt-2 h-10 w-full rounded-md border border-white/[0.1] bg-slate-950 px-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-teal-300/60"
           />
         </label>
         <label className="block text-sm">
-          <span className="text-zinc-400">Correction</span>
+          <span className="text-zinc-400">정정 내용</span>
           <textarea
             value={correction}
             onChange={(event) => setCorrection(event.target.value)}
             maxLength={1600}
-            placeholder="Actually, BELIFE should remember that..."
-            className="mt-2 min-h-28 w-full resize-none rounded-md border border-white/[0.1] bg-black p-3 text-sm leading-6 text-white outline-none transition placeholder:text-zinc-600 focus:border-teal-300/60"
+            placeholder="실제로 BELIFE가 기억해야 할 것은..."
+            className="mt-2 min-h-28 w-full resize-none rounded-md border border-white/[0.1] bg-slate-950 p-3 text-sm leading-6 text-white outline-none transition placeholder:text-zinc-600 focus:border-teal-300/60"
           />
         </label>
-        <label className="flex items-start gap-3 rounded-md border border-white/[0.08] bg-black/40 p-3 text-sm leading-6 text-zinc-400">
+        <label className="flex items-start gap-3 rounded-md border border-white/[0.08] bg-slate-950/40 p-3 text-sm leading-6 text-zinc-400">
           <input
             type="checkbox"
             checked={consent}
             onChange={(event) => setConsent(event.target.checked)}
             className="mt-1 h-4 w-4 accent-teal-300"
           />
-          <span>I confirm this correction should be saved into BELIFE memory and used to adjust future interpretations.</span>
+          <span>이 정정을 BELIFE 기억에 저장하고 이후 해석 조정에 사용하는 데 동의합니다.</span>
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <Button type="button" variant="secondary" onClick={saveCorrection} disabled={!canSave}>
             <CheckCircle2 className="h-4 w-4" />
-            Save correction
+            정정 저장
           </Button>
-          {status ? <p className="text-sm text-orange-200">{status}</p> : null}
+          {status ? <p className="text-sm text-cyan-200">{status}</p> : null}
         </div>
       </div>
     </section>

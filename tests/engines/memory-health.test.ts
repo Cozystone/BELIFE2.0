@@ -111,7 +111,7 @@ describe("memory health", () => {
       ],
     });
 
-    expect(report.guardrail).toContain("append-only");
+    expect(report.guardrail).toContain("추가 기록형");
     expect(report.evidenceBalance.correctionCount).toBe(1);
     expect(report.contradictionWatchlist.some((item) => item.kind === "correction")).toBe(true);
     expect(report.contradictionWatchlist.some((item) => item.kind === "contradiction")).toBe(true);

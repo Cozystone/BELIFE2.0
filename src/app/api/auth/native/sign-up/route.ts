@@ -10,8 +10,8 @@ const signUpSchema = z.object({
 });
 
 function handledSignUpError(error: unknown) {
-  if (error instanceof z.ZodError) return "Please check your sign-up fields.";
-  if (error instanceof Error && error.message === "This email is already registered.") return error.message;
+  if (error instanceof z.ZodError) return "가입 정보를 확인해 주세요.";
+  if (error instanceof Error && error.message === "이미 등록된 이메일입니다.") return error.message;
   return null;
 }
 
@@ -27,6 +27,6 @@ export async function POST(request: Request) {
     }
 
     console.error("Native sign-up failed", error);
-    return Response.json({ ok: false, error: "Unable to sign up." }, { status: 500 });
+    return Response.json({ ok: false, error: "계정을 만들 수 없습니다." }, { status: 500 });
   }
 }
