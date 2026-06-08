@@ -1,4 +1,5 @@
 import {
+  Activity,
   FileText,
   HeartHandshake,
   ListFilter,
@@ -16,6 +17,7 @@ import { ScoreBar } from "@/components/app/score-bar";
 import { buildConnectionQualityLens } from "@/lib/engines/connection-quality";
 import {
   getConnectionIntelligence,
+  getDyadicCoping,
   getPrivacyPreferences,
   getRelationshipMemory,
   requireUserForPage,
@@ -71,9 +73,10 @@ export default async function ConnectionPage() {
     );
   }
 
-  const [{ preview, candidateReport, rerankingReport }, relationshipMemory] = await Promise.all([
+  const [{ preview, candidateReport, rerankingReport }, relationshipMemory, dyadicCoping] = await Promise.all([
     getConnectionIntelligence(user.id),
     getRelationshipMemory(user.id),
+    getDyadicCoping(user.id),
   ]);
   const qualityReport = buildConnectionQualityLens({ preview, relationshipMemory });
   const scenarioPreviews = preview.scenarioPreviews ?? [];
@@ -126,6 +129,95 @@ export default async function ConnectionPage() {
           <article className="rounded-md border border-white/[0.08] bg-black/40 p-3">
             <p className="text-xs text-zinc-500">Confidence</p>
             <p className="mt-2 font-mono text-2xl text-teal-200">{percent(report.confidence)}</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="rounded-md border border-orange-300/10 bg-orange-500/[0.04] p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-orange-500/12 text-orange-200">
+            <Activity className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold">Dyadic Coping Lens</h2>
+              <span className="rounded-md border border-white/[0.08] bg-black/40 px-2 py-1 font-mono text-xs text-orange-200">
+                {percent(dyadicCoping.confidence)}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-7 text-zinc-400">{dyadicCoping.summary}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-5">
+          {dyadicCoping.axes.map((axis) => (
+            <article key={axis.key} className="rounded-md border border-white/[0.08] bg-black/35 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-sm font-medium text-zinc-100">{axis.label}</h3>
+                <span className="rounded-md bg-white/[0.06] px-2 py-1 font-mono text-xs text-zinc-300">
+                  {axis.level}
+                </span>
+              </div>
+              <div className="mt-3">
+                <ScoreBar
+                  label={axis.polarity === "risk" ? "Risk" : "Capacity"}
+                  value={axis.score}
+                  tone={axis.polarity === "risk" ? "zinc" : axis.score >= 0.56 ? "teal" : "zinc"}
+                />
+              </div>
+              <p className="mt-3 text-sm leading-6 text-zinc-400">{axis.interpretation}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <h3 className="text-sm font-medium text-zinc-100">Vulnerabilities</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+              {dyadicCoping.vsa.enduringVulnerabilities.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <h3 className="text-sm font-medium text-zinc-100">Stressful events</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+              {dyadicCoping.vsa.stressfulEvents.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <h3 className="text-sm font-medium text-zinc-100">Adaptive processes</h3>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+              {dyadicCoping.vsa.adaptiveProcesses.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_1.2fr]">
+          <article className="rounded-md border border-teal-300/10 bg-teal-400/5 p-4">
+            <p className="text-xs font-medium uppercase text-teal-200">Support moves</p>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-300">
+              {dyadicCoping.supportMoves.map((move) => (
+                <li key={move}>{move}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="rounded-md border border-orange-300/10 bg-orange-500/5 p-4">
+            <p className="text-xs font-medium uppercase text-orange-200">Risk signals</p>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-300">
+              {dyadicCoping.riskSignals.map((signal) => (
+                <li key={signal}>{signal}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="rounded-md border border-white/[0.08] bg-black/30 p-4">
+            <p className="text-xs font-medium uppercase text-zinc-400">Next conversation move</p>
+            <p className="mt-3 text-sm leading-6 text-zinc-300">{dyadicCoping.nextConversationMove}</p>
+            <p className="mt-4 text-xs leading-5 text-zinc-600">{dyadicCoping.guardrail}</p>
           </article>
         </div>
       </section>

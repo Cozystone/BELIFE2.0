@@ -10,6 +10,7 @@ import {
 } from "@/lib/engines/compatibility";
 import { buildConnectionQualityLens } from "@/lib/engines/connection-quality";
 import { buildDataTrustAudit, calculateDataTrust } from "@/lib/engines/data-trust";
+import { buildDyadicCopingReport } from "@/lib/engines/dyadic-coping";
 import { buildTwinReflection } from "@/lib/engines/digital-twin";
 import { rankMemoryEvidence } from "@/lib/engines/evidence-retrieval";
 import { estimateMentalState } from "@/lib/engines/mental-state";
@@ -773,6 +774,15 @@ export async function getConnectionQuality(userId: string, personLabel?: string)
     getRelationshipMemory(userId, personLabel),
   ]);
   return buildConnectionQualityLens({ preview, relationshipMemory });
+}
+
+export async function getDyadicCoping(userId: string, personLabel?: string) {
+  const [preview, relationshipMemory, state] = await Promise.all([
+    getConnectionPreview(userId),
+    getRelationshipMemory(userId, personLabel),
+    getStore().getLatestState(userId),
+  ]);
+  return buildDyadicCopingReport({ preview, relationshipMemory, state });
 }
 
 export async function getRelationshipMemory(userId: string, personLabel?: string) {

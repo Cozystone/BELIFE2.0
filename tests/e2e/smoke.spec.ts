@@ -344,6 +344,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await expect(page.getByRole("heading", { name: "Candidate Filters" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Relationship Memory" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Connection Quality Lens" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dyadic Coping Lens" })).toBeVisible();
   await expect(page.getByText("Edge strength", { exact: true })).toBeVisible();
   const rerankingResult = await page.evaluate(async () => {
     const response = await fetch("/api/connection/reranking");
@@ -441,6 +442,39 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   ]);
   expect(connectionQualityResult.pairCount).toBe(1);
   expect(connectionQualityResult.totalInteractions).toBeGreaterThan(0);
+  const dyadicCopingResult = await page.evaluate(async () => {
+    const response = await fetch("/api/connection/dyadic-coping?personLabel=E2E%20relationship%20context");
+    const body = await response.json();
+    return {
+      status: response.status,
+      axisCount: body.report?.axes?.length ?? 0,
+      guardrail: body.report?.guardrail ?? "",
+      axisKeys: body.report?.axes?.map((axis: { key: string }) => axis.key) ?? [],
+      pairCount: body.report?.memoryCoverage?.pairCount,
+      supportMoveCount: body.report?.supportMoves?.length ?? 0,
+      riskSignalCount: body.report?.riskSignals?.length ?? 0,
+      vsaCounts: [
+        body.report?.vsa?.enduringVulnerabilities?.length ?? 0,
+        body.report?.vsa?.stressfulEvents?.length ?? 0,
+        body.report?.vsa?.adaptiveProcesses?.length ?? 0,
+      ],
+    };
+  });
+
+  expect(dyadicCopingResult.status).toBe(200);
+  expect(dyadicCopingResult.axisCount).toBe(5);
+  expect(dyadicCopingResult.guardrail).toContain("not public matching");
+  expect(dyadicCopingResult.axisKeys).toEqual([
+    "stressCommunication",
+    "supportiveResponse",
+    "jointRegulation",
+    "repairAfterStress",
+    "withdrawalRisk",
+  ]);
+  expect(dyadicCopingResult.pairCount).toBe(1);
+  expect(dyadicCopingResult.supportMoveCount).toBeGreaterThan(0);
+  expect(dyadicCopingResult.riskSignalCount).toBeGreaterThan(0);
+  expect(dyadicCopingResult.vsaCounts.every((count: number) => count > 0)).toBe(true);
   await expect(page.getByRole("heading", { name: "Custom Scenario Simulation" })).toBeVisible();
   await page.getByRole("button", { name: "Run simulation" }).click();
   await expect(page.getByRole("heading", { name: "Simulation result" })).toBeVisible();
@@ -551,6 +585,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const blockedRelationshipMemoryBody = await blockedRelationshipMemory.json();
     const blockedConnectionQuality = await fetch("/api/connection/quality");
     const blockedConnectionQualityBody = await blockedConnectionQuality.json();
+    const blockedDyadicCoping = await fetch("/api/connection/dyadic-coping");
+    const blockedDyadicCopingBody = await blockedDyadicCoping.json();
     const enabled = await fetch("/api/privacy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -566,6 +602,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     const allowedReranking = await fetch("/api/connection/reranking");
     const allowedRelationshipMemory = await fetch("/api/connection/relationship-memory");
     const allowedConnectionQuality = await fetch("/api/connection/quality");
+    const allowedDyadicCoping = await fetch("/api/connection/dyadic-coping");
 
     return {
       initialStatus: initial.status,
@@ -585,6 +622,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       blockedRelationshipMemoryCode: blockedRelationshipMemoryBody.code,
       blockedConnectionQualityStatus: blockedConnectionQuality.status,
       blockedConnectionQualityCode: blockedConnectionQualityBody.code,
+      blockedDyadicCopingStatus: blockedDyadicCoping.status,
+      blockedDyadicCopingCode: blockedDyadicCopingBody.code,
       enabledStatus: enabled.status,
       enabledPreferences: enabledBody.preferences,
       visibleBriefingStatus: visibleBriefing.status,
@@ -593,6 +632,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
       allowedRerankingStatus: allowedReranking.status,
       allowedRelationshipMemoryStatus: allowedRelationshipMemory.status,
       allowedConnectionQualityStatus: allowedConnectionQuality.status,
+      allowedDyadicCopingStatus: allowedDyadicCoping.status,
     };
   });
 
@@ -622,6 +662,8 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(privacyResult.blockedRelationshipMemoryCode).toBe("CONNECTION_PREVIEW_DISABLED");
   expect(privacyResult.blockedConnectionQualityStatus).toBe(403);
   expect(privacyResult.blockedConnectionQualityCode).toBe("CONNECTION_PREVIEW_DISABLED");
+  expect(privacyResult.blockedDyadicCopingStatus).toBe(403);
+  expect(privacyResult.blockedDyadicCopingCode).toBe("CONNECTION_PREVIEW_DISABLED");
   expect(privacyResult.enabledStatus).toBe(200);
   expect(privacyResult.enabledPreferences).toMatchObject({
     showEvidenceLedger: true,
@@ -633,6 +675,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   expect(privacyResult.allowedRerankingStatus).toBe(200);
   expect(privacyResult.allowedRelationshipMemoryStatus).toBe(200);
   expect(privacyResult.allowedConnectionQualityStatus).toBe(200);
+  expect(privacyResult.allowedDyadicCopingStatus).toBe(200);
   const importResult = await page.evaluate(async () => {
     const response = await fetch("/api/memory/import", {
       method: "POST",

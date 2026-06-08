@@ -610,6 +610,47 @@ export interface ConnectionQualityLensReport {
   nextMicroExperiments: string[];
 }
 
+export type DyadicCopingAxisKey =
+  | "stressCommunication"
+  | "supportiveResponse"
+  | "jointRegulation"
+  | "repairAfterStress"
+  | "withdrawalRisk";
+
+export interface DyadicCopingAxis {
+  key: DyadicCopingAxisKey;
+  label: string;
+  score: number;
+  level: ConnectionAxisInsight["level"];
+  polarity: "protective" | "risk";
+  interpretation: string;
+  evidence: string[];
+  nextObservation: string;
+}
+
+export interface DyadicCopingReport {
+  generatedAt: string;
+  confidence: number;
+  summary: string;
+  guardrail: string;
+  memoryCoverage: {
+    pairCount: number;
+    totalInteractions: number;
+    strongestPair?: string;
+    riskiestPair?: string;
+  };
+  vsa: {
+    enduringVulnerabilities: string[];
+    stressfulEvents: string[];
+    adaptiveProcesses: string[];
+  };
+  axes: DyadicCopingAxis[];
+  stressSignals: string[];
+  supportMoves: string[];
+  riskSignals: string[];
+  nextConversationMove: string;
+}
+
 export type RelationshipMemoryKind =
   | "friendship"
   | "collaboration"
