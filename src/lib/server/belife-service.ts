@@ -35,6 +35,7 @@ import {
   relationshipPairTag,
 } from "@/lib/engines/relationship-memory";
 import { buildMentalStateHistoryReport } from "@/lib/engines/state-history";
+import { buildStateDynamicsReport } from "@/lib/engines/state-dynamics";
 import { buildMemoryHealthReport } from "@/lib/engines/memory-health";
 import type {
   BelifeUser,
@@ -405,6 +406,11 @@ export async function getBriefing(userId: string): Promise<Briefing> {
 export async function getMentalStateHistory(userId: string, limit?: number) {
   const states = await getStore().getStateHistory(userId, limit);
   return buildMentalStateHistoryReport(states);
+}
+
+export async function getMentalStateDynamics(userId: string, limit?: number) {
+  const states = await getStore().getStateHistory(userId, limit);
+  return buildStateDynamicsReport(states);
 }
 
 export async function getOntologyForView(userId: string, view: "core" | "expanded" | "full") {

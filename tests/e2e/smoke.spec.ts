@@ -238,6 +238,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await page.goto("/app/today");
   await expect(page.getByRole("main").getByText("Today")).toBeVisible();
   await expect(page.getByText("Evidence Ledger")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "State Dynamics" })).toBeVisible();
   const remindersSection = page.locator("section", { hasText: "Pattern reminders" });
   await expect(remindersSection).toBeVisible();
   await remindersSection.getByRole("link").first().click();
@@ -264,6 +265,25 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
     hasCurrent: true,
   });
   expect(stateHistoryResult.itemCount).toBeGreaterThan(0);
+  const stateDynamicsResult = await page.evaluate(async () => {
+    const response = await fetch("/api/state/dynamics?limit=12");
+    const body = await response.json();
+    return {
+      status: response.status,
+      modelKind: body.dynamics?.modelKind,
+      sampleSize: body.dynamics?.sampleSize,
+      couplingCount: body.dynamics?.couplings?.length ?? 0,
+      guardrail: body.dynamics?.guardrail ?? "",
+      baselineLevel: body.dynamics?.baselineShift?.level,
+    };
+  });
+
+  expect(stateDynamicsResult.status).toBe(200);
+  expect(stateDynamicsResult.modelKind).toMatch(/lagged-delta|early-heuristic/);
+  expect(stateDynamicsResult.sampleSize).toBeGreaterThan(0);
+  expect(stateDynamicsResult.couplingCount).toBeGreaterThan(0);
+  expect(stateDynamicsResult.guardrail).toContain("not diagnosis");
+  expect(stateDynamicsResult.baselineLevel).toMatch(/low|moderate|high/);
 
   const ontologyCallsBeforeSelfMap = ontologyApiUrls.length;
   await page.goto("/app/self-map");

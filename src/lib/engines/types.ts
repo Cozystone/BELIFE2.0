@@ -177,6 +177,39 @@ export interface MentalStateHistoryReport {
   items: MentalStateEstimate[];
 }
 
+export type StateDynamicsCouplingDirection = "amplifying" | "protective" | "mixed";
+
+export interface StateDynamicsCoupling {
+  id: string;
+  source: MentalStateTrendMetric;
+  target: MentalStateTrendMetric;
+  sourceLabel: string;
+  targetLabel: string;
+  strength: number;
+  direction: StateDynamicsCouplingDirection;
+  evidence: string;
+  interpretation: string;
+  nextObservation: string;
+}
+
+export interface StateDynamicsReport {
+  generatedAt: string;
+  modelKind: "lagged-delta" | "early-heuristic";
+  sampleSize: number;
+  confidence: number;
+  summary: string;
+  guardrail: string;
+  baselineShift: {
+    current: number;
+    trend: number;
+    level: "low" | "moderate" | "high";
+    interpretation: string;
+  };
+  couplings: StateDynamicsCoupling[];
+  stabilizers: string[];
+  watchlist: string[];
+}
+
 export interface BehaviorSnapshot {
   questionFrequency: number;
   directness: number;
