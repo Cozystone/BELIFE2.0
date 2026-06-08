@@ -528,7 +528,7 @@ test("native sign-up keeps a session for protected app APIs", async ({ page }, t
   await expect(page.getByRole("heading", { name: "AI 런타임" })).toBeVisible();
   await expect(page.getByText("해석 가드레일")).toBeVisible();
   await expect(page.getByText("다음 신뢰도 개선")).toBeVisible();
-  await expect(page.getByText(/Live Ollama|결정론 fallback/)).toBeVisible();
+  await expect(page.getByText(/실시간 Ollama|결정론 보조 응답/)).toBeVisible();
   await expect(page.getByText("온톨로지 연결")).toBeVisible();
   const aiHealthResult = await page.evaluate(async () => {
     const response = await fetch("/api/health/ai");

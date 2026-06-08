@@ -40,13 +40,13 @@ describe("getReadinessReport", () => {
         ok: false,
         baseUrl: "https://ollama.example.com",
         models: [],
-        error: "connection refused",
+        error: "Ollama 연결 오류: 연결 거부",
       },
     });
 
     const ollama = report.checks.find((check) => check.key === "ollama");
     expect(ollama?.ok).toBe(false);
-    expect(ollama?.detail).toContain("connection refused");
+    expect(ollama?.detail).toContain("Ollama 연결 오류: 연결 거부");
   });
 
   it("reports missing Ollama env before considering localhost fallback", () => {

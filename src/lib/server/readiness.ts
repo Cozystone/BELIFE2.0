@@ -31,7 +31,7 @@ export function getReadinessReport(options: { ollamaHealth?: OllamaHealth } = {}
     : options.ollamaHealth
       ? options.ollamaHealth.ok
         ? `${options.ollamaHealth.baseUrl}에 ${getOllamaModel("chat")} 모델로 연결할 수 있습니다.`
-        : `${options.ollamaHealth.baseUrl} 준비 실패: ${options.ollamaHealth.error || "health check failed"}.`
+        : `${options.ollamaHealth.baseUrl} 준비 실패: ${options.ollamaHealth.error || "헬스 체크 실패"}.`
       : `${getOllamaBaseUrl()}가 ${getOllamaModel("chat")} 모델로 설정되어 있습니다.`;
 
   const checks: ReadinessCheck[] = [

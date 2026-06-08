@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       return Response.json({ error: error.message, code: error.code }, { status: error.status });
     }
     return Response.json(
-      { error: error instanceof Error ? error.message : "Invalid connection simulation request" },
+      { error: error instanceof Error ? error.message : "관계 시뮬레이션 요청 형식을 확인해 주세요." },
       { status: 400 },
     );
   }

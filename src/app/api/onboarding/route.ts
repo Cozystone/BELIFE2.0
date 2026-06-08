@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return Response.json({ profile });
   } catch (error) {
     return Response.json(
-      { error: error instanceof Error ? error.message : "Invalid onboarding payload" },
+      { error: error instanceof Error ? error.message : "온보딩 입력 형식을 확인해 주세요." },
       { status: 400 },
     );
   }

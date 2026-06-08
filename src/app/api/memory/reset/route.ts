@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return Response.json(result);
   } catch {
     return Response.json(
-      { error: "Type RESET to clear BELIFE memory." },
+      { error: "BELIFE 기억을 초기화하려면 RESET을 입력해 주세요." },
       { status: 400 },
     );
   }

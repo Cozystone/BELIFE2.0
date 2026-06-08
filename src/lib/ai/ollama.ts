@@ -47,6 +47,12 @@ function getTimeoutMs() {
   return Number(process.env.OLLAMA_TIMEOUT_MS || 18000);
 }
 
+function describeOllamaError(error: unknown) {
+  if (!(error instanceof Error)) return "Ollama에 연결하지 못했습니다.";
+  if (error.name === "AbortError") return "Ollama 응답 시간이 초과되었습니다.";
+  return `Ollama 연결 오류: ${error.message}`;
+}
+
 export function getOllamaRuntimeDiagnostics(health?: OllamaHealth): OllamaRuntimeDiagnostics {
   const configuredForProduction = Boolean(process.env.OLLAMA_BASE_URL);
   const endpoint = getOllamaBaseUrl();
@@ -64,9 +70,9 @@ export function getOllamaRuntimeDiagnostics(health?: OllamaHealth): OllamaRuntim
     healthPath: "/api/health/ai",
     readinessPath: "/api/health/readiness",
     detail: health?.ok
-      ? `${endpoint} is reachable.`
+      ? `${endpoint}에 연결할 수 있습니다.`
       : configuredForProduction
-        ? health?.error || "Ollama endpoint is configured but not reachable."
+        ? health?.error || "Ollama 엔드포인트가 설정되어 있지만 아직 연결할 수 없습니다."
         : "OLLAMA_BASE_URL이 없어 Vercel에서 결정론적 fallback을 사용합니다.",
   };
 }
@@ -90,7 +96,7 @@ export async function getOllamaHealth(): Promise<OllamaHealth> {
       headers: process.env.OLLAMA_API_KEY ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` } : undefined,
     });
     if (!response.ok) {
-      return { ok: false, baseUrl, models: [], error: `Ollama returned ${response.status}` };
+      return { ok: false, baseUrl, models: [], error: `Ollama가 HTTP ${response.status} 응답을 반환했습니다.` };
     }
     const body = (await response.json()) as { models?: Array<{ name: string }> };
     return { ok: true, baseUrl, models: body.models?.map((model) => model.name) ?? [] };
@@ -99,7 +105,7 @@ export async function getOllamaHealth(): Promise<OllamaHealth> {
       ok: false,
       baseUrl,
       models: [],
-      error: error instanceof Error ? error.message : "Ollama에 연결하지 못했습니다.",
+      error: describeOllamaError(error),
     };
   } finally {
     clearTimeout(timer);
@@ -136,7 +142,7 @@ export async function ollamaGenerate(options: OllamaGenerateOptions) {
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama returned ${response.status}`);
+      throw new Error(`Ollama가 HTTP ${response.status} 응답을 반환했습니다.`);
     }
 
     const body = (await response.json()) as { response?: string };

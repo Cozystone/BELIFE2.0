@@ -61,7 +61,7 @@ export default async function SettingsPage() {
     ["관계 프리뷰", inventory.counts.connectionPreviews],
   ] as const;
   const aiRuntimeRows = [
-    ["모드", aiRuntime.mode === "live" ? "Live Ollama" : "결정론 fallback"],
+    ["모드", aiRuntime.mode === "live" ? "실시간 Ollama" : "결정론 보조 응답"],
     ["엔드포인트", aiRuntime.endpoint],
     ["대화 모델", aiRuntime.chatModel],
     ["추출 모델", aiRuntime.extractorModel],

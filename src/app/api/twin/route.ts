@@ -16,6 +16,6 @@ export async function POST(request: Request) {
     const reflection = await getTwinReflection(user.id, question);
     return Response.json({ answer: reflection.answer, reflection });
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "Invalid twin request" }, { status: 400 });
+    return Response.json({ error: error instanceof Error ? error.message : "트윈 요청 형식을 확인해 주세요." }, { status: 400 });
   }
 }
