@@ -1,7 +1,6 @@
 "use client";
 
 import { LockKeyhole, LogIn, UserPlus } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -29,7 +28,6 @@ export function NativeAuthForm({
   mode: "sign-in" | "sign-up";
   nativeAvailable: boolean;
 }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -58,8 +56,7 @@ export function NativeAuthForm({
 
       const body = (await response.json().catch(() => ({}))) as NativeAuthResponse;
       if (response.ok && body.ok !== false && body.account) {
-        router.push(isSignUp ? "/onboarding" : (nextPathFromLocation() ?? "/app/today"));
-        router.refresh();
+        window.location.assign(isSignUp ? "/onboarding" : (nextPathFromLocation() ?? "/app/today"));
       } else {
         setError(body.error || "인증에 실패했습니다.");
       }

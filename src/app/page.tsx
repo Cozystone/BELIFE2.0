@@ -19,7 +19,7 @@ export default function Home() {
             </span>
             <span className="text-lg font-semibold">BELIFE</span>
           </Link>
-          <Link href="/app/today" className="text-sm text-zinc-400 hover:text-orange-200">
+          <Link href="/app/today" prefetch={false} className="text-sm text-zinc-400 hover:text-orange-200">
             Open app
           </Link>
         </nav>
@@ -42,7 +42,7 @@ export default function Home() {
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/app/talk">
+              <Link href="/app/talk" prefetch={false}>
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto">
                   Talk now
                 </Button>
