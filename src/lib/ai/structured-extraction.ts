@@ -121,7 +121,8 @@ export async function buildStructuredExtraction(input: {
   const raw = await ollamaJson<unknown>(
     {
       temperature: 0.12,
-      system: "You extract structured personal intelligence for BELIFE. Return only valid JSON. Do not diagnose, moralize, or invent unsupported facts.",
+      system:
+        "You extract structured personal intelligence for BELIFE. Return only valid JSON. Do not diagnose, moralize, or invent unsupported facts. Every user-visible string in JSON must be Korean.",
       prompt: buildExtractionPrompt(input.text, input.source ?? "text", input.previousState, input.previousBehavior),
     },
     fallback,
@@ -146,7 +147,9 @@ export async function buildStructuredExtraction(input: {
 
   const nodes = mergeNodes([
     ...fallbackNodes,
-    ...extraction.ontologyCandidates.map((node) => toOntologyNode(input.userId, node)),
+    ...extraction.ontologyCandidates
+      .filter((node) => hasHangul(node.label) && hasHangul(node.summary))
+      .map((node) => toOntologyNode(input.userId, node)),
   ]);
 
   return {
@@ -183,6 +186,7 @@ Return JSON with this exact top-level shape:
 
 Rules:
 - Use only evidence in the input and previous summaries.
+- All memory content, ontology labels, ontology summaries, mental-state summaries, drivers, and behavior summaries must be written in Korean.
 - Prefer uncertainty over overclaiming.
 - Never claim diagnosis, therapy, or deterministic relationship prediction.
 - Keep labels compact and useful for a self ontology graph.`;
@@ -276,6 +280,20 @@ function normalizeTags(tags: string[]) {
   return [...new Set(normalized)].slice(0, 8);
 }
 
+function hasHangul(value: string) {
+  return /[가-힣]/.test(value);
+}
+
+function koreanTextOrFallback(candidate: string | undefined, fallback: string, limit: number) {
+  const text = candidate?.trim();
+  return compactText(text && hasHangul(text) ? text : fallback, limit);
+}
+
+function koreanListOrFallback(candidates: string[] | undefined, fallback: string[]) {
+  const koreanCandidates = (candidates ?? []).filter(hasHangul).map((driver) => compactText(driver, 80));
+  return (koreanCandidates.length ? koreanCandidates : fallback).slice(0, 6);
+}
+
 function normalizeState(
   fallback: MentalStateEstimate,
   state: RawExtraction["mentalState"],
@@ -293,8 +311,8 @@ function normalizeState(
     baselineDeviation: clamp(state.baselineDeviation ?? fallback.baselineDeviation),
     abstentionRisk: clamp(state.abstentionRisk ?? fallback.abstentionRisk),
     confidence: clamp(state.confidence ?? fallback.confidence),
-    summary: compactText(state.summary ?? fallback.summary, 260),
-    drivers: (state.drivers?.length ? state.drivers : fallback.drivers).slice(0, 6),
+    summary: koreanTextOrFallback(state.summary, fallback.summary, 260),
+    drivers: koreanListOrFallback(state.drivers, fallback.drivers),
     createdAt: isoNow(),
   };
 }
@@ -314,7 +332,7 @@ function normalizeBehavior(
     pacing: clamp(behavior.pacing ?? fallback.pacing),
     warmth: clamp(behavior.warmth ?? fallback.warmth),
     confidence: clamp(behavior.confidence ?? fallback.confidence),
-    summary: compactText(behavior.summary ?? fallback.summary, 260),
+    summary: koreanTextOrFallback(behavior.summary, fallback.summary, 260),
     createdAt: isoNow(),
   };
 }

@@ -25,6 +25,8 @@ describe("buildStructuredExtraction", () => {
     expect(extraction.nodes.some((node) => node.type === "Goal")).toBe(true);
     expect(extraction.nodes.some((node) => node.type === "EmotionPattern")).toBe(true);
     expect(extraction.state.stressLoad).toBeGreaterThan(0.25);
+    expect(/[가-힣]/.test(extraction.state.summary)).toBe(true);
+    expect(extraction.state.drivers.every((driver) => /[가-힣]/.test(driver))).toBe(true);
     expect(extraction.behavior.confidence).toBeGreaterThan(0.3);
   });
 });

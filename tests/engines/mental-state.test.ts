@@ -16,7 +16,7 @@ describe("estimateMentalState", () => {
     const state = estimateMentalState("항상 다 망한 것 같고, 절대 좋아질 수 없다는 생각이 계속 반복돼.", null);
 
     expect(state.cognitiveDistortionRisk).toBeGreaterThan(0.35);
-    expect(state.drivers).toContain("cognitive distortion candidate");
+    expect(state.drivers).toContain("인지 왜곡 후보");
     expect(state.summary).not.toContain("진단");
   });
 

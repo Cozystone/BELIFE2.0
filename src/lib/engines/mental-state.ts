@@ -152,14 +152,14 @@ export function estimateMentalState(
   );
 
   const drivers = [
-    stressLoad > 0.45 ? "stress load" : "",
-    burnoutRisk > 0.42 ? "energy depletion" : "",
-    rumination > 0.35 ? "repetitive thought loop" : "",
-    socialWithdrawal > 0.38 ? "possible withdrawal signal" : "",
-    cognitiveDistortionRisk > 0.35 ? "cognitive distortion candidate" : "",
-    motivationalCollapseRisk > 0.48 ? "motivation drop risk" : "",
-    baselineDeviation > 0.18 ? "baseline deviation" : "",
-    abstentionRisk > 0.42 ? "low-confidence interpretation" : "",
+    stressLoad > 0.45 ? "부담 신호" : "",
+    burnoutRisk > 0.42 ? "에너지 고갈 신호" : "",
+    rumination > 0.35 ? "반복 사고 루프" : "",
+    socialWithdrawal > 0.38 ? "위축 가능성" : "",
+    cognitiveDistortionRisk > 0.35 ? "인지 왜곡 후보" : "",
+    motivationalCollapseRisk > 0.48 ? "동기 저하 위험" : "",
+    baselineDeviation > 0.18 ? "평소 기준선과의 차이" : "",
+    abstentionRisk > 0.42 ? "낮은 확신의 해석" : "",
   ].filter(Boolean);
 
   return completeMentalStateSignals(
@@ -182,7 +182,7 @@ export function estimateMentalState(
           : motivation > 0.55
             ? "압박은 있지만 목표를 향한 에너지도 아직 살아 있습니다."
             : "현재 상태는 아직 섞여 있고 형성 중입니다. BELIFE는 단정하기보다 한 가지를 더 물어야 합니다.",
-      drivers: drivers.length ? drivers : ["limited but usable self-report signal"],
+      drivers: drivers.length ? drivers : ["제한적이지만 사용 가능한 자기보고 신호"],
       createdAt: isoNow(),
     },
     previous,
